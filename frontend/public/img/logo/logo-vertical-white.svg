@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="900" viewBox="0 0 720 900">
+  <rect width="720" height="900" fill="none"/>
+  <g transform="translate(172 55) scale(0.735)">
+    
+  <defs>
+    <linearGradient id="grad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#22C55E"/>
+      <stop offset="55%" stop-color="#16A34A"/>
+      <stop offset="100%" stop-color="#15803D"/>
+    </linearGradient>
+  </defs>
+  
+  <g fill="none" stroke="#FFFFFF" stroke-width="28" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M118 407 C75 407 58 377 58 336 L58 139 C58 92 92 58 139 58 L344 58 C391 58 424 92 424 139 L424 158"/>
+    <path d="M126 298 C207 280 286 225 366 128"/>
+    <path d="M326 128 L366 128 L366 168"/>
+  </g>
+  <g fill="#FFFFFF">
+    <rect x="119" y="321" width="54" height="105" rx="23"/>
+    <rect x="222" y="276" width="54" height="150" rx="23"/>
+    <rect x="325" y="211" width="54" height="215" rx="23"/>
+  </g>
+
+  </g>
+  <text x="360" y="630" text-anchor="middle" font-family="Poppins, Arial, sans-serif" font-size="122" font-weight="600" letter-spacing="1" fill="#FFFFFF">planeje</text>
+  <text x="360" y="704" text-anchor="middle" font-family="Poppins, Arial, sans-serif" font-size="30" font-weight="700" letter-spacing="7" fill="#FFFFFF">SUAS FINANÇAS,</text>
+  <text x="360" y="752" text-anchor="middle" font-family="Poppins, Arial, sans-serif" font-size="30" font-weight="700" letter-spacing="7" fill="#FFFFFF">SEU FUTURO.</text>
+</svg>
