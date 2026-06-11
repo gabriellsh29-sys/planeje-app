@@ -159,6 +159,23 @@ function PlanosTab() {
     }
   };
 
+  const gerenciarAssinatura = async () => {
+    setLoading('portal');
+    try {
+      const res = await fetch('/api/create-portal-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id }),
+      });
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+      else throw new Error(data.error || 'Erro ao abrir portal de assinatura');
+    } catch (err) {
+      alert('Erro ao abrir portal de assinatura: ' + err.message);
+      setLoading(null);
+    }
+  };
+
   const ativo = perfil?.plano === 'pago' && perfil?.assinatura_status === 'ativa';
   const liberado = perfil?.plano === 'liberado';
 
@@ -193,6 +210,14 @@ function PlanosTab() {
             {loading === 'anual' ? 'Redirecionando...' : 'Assinar Anual — R$ 89,90/ano'}
           </button>
         </>
+      )}
+
+      {ativo && (
+        <button onClick={gerenciarAssinatura} disabled={loading}
+          className="w-full py-3 rounded-xl font-semibold text-white border transition-all disabled:opacity-60"
+          style={{ borderColor: 'rgba(255,255,255,0.15)' }}>
+          {loading === 'portal' ? 'Abrindo...' : 'Gerenciar / Cancelar assinatura'}
+        </button>
       )}
 
       <a href="https://wa.me/5562999855052?text=Quero%20saber%20mais%20sobre%20o%20Planeje"

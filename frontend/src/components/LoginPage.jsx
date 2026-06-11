@@ -163,6 +163,10 @@ export default function LoginPage() {
           <a href="/privacidade" target="_blank" rel="noreferrer" style={{ color: 'rgba(255,255,255,0.5)' }}>
             Política de Privacidade
           </a>
+          {' · '}
+          <a href="/termos" target="_blank" rel="noreferrer" style={{ color: 'rgba(255,255,255,0.5)' }}>
+            Termos de Uso
+          </a>
         </p>
       </div>
     </div>
