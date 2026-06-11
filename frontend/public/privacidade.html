@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Política de Privacidade — Planeje</title>
+<link rel="icon" type="image/png" href="/img/logo/icon-192x192.png" />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --navy-900:#0F172A; --navy-850:#131C32;
+    --green-500:#22C55E; --green-600:#16A34A;
+    --tint-line:rgba(34,197,94,0.18); --tint-fill:rgba(34,197,94,0.06);
+    --white-70:rgba(255,255,255,.70); --white-50:rgba(255,255,255,.50); --white-35:rgba(255,255,255,.35);
+    --font-display:'Sora',system-ui,sans-serif; --font-sans:'Plus Jakarta Sans',system-ui,sans-serif;
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--navy-900); color:var(--white-70); font-family:var(--font-sans); line-height:1.7; -webkit-font-smoothing:antialiased; }
+  a{ color:var(--green-500); }
+  .wrap{ max-width:760px; margin:0 auto; padding:48px 24px 96px; }
+  header.nav{ display:flex; align-items:center; gap:10px; padding:16px 24px; border-bottom:1px solid var(--tint-line); }
+  .sq{ width:32px; height:32px; border-radius:9px; background:linear-gradient(135deg,#22C55E 0%,#16A34A 100%); display:inline-flex; align-items:center; justify-content:center; }
+  .nm{ font-family:var(--font-display); font-weight:800; font-size:18px; color:#fff; }
+  h1{ font-family:var(--font-display); color:#fff; font-size:32px; margin:0 0 8px; }
+  h2{ font-family:var(--font-display); color:#fff; font-size:19px; margin:32px 0 10px; }
+  p,li{ font-size:15px; color:var(--white-70); }
+  ul{ padding-left:20px; }
+  .updated{ font-size:13px; color:var(--white-35); margin-bottom:32px; }
+  .box{ background:var(--tint-fill); border:1px solid var(--tint-line); border-radius:14px; padding:18px 20px; margin:20px 0; }
+  footer{ border-top:1px solid var(--tint-line); padding:24px; text-align:center; font-size:12px; color:var(--white-35); }
+  footer a{ color:var(--white-50); }
+</style>
+</head>
+<body>
+  <header class="nav">
+    <a href="/lp" style="display:flex;align-items:center;gap:10px;text-decoration:none;">
+      <span class="sq">
+        <svg width="18" height="18" viewBox="0 0 512 512" fill="none" aria-hidden="true"><g fill="none" stroke="#fff" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"><path d="M118 407 C75 407 58 377 58 336 L58 139 C58 92 92 58 139 58 L344 58 C391 58 424 92 424 139 L424 158"/><path d="M126 298 C207 280 286 225 366 128"/><path d="M326 128 L366 128 L366 168"/></g><g fill="#fff"><rect x="119" y="321" width="54" height="105" rx="23"/><rect x="222" y="276" width="54" height="150" rx="23"/><rect x="325" y="211" width="54" height="215" rx="23"/></g></svg>
+      </span>
+      <span class="nm">planeje</span>
+    </a>
+  </header>
+
+  <div class="wrap">
+    <h1>Política de Privacidade</h1>
+    <p class="updated">Última atualização: junho de 2026</p>
+
+    <p>Esta Política de Privacidade descreve como o <strong>Planeje</strong> coleta, usa, armazena e protege as informações dos usuários do aplicativo, em conformidade com a Lei Geral de Proteção de Dados (LGPD — Lei nº 13.709/2018).</p>
+
+    <h2>1. Quais dados coletamos</h2>
+    <ul>
+      <li><strong>Dados de cadastro:</strong> nome, e-mail e foto de perfil (quando você opta por enviar uma).</li>
+      <li><strong>Dados de autenticação:</strong> caso você entre com o Google, recebemos nome, e-mail e foto associados à sua conta Google, conforme autorizado por você.</li>
+      <li><strong>Dados financeiros inseridos por você:</strong> receitas, despesas, dívidas, cartões, orçamentos, metas e anotações que você cadastra dentro do app.</li>
+      <li><strong>Dados de assinatura:</strong> status do plano (gratuito, em teste ou pago), gerenciados via Stripe. Não armazenamos dados de cartão de crédito — isso é processado diretamente pelo Stripe.</li>
+    </ul>
+
+    <h2>2. Como usamos seus dados</h2>
+    <ul>
+      <li>Para fornecer e manter o funcionamento do aplicativo (sincronizar suas informações entre dispositivos);</li>
+      <li>Para gerenciar seu período de teste gratuito e sua assinatura;</li>
+      <li>Para comunicação relacionada à sua conta (ex: confirmação de cadastro, avisos sobre o plano).</li>
+    </ul>
+
+    <div class="box">
+      <strong style="color:#fff;">Importante:</strong> seus dados financeiros não são vendidos, compartilhados ou usados para fins de marketing por terceiros. O acesso é restrito à infraestrutura necessária para o funcionamento do serviço.
+    </div>
+
+    <h2>3. Onde seus dados ficam armazenados</h2>
+    <p>As informações são armazenadas de forma segura utilizando o <strong>Supabase</strong> (banco de dados e autenticação) e processadas com criptografia em trânsito (HTTPS/TLS). Pagamentos são processados pelo <strong>Stripe</strong>, que segue padrões internacionais de segurança (PCI-DSS).</p>
+
+    <h2>4. Seus direitos</h2>
+    <p>Você pode, a qualquer momento:</p>
+    <ul>
+      <li>Acessar, corrigir ou excluir seus dados pessoais;</li>
+      <li>Solicitar a exclusão completa da sua conta e dos dados associados;</li>
+      <li>Cancelar sua assinatura quando quiser, sem multas.</li>
+    </ul>
+    <p>Para exercer esses direitos, entre em contato pelo e-mail abaixo.</p>
+
+    <h2>5. Cookies e tecnologias semelhantes</h2>
+    <p>Utilizamos apenas os recursos essenciais para manter sua sessão autenticada (cookies/tokens de autenticação). Não utilizamos cookies de rastreamento publicitário.</p>
+
+    <h2>6. Alterações nesta política</h2>
+    <p>Esta política pode ser atualizada periodicamente para refletir melhorias no app ou mudanças legais. A data da última atualização estará sempre indicada no topo desta página.</p>
+
+    <h2>7. Contato</h2>
+    <p>Em caso de dúvidas sobre esta política ou sobre o tratamento dos seus dados, entre em contato pelo e-mail: <a href="mailto:contato@planejeapp.com.br">contato@planejeapp.com.br</a></p>
+  </div>
+
+  <footer>
+    © 2026 Planeje · <a href="/lp">Voltar para a página inicial</a>
+  </footer>
+</body>
+</html>

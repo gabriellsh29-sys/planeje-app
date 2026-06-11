@@ -159,7 +159,10 @@ export default function LoginPage() {
         </p>
 
         <p className="text-center mt-5" style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12 }}>
-          Planeje · {new Date().getFullYear()}
+          Planeje · {new Date().getFullYear()} ·{' '}
+          <a href="/privacidade" target="_blank" rel="noreferrer" style={{ color: 'rgba(255,255,255,0.5)' }}>
+            Política de Privacidade
+          </a>
         </p>
       </div>
     </div>
