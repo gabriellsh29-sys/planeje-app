@@ -34,7 +34,7 @@ export function AuthProvider({ children }) {
       setSyncing(true);
       Promise.all([
         pullFromCloud(userId),
-        supabase.from('perfis').select('plano, trial_expira_em, assinatura_status').eq('id', userId).maybeSingle(),
+        supabase.from('perfis').select('nome, plano, trial_expira_em, assinatura_status, avatar_url').eq('id', userId).maybeSingle(),
       ]).then(([, { data }]) => {
         setPerfil(data);
         startCloudSync(userId);
@@ -44,6 +44,13 @@ export function AuthProvider({ children }) {
       setPerfil(null);
     }
   }, [session]);
+
+  const refreshPerfil = async () => {
+    const userId = session?.user?.id;
+    if (!userId) return;
+    const { data } = await supabase.from('perfis').select('nome, plano, trial_expira_em, assinatura_status, avatar_url').eq('id', userId).maybeSingle();
+    setPerfil(data);
+  };
 
   const signInWithGoogle = () => supabase.auth.signInWithOAuth({
     provider: 'google',
@@ -65,7 +72,7 @@ export function AuthProvider({ children }) {
     || (perfil.trial_expira_em && new Date(perfil.trial_expira_em) > new Date());
 
   return (
-    <AuthContext.Provider value={{ user, session, perfil, acessoLiberado, loading: loading || (user && syncing), signInWithGoogle, signInWithPassword, signUp, logout }}>
+    <AuthContext.Provider value={{ user, session, perfil, acessoLiberado, refreshPerfil, loading: loading || (user && syncing), signInWithGoogle, signInWithPassword, signUp, logout }}>
       {children}
     </AuthContext.Provider>
   );

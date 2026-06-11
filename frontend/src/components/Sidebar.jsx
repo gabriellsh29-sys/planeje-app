@@ -9,6 +9,7 @@ const NAV = [
   { id: 'planejamento', label: 'Planejamento', icon: PlanIcon      },
   { id: 'graficos',     label: 'Gráficos',    icon: ChartIcon     },
   { id: 'anotacoes',    label: 'Anotações',   icon: NoteIcon      },
+  { id: 'perfil',       label: 'Perfil',      icon: UserIcon      },
 ];
 
 export default function Sidebar({ page, setPage, month, year, onPrev, onNext, onToday }) {
@@ -142,6 +143,9 @@ function PlanIcon() {
 }
 function NoteIcon() {
   return <svg viewBox="0 0 20 20" fill="currentColor" className="w-full h-full"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>;
+}
+function UserIcon() {
+  return <svg viewBox="0 0 20 20" fill="currentColor" className="w-full h-full"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"/></svg>;
 }
 function LogoutIcon() {
   return <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clipRule="evenodd" /></svg>;

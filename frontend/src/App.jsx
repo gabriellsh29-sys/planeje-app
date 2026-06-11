@@ -11,6 +11,8 @@ import Graficos from './pages/Graficos';
 import Anotacoes from './pages/Anotacoes';
 import Planejamento from './pages/Planejamento';
 import CartaoCredito from './pages/CartaoCredito';
+import Perfil from './pages/Perfil';
+import TrialBanner from './components/TrialBanner';
 import { useTransactions } from './hooks/useTransactions';
 
 const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -21,6 +23,7 @@ const PAGE_TITLES = {
   planejamento: 'Planejamento',
   graficos: 'Gráficos',
   anotacoes: 'Anotações',
+  perfil: 'Perfil',
 };
 
 function TransacoesWrapper({ month, year }) {
@@ -84,6 +87,8 @@ function Dashboard() {
       <Sidebar page={page} setPage={setPage} month={month} year={year} onPrev={prevMonth} onNext={nextMonth} onToday={goToToday} />
 
       <main className="flex-1 flex flex-col overflow-hidden md:pl-0">
+        <TrialBanner onClickPlanos={() => setPage('perfil')} />
+
         {/* Mobile top bar */}
         <div className="md:hidden sticky top-0 z-20 flex flex-col flex-shrink-0"
           style={{ background: 'rgba(15,23,42,0.92)', backdropFilter: 'blur(16px)', borderBottom: '1px solid rgba(34,197,94,0.12)' }}>
@@ -114,6 +119,7 @@ function Dashboard() {
           {page === 'planejamento' && <Planejamento key={refreshKey} month={month} year={year} />}
           {page === 'graficos'     && <Graficos key={refreshKey} month={month} year={year} />}
           {page === 'anotacoes'    && <Anotacoes />}
+          {page === 'perfil'       && <Perfil />}
         </div>
       </main>
 
