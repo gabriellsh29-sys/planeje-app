@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import LoginPage from './components/LoginPage';
+import PaywallPage from './components/PaywallPage';
 import Sidebar from './components/Sidebar';
 import TransactionForm from './components/TransactionForm';
 import Resumo from './pages/Resumo';
@@ -135,7 +136,7 @@ function Dashboard() {
 }
 
 function AppContent() {
-  const { user, loading } = useAuth();
+  const { user, loading, acessoLiberado } = useAuth();
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: '#0f172a' }}>
@@ -147,7 +148,9 @@ function AppContent() {
       </div>
     );
   }
-  return user ? <Dashboard /> : <LoginPage />;
+  if (!user) return <LoginPage />;
+  if (!acessoLiberado) return <PaywallPage />;
+  return <Dashboard />;
 }
 
 export default function App() {

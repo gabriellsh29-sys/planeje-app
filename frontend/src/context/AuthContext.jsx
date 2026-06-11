@@ -8,6 +8,7 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(true);
+  const [perfil, setPerfil] = useState(null);
   const lastUserId = useRef(null);
 
   useEffect(() => {
@@ -31,10 +32,16 @@ export function AuthProvider({ children }) {
     lastUserId.current = userId;
     if (userId) {
       setSyncing(true);
-      pullFromCloud(userId).then(() => {
+      Promise.all([
+        pullFromCloud(userId),
+        supabase.from('perfis').select('plano, trial_expira_em, assinatura_status').eq('id', userId).maybeSingle(),
+      ]).then(([, { data }]) => {
+        setPerfil(data);
         startCloudSync(userId);
         setSyncing(false);
       });
+    } else {
+      setPerfil(null);
     }
   }, [session]);
 
@@ -53,8 +60,12 @@ export function AuthProvider({ children }) {
 
   const user = session?.user || null;
 
+  const acessoLiberado = !perfil || perfil.plano === 'liberado'
+    || (perfil.plano === 'pago' && perfil.assinatura_status === 'ativa')
+    || (perfil.trial_expira_em && new Date(perfil.trial_expira_em) > new Date());
+
   return (
-    <AuthContext.Provider value={{ user, session, loading: loading || (user && syncing), signInWithGoogle, signInWithPassword, signUp, logout }}>
+    <AuthContext.Provider value={{ user, session, perfil, acessoLiberado, loading: loading || (user && syncing), signInWithGoogle, signInWithPassword, signUp, logout }}>
       {children}
     </AuthContext.Provider>
   );
