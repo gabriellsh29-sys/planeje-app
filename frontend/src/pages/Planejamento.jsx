@@ -1,14 +1,15 @@
 import React, { useState, useMemo } from 'react';
+import { AppIcon, GOAL_ICONS } from '../lib/icons';
 
 const ORCAMENTO_KEY = 'planeje_orcamentos';
 const METAS_KEY     = 'planeje_metas';
 const DIVIDA_KEY    = 'financeiro_dividas';
+const CATEGORIAS_KEY = 'planeje_categorias_orcamento';
 
 const fmt = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
 const fmtDate = (d) => { try { return new Date(d + 'T00:00:00').toLocaleDateString('pt-BR'); } catch { return d; } };
 
 const CORES = ['#22c55e','#3b82f6','#f59e0b','#a855f7','#06b6d4','#f43f5e','#c9a84c','#34d399'];
-const EMOJIS_META = ['🎯','✈️','🏠','🚗','📱','💍','🎓','💰','🏥','🌴','🎮','📚'];
 
 function load(key, fb) { try { return JSON.parse(localStorage.getItem(key) || 'null') ?? fb; } catch { return fb; } }
 function save(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
@@ -66,24 +67,35 @@ function Orcamento({ month, year }) {
   const [editId, setEditId]         = useState(null);
   const [formCateg, setFormCateg]   = useState('');
   const [formLimite, setFormLimite] = useState('');
+  const [novaCategoria, setNovaCategoria] = useState('');
+  const [categoriasExtra, setCategoriasExtra] = useState(() => load(CATEGORIAS_KEY, []));
 
   const categoriasDividas = useMemo(getCategoriasDividas, []);
 
   const salvar = () => {
-    if (!formCateg || !formLimite) return;
+    let categoria = formCateg;
+    if (categoria === '__nova__') {
+      categoria = novaCategoria.trim();
+      if (!categoria) return;
+      if (!categoriasExtra.includes(categoria)) {
+        const updatedCats = [...categoriasExtra, categoria];
+        setCategoriasExtra(updatedCats); save(CATEGORIAS_KEY, updatedCats);
+      }
+    }
+    if (!categoria || !formLimite) return;
     const limite = parseFloat(formLimite.replace(',', '.')) || 0;
     if (!limite) return;
-    const item = { id: editId || Date.now().toString(), categoria: formCateg, limite };
+    const item = { id: editId || Date.now().toString(), categoria, limite };
     const updated = editId
       ? orcamentos.map(o => o.id === editId ? item : o)
       : [...orcamentos, item];
     setOrcamentos(updated); save(ORCAMENTO_KEY, updated);
-    setShowForm(false); setEditId(null); setFormCateg(''); setFormLimite('');
+    setShowForm(false); setEditId(null); setFormCateg(''); setFormLimite(''); setNovaCategoria('');
   };
 
   const remover = (id) => { const u = orcamentos.filter(o => o.id !== id); setOrcamentos(u); save(ORCAMENTO_KEY, u); };
 
-  const openEdit = (o) => { setFormCateg(o.categoria); setFormLimite(o.limite.toFixed(2)); setEditId(o.id); setShowForm(true); };
+  const openEdit = (o) => { setFormCateg(o.categoria); setFormLimite(o.limite.toFixed(2)); setNovaCategoria(''); setEditId(o.id); setShowForm(true); };
 
   const totalLimite = orcamentos.reduce((s, o) => s + o.limite, 0);
   const totalGasto  = orcamentos.reduce((s, o) => s + getGastoCategoria(o.categoria, month, year), 0);
@@ -117,7 +129,7 @@ function Orcamento({ month, year }) {
       )}
 
       {/* Botão novo */}
-      <button onClick={() => { setShowForm(true); setEditId(null); setFormCateg(''); setFormLimite(''); }}
+      <button onClick={() => { setShowForm(true); setEditId(null); setFormCateg(''); setFormLimite(''); setNovaCategoria(''); }}
         className="w-full py-3 rounded-2xl text-sm font-semibold flex items-center justify-center gap-2 transition-all"
         style={{ background: 'rgba(201,168,76,0.1)', color: '#c9a84c', border: '1px solid rgba(201,168,76,0.2)' }}>
         <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd"/></svg>
@@ -190,11 +202,19 @@ function Orcamento({ month, year }) {
                 <select value={formCateg} onChange={e => setFormCateg(e.target.value)}
                   className="input-premium [color-scheme:dark]">
                   <option value="">Selecione...</option>
-                  {[...new Set([...categoriasDividas, 'Cartão de Crédito','Empréstimo','Financiamento','Alimentação','Transporte','Saúde','Lazer','Outros'])].map(c => (
+                  {[...new Set([...categoriasDividas, ...categoriasExtra, 'Cartão de Crédito','Empréstimo','Financiamento','Alimentação','Transporte','Saúde','Lazer','Outros'])].map(c => (
                     <option key={c} value={c}>{c}</option>
                   ))}
+                  <option value="__nova__">+ Nova categoria...</option>
                 </select>
               </div>
+              {formCateg === '__nova__' && (
+                <div>
+                  <label className="text-white/50 text-xs block mb-1.5">Nome da nova categoria</label>
+                  <input value={novaCategoria} onChange={e => setNovaCategoria(e.target.value)}
+                    placeholder="Ex: Educação dos filhos" className="input-premium" />
+                </div>
+              )}
               <div>
                 <label className="text-white/50 text-xs block mb-1.5">Limite mensal (R$)</label>
                 <input type="number" step="0.01" value={formLimite} onChange={e => setFormLimite(e.target.value)}
@@ -202,7 +222,7 @@ function Orcamento({ month, year }) {
               </div>
               <div className="flex gap-3 pb-2">
                 <button onClick={() => setShowForm(false)} className="btn-ghost flex-1">Cancelar</button>
-                <button onClick={salvar} disabled={!formCateg || !formLimite}
+                <button onClick={salvar} disabled={!formCateg || !formLimite || (formCateg === '__nova__' && !novaCategoria.trim())}
                   className="btn-gold flex-1 text-center disabled:opacity-40">Salvar</button>
               </div>
             </div>
@@ -220,7 +240,7 @@ function Metas() {
   const [editId,   setEditId]   = useState(null);
   const [showDep,  setShowDep]  = useState(null);
   const [depValor, setDepValor] = useState('');
-  const [form, setForm] = useState({ nome: '', valorAlvo: '', prazo: '', emoji: '🎯', cor: CORES[0] });
+  const [form, setForm] = useState({ nome: '', valorAlvo: '', prazo: '', emoji: 'target', cor: CORES[0] });
 
   const upd = (p) => setForm(f => ({ ...f, ...p }));
 
@@ -236,13 +256,13 @@ function Metas() {
     };
     const updated = editId ? metas.map(m => m.id === editId ? item : m) : [...metas, item];
     setMetas(updated); save(METAS_KEY, updated);
-    setShowForm(false); setEditId(null); setForm({ nome: '', valorAlvo: '', prazo: '', emoji: '🎯', cor: CORES[0] });
+    setShowForm(false); setEditId(null); setForm({ nome: '', valorAlvo: '', prazo: '', emoji: 'target', cor: CORES[0] });
   };
 
   const remover = (id) => { const u = metas.filter(m => m.id !== id); setMetas(u); save(METAS_KEY, u); };
 
   const openEdit = (m) => {
-    setForm({ nome: m.nome, valorAlvo: m.valorAlvo.toFixed(2), prazo: m.prazo || '', emoji: m.emoji || '🎯', cor: m.cor || CORES[0] });
+    setForm({ nome: m.nome, valorAlvo: m.valorAlvo.toFixed(2), prazo: m.prazo || '', emoji: m.emoji || 'target', cor: m.cor || CORES[0] });
     setEditId(m.id); setShowForm(true);
   };
 
@@ -261,7 +281,7 @@ function Metas() {
 
   return (
     <div className="p-4 md:p-6 pb-8 space-y-4">
-      <button onClick={() => { setShowForm(true); setEditId(null); setForm({ nome: '', valorAlvo: '', prazo: '', emoji: '🎯', cor: CORES[0] }); }}
+      <button onClick={() => { setShowForm(true); setEditId(null); setForm({ nome: '', valorAlvo: '', prazo: '', emoji: 'target', cor: CORES[0] }); }}
         className="w-full py-3 rounded-2xl text-sm font-semibold flex items-center justify-center gap-2 transition-all"
         style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.2)' }}>
         <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd"/></svg>
@@ -285,7 +305,7 @@ function Metas() {
                 <div className="flex items-start gap-3 mb-3">
                   <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-xl flex-shrink-0"
                     style={{ background: m.cor + '18', border: `1px solid ${m.cor}33` }}>
-                    {m.emoji}
+                    <AppIcon id={m.emoji} className="w-5 h-5" style={{ color: m.cor }} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
@@ -375,13 +395,15 @@ function Metas() {
               <div className="flex items-center gap-3">
                 <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0"
                   style={{ background: form.cor + '18', border: `1px solid ${form.cor}33` }}>
-                  {form.emoji}
+                  <AppIcon id={form.emoji} className="w-6 h-6" style={{ color: form.cor }} />
                 </div>
                 <div className="flex-1">
                   <div className="flex flex-wrap gap-1.5 mb-2">
-                    {EMOJIS_META.map(e => (
-                      <button key={e} onClick={() => upd({ emoji: e })}
-                        className={`w-8 h-8 rounded-lg flex items-center justify-center text-base transition ${form.emoji === e ? 'bg-white/15 scale-110' : 'hover:bg-white/10'}`}>{e}</button>
+                    {GOAL_ICONS.map(iconId => (
+                      <button key={iconId} onClick={() => upd({ emoji: iconId })}
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center transition ${form.emoji === iconId ? 'bg-white/15 scale-110' : 'hover:bg-white/10'}`}>
+                        <AppIcon id={iconId} className="w-4 h-4" />
+                      </button>
                     ))}
                   </div>
                   <div className="flex gap-1.5">

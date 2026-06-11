@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { AppIcon, LIST_ICONS } from '../lib/icons';
 
 const TAREFAS_KEY   = 'planeje_tarefas';
 const GRUPOS_KEY    = 'planeje_grupos';
@@ -17,27 +18,14 @@ function loadTarefas() {
 
 function loadGrupos() {
   const salvos = load(GRUPOS_KEY, null);
-  if (salvos !== null) return salvos.map(g => ({ emoji: '📋', cor: '#22c55e', secoes: [], ...g }));
+  if (salvos !== null) return salvos.map(g => ({ emoji: 'clipboard-list', cor: '#22c55e', secoes: [], ...g }));
   return [];
 }
 
-const ETIQUETAS_PADRAO = [
-  { id: 'pendente',   nome: 'Pendente',   cor: '#22c55e' },
-  { id: 'comprar',    nome: 'Comprar',    cor: '#f59e0b' },
-  { id: 'emprestado', nome: 'Emprestado', cor: '#ef4444' },
-  { id: 'ok',         nome: 'OK',         cor: '#22c55e' },
-];
+const ETIQUETAS_PADRAO = [];
 
 const CORES_LISTA = ['#6366f1','#a855f7','#22c55e','#f59e0b','#ef4444','#06b6d4','#f43f5e','#3b82f6','#84cc16','#f97316'];
 const COR_OPTIONS = ['#6366f1','#a855f7','#22c55e','#f59e0b','#ef4444','#06b6d4','#f43f5e','#3b82f6'];
-
-const EMOJIS = {
-  'Geral':    ['📋','📝','✅','🎯','💡','⭐','🔔','📌','🗂️','📁','🚀','💼','📊','🏠','🗒️','📎','🔖','🧩','🎪','🏆'],
-  'Finanças': ['💰','💵','💳','🏦','📈','📉','💸','🪙','💲','🤑','🏧','💹'],
-  'Saúde':    ['🏋️','🧘','🥗','💊','🩺','🧬','❤️','🏃','🚴','🥤'],
-  'Estudo':   ['🎓','📚','✏️','🔬','🧪','🖥️','💻','📐','🧮','📖'],
-  'Vida':     ['✈️','🛒','🍕','🎮','🎵','🎨','🌱','🐶','👨‍👩‍👧','🏡'],
-};
 
 export default function Anotacoes() {
   const [tarefas,       setTarefas]       = useState(loadTarefas);
@@ -212,7 +200,7 @@ export default function Anotacoes() {
               style={active ? { background: 'rgba(34,197,94,0.12)', borderLeft: `2px solid ${g.cor}` } : { borderLeft: '2px solid transparent' }}
               onClick={() => setGrupoAtivo(g.id)}>
               <div className="flex items-center gap-2 min-w-0">
-                <span className="text-sm flex-shrink-0" style={{ color: g.cor }}>{g.emoji}</span>
+                <span className="flex-shrink-0" style={{ color: g.cor }}><AppIcon id={g.emoji} className="w-4 h-4" /></span>
                 <span className={`text-sm truncate ${active ? 'text-text-1 font-semibold' : 'text-text-2'}`}>{g.nome}</span>
               </div>
               <div className="flex items-center gap-1 flex-shrink-0">
@@ -272,7 +260,7 @@ export default function Anotacoes() {
                 style={active
                   ? { background: g.cor + '22', color: g.cor, border: `1px solid ${g.cor}44` }
                   : { background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                <span>{g.emoji}</span>
+                <AppIcon id={g.emoji} className="w-4 h-4" />
                 <span>{g.nome}</span>
                 {count > 0 && <span className="font-bold" style={{ color: active ? g.cor : 'rgba(255,255,255,0.4)' }}>{count}</span>}
               </button>
@@ -291,7 +279,7 @@ export default function Anotacoes() {
 
         {grupos.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-text-3 gap-4 p-6">
-            <span className="text-5xl opacity-30">📋</span>
+            <AppIcon id="clipboard-list" className="w-12 h-12 opacity-30" />
             <p className="text-sm font-medium text-text-2">Nenhuma lista criada ainda</p>
             <button onClick={() => setListModal({ modo: 'add' })}
               className="btn-gold px-5 py-2.5 rounded-xl text-sm font-semibold">
@@ -303,7 +291,7 @@ export default function Anotacoes() {
             {/* Header */}
             <div className="px-4 md:px-6 py-3 flex items-center gap-3 flex-shrink-0"
               style={{ borderBottom: '1px solid rgba(34,197,94,0.12)' }}>
-              <span className="text-xl">{grupoObj?.emoji}</span>
+              <AppIcon id={grupoObj?.emoji} className="w-5 h-5" style={{ color: grupoObj?.cor }} />
               <h2 className="text-text-1 font-bold text-base md:text-lg">{grupoObj?.nome}</h2>
               <span className="text-text-3 text-sm">{pendentes.length}</span>
               <div className="flex-1" />
@@ -440,9 +428,9 @@ export default function Anotacoes() {
 // ── Modal Nova/Editar Lista ──────────────────────────────────────
 function ListModal({ modo, grupoInicial, onSave, onClose }) {
   const [nome,      setNome]      = useState(grupoInicial?.nome || '');
-  const [emoji,     setEmoji]     = useState(grupoInicial?.emoji || '📋');
+  const [emoji,     setEmoji]     = useState(grupoInicial?.emoji || 'clipboard-list');
   const [cor,       setCor]       = useState(grupoInicial?.cor  || CORES_LISTA[0]);
-  const [emojiTab,  setEmojiTab]  = useState(Object.keys(EMOJIS)[0]);
+  const [emojiTab,  setEmojiTab]  = useState(Object.keys(LIST_ICONS)[0]);
   const [showEmoji, setShowEmoji] = useState(false);
 
   const submit = () => {
@@ -468,26 +456,26 @@ function ListModal({ modo, grupoInicial, onSave, onClose }) {
           <div className="flex items-center gap-2">
             <div className="relative">
               <button onClick={() => setShowEmoji(v => !v)}
-                className="w-10 h-10 rounded-xl flex items-center justify-center text-xl transition hover:bg-white/5"
+                className="w-10 h-10 rounded-xl flex items-center justify-center transition hover:bg-white/5"
                 style={{ background: cor + '22', border: `1px solid ${cor}44` }}>
-                {emoji}
+                <AppIcon id={emoji} className="w-5 h-5" style={{ color: cor }} />
               </button>
               {showEmoji && (
                 <div className="absolute top-12 left-0 z-10 rounded-2xl overflow-hidden w-72"
                   style={{ background: '#0f172a', border: '1px solid rgba(34,197,94,0.25)', boxShadow: '0 16px 48px rgba(0,0,0,0.6)' }}>
                   <div className="flex border-b overflow-x-auto" style={{ borderColor: 'rgba(34,197,94,0.12)' }}>
-                    {Object.keys(EMOJIS).map(cat => (
+                    {Object.keys(LIST_ICONS).map(cat => (
                       <button key={cat} onClick={() => setEmojiTab(cat)}
                         className={`px-3 py-2 text-xs whitespace-nowrap transition flex-shrink-0 ${emojiTab === cat ? 'text-accent border-b-2 border-accent' : 'text-text-3 hover:text-text-2'}`}>
                         {cat}
                       </button>
                     ))}
                   </div>
-                  <div className="grid grid-cols-10 gap-0 p-2 max-h-36 overflow-y-auto">
-                    {EMOJIS[emojiTab].map(em => (
-                      <button key={em} onClick={() => { setEmoji(em); setShowEmoji(false); }}
-                        className="w-7 h-7 flex items-center justify-center text-base rounded hover:bg-white/10 transition">
-                        {em}
+                  <div className="grid grid-cols-8 gap-0 p-2 max-h-36 overflow-y-auto">
+                    {LIST_ICONS[emojiTab].map(iconId => (
+                      <button key={iconId} onClick={() => { setEmoji(iconId); setShowEmoji(false); }}
+                        className="w-8 h-8 flex items-center justify-center rounded hover:bg-white/10 transition">
+                        <AppIcon id={iconId} className="w-4 h-4" />
                       </button>
                     ))}
                   </div>
@@ -514,7 +502,7 @@ function ListModal({ modo, grupoInicial, onSave, onClose }) {
 
           <div className="rounded-xl p-3 flex items-center gap-2"
             style={{ background: cor + '11', border: `1px solid ${cor}33` }}>
-            <span className="text-lg">{emoji}</span>
+            <AppIcon id={emoji} className="w-5 h-5" style={{ color: cor }} />
             <span className="text-sm font-semibold" style={{ color: cor }}>{nome || 'Nome da lista'}</span>
           </div>
         </div>
