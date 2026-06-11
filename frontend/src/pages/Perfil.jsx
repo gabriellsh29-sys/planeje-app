@@ -13,11 +13,12 @@ const TABS = [
 ];
 
 export default function Perfil() {
+  const { logout } = useAuth();
   const [tab, setTab] = useState('dados');
 
   return (
     <div className="max-w-xl mx-auto p-4 md:p-6 animate-fade-in">
-      <h1 className="text-text-1 font-bold text-lg mb-4">Perfil</h1>
+      <h1 className="hidden md:block text-text-1 font-bold text-lg mb-4">Perfil</h1>
 
       <div className="flex gap-1 mb-5 rounded-xl p-1" style={{ background: 'rgba(255,255,255,0.04)' }}>
         {TABS.map(t => (
@@ -34,6 +35,12 @@ export default function Perfil() {
       {tab === 'dados' && <DadosTab />}
       {tab === 'planos' && <PlanosTab />}
       {tab === 'senha' && <SenhaTab />}
+
+      <button onClick={logout}
+        className="md:hidden w-full mt-6 py-2.5 rounded-xl text-sm font-medium transition-all"
+        style={{ color: '#f87171', border: '1px solid rgba(248,113,113,0.25)', background: 'rgba(248,113,113,0.06)' }}>
+        Sair da conta
+      </button>
     </div>
   );
 }
