@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Planeje — Suas finanças, seu futuro</title>
+<meta name="description" content="O Planeje reúne suas dívidas, cartões, receitas, orçamento e metas num único app. Comece grátis por 7 dias, sem cartão." />
+<link rel="icon" type="image/png" href="/img/logo/icon-192x192.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+  :root{
+    --navy-900:#0F172A; --navy-850:#131C32; --navy-800:#1E293B; --navy-950:#020617;
+    --green-500:#22C55E; --green-600:#16A34A;
+    --grad-brand:linear-gradient(135deg,#22C55E 0%,#16A34A 100%);
+    --grad-balance:linear-gradient(135deg,rgba(34,197,94,0.10) 0%,rgba(15,23,42,0) 70%);
+    --tint-line:rgba(34,197,94,0.18); --tint-fill:rgba(34,197,94,0.06); --tint-fill-2:rgba(34,197,94,0.12);
+    --white:#fff; --white-70:rgba(255,255,255,.70); --white-50:rgba(255,255,255,.50); --white-35:rgba(255,255,255,.35);
+    --positive:#22C55E; --negative:#EF4444;
+    --cat-indigo:#6366F1; --cat-purple:#A855F7; --cat-amber:#F59E0B; --cat-red:#EF4444; --cat-cyan:#06B6D4;
+    --font-display:'Sora',system-ui,sans-serif; --font-sans:'Plus Jakarta Sans',system-ui,sans-serif; --font-num:'Space Grotesk',monospace;
+    --shadow-xl:0 16px 32px rgba(0,0,0,.45),0 36px 72px rgba(0,0,0,.55);
+    --shadow-brand:0 8px 24px rgba(34,197,94,.35); --shadow-brand-lg:0 12px 40px rgba(34,197,94,.45);
+  }
+  *,*::before,*::after{ box-sizing:border-box; }
+  body{ margin:0; background:var(--navy-900); color:var(--white-70); font-family:var(--font-sans); -webkit-font-smoothing:antialiased; }
+  h1,h2,h3{ margin:0; color:#fff; font-family:var(--font-display); letter-spacing:-0.02em; }
+  p{ margin:0; }
+  a{ text-decoration:none; color:inherit; }
+  .num{ font-family:var(--font-num); font-feature-settings:"tnum" on; }
+
+  /* Buttons */
+  .btn{ display:inline-flex; align-items:center; justify-content:center; gap:.5em; font-family:var(--font-sans); font-weight:600; border-radius:14px; cursor:pointer; border:1px solid transparent; white-space:nowrap; transition:filter .12s,box-shadow .12s,background .12s,border-color .12s; }
+  .btn-sm{ height:36px; padding:0 .9rem; font-size:14px; }
+  .btn-md{ height:44px; padding:0 1.25rem; font-size:16px; }
+  .btn-lg{ height:52px; padding:0 1.75rem; font-size:18px; }
+  .btn-primary{ background:var(--grad-brand); color:#04140A; box-shadow:var(--shadow-brand); }
+  .btn-primary:hover{ filter:brightness(1.06); box-shadow:var(--shadow-brand-lg); }
+  .btn-secondary{ background:transparent; color:#fff; border-color:var(--tint-line); }
+  .btn-secondary:hover{ background:var(--tint-fill-2); border-color:var(--green-500); }
+  .btn-full{ width:100%; }
+
+  .wrap{ max-width:1140px; margin:0 auto; }
+  .lp-ico svg{ width:22px; height:22px; }
+  @keyframes float{ 0%,100%{ transform:translateY(0);} 50%{ transform:translateY(-10px);} }
+
+  header.nav{ position:sticky; top:0; z-index:50; display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 32px; background:rgba(15,23,42,.82); backdrop-filter:blur(12px); border-bottom:1px solid var(--tint-line); }
+  .brand{ display:flex; align-items:center; gap:10px; }
+  .brand .sq{ width:36px; height:36px; border-radius:11px; background:var(--grad-brand); display:inline-flex; align-items:center; justify-content:center; }
+  .brand .nm{ font-family:var(--font-display); font-weight:800; font-size:20px; color:#fff; }
+  .navlinks{ display:flex; align-items:center; gap:28px; font-size:14px; font-weight:600; color:var(--white-70); }
+  .navright{ display:flex; align-items:center; gap:12px; }
+
+  section{ padding-left:32px; padding-right:32px; }
+  .hero{ position:relative; overflow:hidden; padding:72px 32px 80px; }
+  .hero-glow{ position:absolute; top:-180px; right:-120px; width:520px; height:520px; border-radius:50%; background:radial-gradient(circle,rgba(34,197,94,.18),transparent 70%); pointer-events:none; }
+  .hero-grid{ position:relative; display:grid; grid-template-columns:1.05fr .95fr; gap:56px; align-items:center; }
+  .pill{ display:inline-flex; align-items:center; gap:8px; padding:6px 12px; border-radius:999px; background:var(--tint-fill); border:1px solid var(--tint-line); color:var(--green-500); font-size:13px; font-weight:600; }
+  .pill .dot{ width:7px; height:7px; border-radius:50%; background:var(--green-500); box-shadow:0 0 8px var(--green-500); }
+  h1.head{ margin:20px 0 0; font-weight:800; font-size:54px; line-height:1.05; letter-spacing:-0.03em; color:#fff; text-wrap:balance; }
+  .grad-txt{ background:var(--grad-brand); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+  .lead{ margin:22px 0 0; font-size:19px; line-height:1.6; color:var(--white-70); max-width:38ch; }
+  .cta-row{ display:flex; flex-wrap:wrap; gap:14px; margin-top:32px; }
+  .fineprint{ margin:16px 0 0; font-size:13px; color:var(--white-50); }
+
+  .preview{ position:relative; background:var(--navy-850); border:1px solid rgba(34,197,94,.25); border-radius:24px; padding:22px; box-shadow:var(--shadow-xl); animation:float 6s ease-in-out infinite; }
+  .preview .ov{ position:absolute; inset:0; border-radius:24px; background:var(--grad-balance); pointer-events:none; }
+  .pv{ position:relative; }
+  .cap{ font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--white-50); }
+  .bal{ font-family:var(--font-num); font-weight:700; font-size:40px; color:#fff; margin-top:4px; }
+  .bal small{ font-size:24px; opacity:.85; }
+  .pv-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:20px; }
+  .pv-tile{ background:var(--tint-fill); border:1px solid var(--tint-line); border-radius:14px; padding:14px; }
+  .pv-tile .v{ font-family:var(--font-num); font-weight:700; font-size:18px; margin-top:6px; }
+  .meta-card{ margin-top:16px; background:var(--tint-fill); border:1px solid var(--tint-line); border-radius:14px; padding:14px; }
+  .track{ height:10px; border-radius:999px; background:var(--navy-950); border:1px solid rgba(255,255,255,.08); margin-top:8px; overflow:hidden; }
+  .track > i{ display:block; height:100%; width:36%; background:var(--grad-brand); border-radius:999px; }
+
+  .value-strip{ padding:8px 32px 64px; }
+  .value-card{ background:var(--tint-fill); border:1px solid var(--tint-line); border-radius:20px; padding:36px 40px; }
+  .value-card p{ font-family:var(--font-display); font-weight:600; font-size:24px; line-height:1.4; color:#fff; text-wrap:balance; }
+
+  .sec-head{ text-align:center; margin-bottom:44px; }
+  .eyebrow{ font-size:13px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--green-500); }
+  .sec-head h2{ margin:10px 0 0; font-weight:700; font-size:38px; }
+  .feat{ display:grid; grid-template-columns:repeat(3,1fr); gap:18px; padding-bottom:72px; }
+  .fcard{ background:var(--tint-fill); border:1px solid var(--tint-line); border-radius:18px; padding:26px; }
+  .fcard .ic{ display:inline-flex; width:46px; height:46px; align-items:center; justify-content:center; border-radius:12px; }
+  .fcard h3{ margin:16px 0 6px; font-weight:600; font-size:18px; color:#fff; }
+  .fcard p{ font-size:14px; line-height:1.6; color:var(--white-50); }
+
+  .plans{ display:grid; grid-template-columns:1fr 1fr; gap:18px; align-items:stretch; max-width:1000px; margin:0 auto; padding-bottom:72px; }
+  .plan{ background:var(--tint-fill); border:1px solid var(--tint-line); border-radius:20px; padding:30px; }
+  .plan.pop{ position:relative; background:var(--navy-850); border:1.5px solid var(--green-500); box-shadow:var(--shadow-brand); overflow:hidden; }
+  .plan .nm{ font-family:var(--font-display); font-weight:600; font-size:18px; color:#fff; }
+  .plan .sub{ font-size:14px; color:var(--white-50); margin-top:4px; }
+  .price{ display:flex; align-items:baseline; gap:6px; margin:22px 0; }
+  .price .big{ font-family:var(--font-num); font-weight:700; font-size:42px; color:#fff; }
+  .price .per{ font-size:15px; color:var(--white-50); }
+  .tag-pop{ padding:5px 10px; border-radius:999px; background:var(--grad-brand); color:#04140A; font-size:11px; font-weight:700; letter-spacing:.04em; }
+
+  .guarantee{ display:flex; align-items:center; gap:20px; flex-wrap:wrap; justify-content:center; text-align:center; background:var(--tint-fill); border:1px solid var(--tint-line); border-radius:20px; padding:32px; margin-bottom:72px; }
+  .guarantee .ic{ display:inline-flex; width:48px; height:48px; align-items:center; justify-content:center; border-radius:14px; background:var(--tint-fill-2); color:var(--green-500); }
+  .guarantee p{ font-family:var(--font-display); font-weight:600; font-size:19px; color:#fff; max-width:60ch; }
+
+  .final{ position:relative; overflow:hidden; padding:80px 32px 96px; text-align:center; }
+  .final-glow{ position:absolute; bottom:-200px; left:50%; transform:translateX(-50%); width:680px; height:480px; border-radius:50%; background:radial-gradient(circle,rgba(34,197,94,.16),transparent 70%); pointer-events:none; }
+  .final h2{ font-weight:800; font-size:42px; text-wrap:balance; }
+  .final p{ margin:18px 0 0; font-size:17px; color:var(--white-70); }
+
+  footer{ border-top:1px solid var(--tint-line); padding:32px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+  footer .fp{ font-size:12px; color:var(--white-35); }
+  footer .fp a{ color:var(--white-50); }
+
+  @media (max-width:900px){
+    .hero-grid,.feat,.plans{ grid-template-columns:1fr !important; }
+    .hide-sm{ display:none !important; }
+    h1.head{ font-size:40px; } .sec-head h2,.final h2{ font-size:30px; }
+  }
+</style>
+</head>
+<body>
+
+  <header class="nav">
+    <a class="brand" href="/lp.html">
+      <span class="sq">
+        <svg width="22" height="22" viewBox="0 0 40 40" fill="none" aria-hidden="true"><rect x="11" y="24.5" width="4.6" height="8" rx="1.8" fill="#fff"/><rect x="18.2" y="21" width="4.6" height="11.5" rx="1.8" fill="#fff"/><rect x="25.4" y="17" width="4.6" height="15.5" rx="1.8" fill="#fff"/><path d="M9.5 24 C 15 23, 16.5 17.5, 21.5 15.5 C 25.5 14, 28 11.5, 30.5 9" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M24.7 9.2 L31 8.4 L30.4 14.7" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+      <span class="nm">planeje</span>
+    </a>
+    <nav class="navlinks hide-sm">
+      <a href="#recursos">Recursos</a>
+      <a href="#planos">Planos</a>
+      <a href="#duvidas">Dúvidas</a>
+    </nav>
+    <div class="navright">
+      <a href="/" style="font-size:14px;font-weight:600;color:#fff;">Entrar</a>
+      <a class="btn btn-primary btn-sm" href="/?cadastro=1">Comece grátis</a>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-glow"></div>
+    <div class="wrap hero-grid">
+      <div>
+        <span class="pill"><span class="dot"></span>7 dias grátis · sem cartão</span>
+        <h1 class="head">Chega de não saber<br>pra onde foi <span class="grad-txt">o dinheiro.</span></h1>
+        <p class="lead">O Planeje reúne suas dívidas, cartões, receitas, orçamento e metas num único app — pra você finalmente saber onde está e pra onde quer chegar.</p>
+        <div class="cta-row">
+          <a class="btn btn-primary btn-lg" href="/?cadastro=1">Comece seu teste grátis</a>
+          <a class="btn btn-secondary btn-lg" href="#planos">Ver os planos</a>
+        </div>
+        <p class="fineprint">Sem cartão. Sem cobrança agora. Cancela quando quiser.</p>
+      </div>
+      <div style="position:relative;">
+        <div class="preview">
+          <div class="ov"></div>
+          <div class="pv">
+            <div class="cap">Saldo em conta</div>
+            <div class="bal">R$ 4.820<small>,90</small></div>
+            <div style="font-size:12px;color:var(--white-35);margin-top:2px;">Atualizado agora</div>
+            <div class="pv-grid">
+              <div class="pv-tile"><div class="cap">Receitas</div><div class="v" style="color:var(--positive);">R$ 7.200</div></div>
+              <div class="pv-tile"><div class="cap">Despesas</div><div class="v" style="color:var(--negative);">R$ 2.380</div></div>
+            </div>
+            <div class="meta-card">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;">
+                <span style="font-size:13px;font-weight:600;color:var(--white-70);">Reserva de emergência</span>
+                <span class="num" style="font-size:13px;font-weight:700;color:var(--green-500);">36%</span>
+              </div>
+              <div class="track"><i></i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="value-strip">
+    <div class="wrap value-card">
+      <p>Não é falta de disciplina. <span style="color:var(--white-50);">É falta de visão.</span> Quando suas finanças estão espalhadas entre planilhas, bloquinhos e apps diferentes, você nunca tem o quadro completo.</p>
+    </div>
+  </section>
+
+  <section id="recursos" class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Tudo em um só lugar</div>
+      <h2>Sua vida financeira organizada</h2>
+    </div>
+    <div class="feat">
+      <div class="fcard"><span class="ic lp-ico" style="background:rgba(99,102,241,.14);color:var(--cat-indigo);"><i data-lucide="layout-dashboard"></i></span><h3>Dashboard completo</h3><p>Saldo, receitas, despesas e o que está por vir — tudo numa tela só.</p></div>
+      <div class="fcard"><span class="ic lp-ico" style="background:rgba(239,68,68,.14);color:var(--cat-red);"><i data-lucide="credit-card"></i></span><h3>Dívidas e cartões</h3><p>Acompanhe faturas e dívidas sem sustos no fim do mês.</p></div>
+      <div class="fcard"><span class="ic lp-ico" style="background:rgba(245,158,11,.14);color:var(--cat-amber);"><i data-lucide="wallet"></i></span><h3>Orçamento por categoria</h3><p>Categorias personalizáveis pra cada real ter um lugar.</p></div>
+      <div class="fcard"><span class="ic lp-ico" style="background:rgba(34,197,94,.14);color:var(--positive);"><i data-lucide="target"></i></span><h3>Metas de poupança</h3><p>Defina objetivos e veja o progresso visual a cada depósito.</p></div>
+      <div class="fcard"><span class="ic lp-ico" style="background:rgba(6,182,212,.14);color:var(--cat-cyan);"><i data-lucide="pencil"></i></span><h3>Anotações e tarefas</h3><p>Listas e lembretes financeiros organizados por etiquetas.</p></div>
+      <div class="fcard"><span class="ic lp-ico" style="background:rgba(168,85,247,.14);color:var(--cat-purple);"><i data-lucide="smartphone"></i></span><h3>Celular e computador</h3><p>Mobile-first, com acesso completo também no desktop.</p></div>
+    </div>
+  </section>
+
+  <section id="planos" class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Planos</div>
+      <h2>Comece grátis. Continue por menos de um café.</h2>
+    </div>
+    <div class="plans">
+      <div class="plan">
+        <div class="nm">Mensal</div>
+        <div class="sub">Flexibilidade total</div>
+        <div class="price"><span class="big">R$ 9,90</span><span class="per">/mês</span></div>
+        <a class="btn btn-secondary btn-lg btn-full" href="/?cadastro=1&plano=mensal">Assinar mensal</a>
+      </div>
+      <div class="plan pop">
+        <div class="ov" style="position:absolute;inset:0;border-radius:20px;background:var(--grad-balance);pointer-events:none;"></div>
+        <div style="position:relative;">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div class="nm">Anual</div>
+            <span class="tag-pop">MAIS POPULAR</span>
+          </div>
+          <div class="sub">Economize 25%</div>
+          <div class="price" style="margin-bottom:4px;"><span class="big">R$ 89,90</span><span class="per">/ano</span></div>
+          <div style="font-size:13px;color:var(--green-500);font-weight:600;margin-bottom:22px;">≈ R$ 7,49/mês</div>
+          <a class="btn btn-primary btn-lg btn-full" href="/?cadastro=1&plano=anual">Começar teste grátis</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap">
+    <div class="guarantee">
+      <span class="ic lp-ico"><i data-lucide="shield-check"></i></span>
+      <p>Sem risco. Sem pegadinha. 7 dias pra testar o Planeje completo — sem informar cartão, sem ser cobrado. Você só paga se decidir ficar.</p>
+    </div>
+  </section>
+
+  <section id="duvidas" class="final">
+    <div class="final-glow"></div>
+    <div style="position:relative;max-width:680px;margin:0 auto;">
+      <h2>Você trabalha o mês inteiro. Faça o seu dinheiro fazer sentido.</h2>
+      <p>7 dias grátis pra testar tudo, sem compromisso.</p>
+      <div style="display:flex;justify-content:center;margin-top:30px;">
+        <a class="btn btn-primary btn-lg" href="/?cadastro=1">Quero organizar minha vida financeira</a>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="brand">
+      <span class="sq" style="width:30px;height:30px;border-radius:9px;">
+        <svg width="18" height="18" viewBox="0 0 40 40" fill="none" aria-hidden="true"><rect x="11" y="24.5" width="4.6" height="8" rx="1.8" fill="#fff"/><rect x="18.2" y="21" width="4.6" height="11.5" rx="1.8" fill="#fff"/><rect x="25.4" y="17" width="4.6" height="15.5" rx="1.8" fill="#fff"/><path d="M9.5 24 C 15 23, 16.5 17.5, 21.5 15.5 C 25.5 14, 28 11.5, 30.5 9" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M24.7 9.2 L31 8.4 L30.4 14.7" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+      <span class="nm" style="font-size:16px;">planeje</span>
+    </div>
+    <p class="fp">© 2026 Planeje · Suas finanças, seu futuro. · <a href="#privacidade">Política de Privacidade</a></p>
+  </footer>
+
+  <script>
+    if (window.lucide) window.lucide.createIcons();
+  </script>
+</body>
+</html>
