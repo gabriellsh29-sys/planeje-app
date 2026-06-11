@@ -14,7 +14,7 @@ export default function PaywallPage() {
           Para continuar usando, assine um dos nossos planos.
         </p>
         <a
-          href="https://wa.me/5500000000000?text=Quero%20assinar%20o%20Planeje"
+          href="https://wa.me/5562999855052?text=Quero%20assinar%20o%20Planeje"
           target="_blank" rel="noreferrer"
           className="w-full py-3 rounded-xl font-semibold text-[#07090f] transition-all"
           style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)' }}>
