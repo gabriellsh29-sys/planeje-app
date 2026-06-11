@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabaseClient';
+import AvatarCropModal from '../components/AvatarCropModal';
 
 const PRICE_MENSAL = import.meta.env.VITE_STRIPE_PRICE_MENSAL;
 const PRICE_ANUAL = import.meta.env.VITE_STRIPE_PRICE_ANUAL;
@@ -43,6 +44,7 @@ function DadosTab() {
   const [salvando, setSalvando] = useState(false);
   const [enviandoFoto, setEnviandoFoto] = useState(false);
   const [msg, setMsg] = useState('');
+  const [cropSrc, setCropSrc] = useState(null);
 
   const avatarUrl = perfil?.avatar_url;
 
@@ -58,14 +60,24 @@ function DadosTab() {
     setSalvando(false);
   };
 
-  const onFotoChange = async (e) => {
+  const onFotoChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setCropSrc(URL.createObjectURL(file));
+    e.target.value = '';
+  };
+
+  const fecharCrop = () => {
+    if (cropSrc) URL.revokeObjectURL(cropSrc);
+    setCropSrc(null);
+  };
+
+  const confirmarFoto = async (blob) => {
+    fecharCrop();
     setEnviandoFoto(true); setMsg('');
     try {
-      const ext = file.name.split('.').pop();
-      const path = `${user.id}/avatar.${ext}`;
-      const { error: upErr } = await supabase.storage.from('avatars').upload(path, file, { upsert: true });
+      const path = `${user.id}/avatar.jpg`;
+      const { error: upErr } = await supabase.storage.from('avatars').upload(path, blob, { upsert: true, contentType: 'image/jpeg' });
       if (upErr) throw upErr;
       const { data } = supabase.storage.from('avatars').getPublicUrl(path);
       const url = `${data.publicUrl}?t=${Date.now()}`;
@@ -111,6 +123,10 @@ function DadosTab() {
       </button>
 
       {msg && <p className="text-text-2 text-xs text-center">{msg}</p>}
+
+      {cropSrc && (
+        <AvatarCropModal src={cropSrc} onCancel={fecharCrop} onConfirm={confirmarFoto} />
+      )}
     </div>
   );
 }
