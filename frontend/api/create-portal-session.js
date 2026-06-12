@@ -10,6 +10,12 @@ export default async function handler(req, res) {
   const { userId } = req.body || {};
   if (!userId) return res.status(400).json({ error: 'Dados inválidos' });
 
+  const token = (req.headers.authorization || '').replace('Bearer ', '');
+  const { data: authData, error: authError } = await supabase.auth.getUser(token);
+  if (authError || !authData?.user || authData.user.id !== userId) {
+    return res.status(401).json({ error: 'Não autorizado' });
+  }
+
   try {
     const { data: perfil, error } = await supabase.from('perfis').select('stripe_customer_id').eq('id', userId).maybeSingle();
     if (error) throw error;

@@ -139,7 +139,7 @@ function DadosTab() {
 }
 
 function PlanosTab() {
-  const { perfil, user } = useAuth();
+  const { perfil, user, session } = useAuth();
   const [loading, setLoading] = useState(null);
 
   const assinar = async (priceId, plano) => {
@@ -164,7 +164,7 @@ function PlanosTab() {
     try {
       const res = await fetch('/api/create-portal-session', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
         body: JSON.stringify({ userId: user.id }),
       });
       const data = await res.json();
