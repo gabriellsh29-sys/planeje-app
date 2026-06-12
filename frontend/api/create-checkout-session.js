@@ -1,12 +1,22 @@
 import Stripe from 'stripe';
+import { checkOrigin, requireAuthUser, rateLimit } from './_security.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
+const ALLOWED_PRICES = [process.env.VITE_STRIPE_PRICE_MENSAL, process.env.VITE_STRIPE_PRICE_ANUAL];
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Método não permitido' });
+  if (!checkOrigin(req, res)) return;
+  if (!rateLimit(req, res, { key: 'checkout', limit: 10, windowMs: 60_000 })) return;
 
-  const { priceId, userId, email } = req.body || {};
+  const { priceId, userId } = req.body || {};
   if (!priceId || !userId) return res.status(400).json({ error: 'Dados inválidos' });
+  if (!ALLOWED_PRICES.includes(priceId)) return res.status(400).json({ error: 'Plano inválido' });
+
+  const user = await requireAuthUser(req, res);
+  if (!user) return;
+  if (user.id !== userId) return res.status(401).json({ error: 'Não autorizado' });
 
   try {
     const origin = req.headers.origin || `https://${req.headers.host}`;
@@ -14,7 +24,7 @@ export default async function handler(req, res) {
       mode: 'subscription',
       payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
-      customer_email: email,
+      customer_email: user.email,
       client_reference_id: userId,
       success_url: `${origin}/?pagamento=sucesso`,
       cancel_url: `${origin}/?pagamento=cancelado`,

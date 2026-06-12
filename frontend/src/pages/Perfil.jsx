@@ -147,8 +147,8 @@ function PlanosTab() {
     try {
       const res = await fetch('/api/create-checkout-session', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ priceId, userId: user.id, email: user.email }),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ priceId, userId: user.id }),
       });
       const data = await res.json();
       if (data.url) window.location.href = data.url;
