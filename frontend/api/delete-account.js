@@ -12,9 +12,12 @@ export default async function handler(req, res) {
   if (!user) return;
 
   try {
-    // Apaga dados do usuário antes de apagar a conta
+    // Apaga dados financeiros e perfil
     await supabase.from('user_data').delete().eq('user_id', user.id);
     await supabase.from('perfis').delete().eq('id', user.id);
+
+    // Apaga avatar do storage (LGPD — exclusão completa dos dados)
+    await supabase.storage.from('avatars').remove([`${user.id}/avatar.jpg`]);
 
     // Apaga a conta de autenticação via admin
     const { error } = await supabase.auth.admin.deleteUser(user.id);

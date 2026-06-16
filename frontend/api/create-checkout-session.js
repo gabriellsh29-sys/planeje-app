@@ -3,7 +3,7 @@ import { checkOrigin, requireAuthUser, rateLimit } from './_security.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-const ALLOWED_PRICES = [process.env.VITE_STRIPE_PRICE_MENSAL, process.env.VITE_STRIPE_PRICE_ANUAL];
+const ALLOWED_PRICES = [process.env.VITE_STRIPE_PRICE_MENSAL, process.env.VITE_STRIPE_PRICE_ANUAL].filter(Boolean);
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Método não permitido' });
@@ -31,6 +31,7 @@ export default async function handler(req, res) {
     });
     res.status(200).json({ url: session.url });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('[checkout]', err.message);
+    res.status(500).json({ error: 'Erro ao iniciar pagamento. Tente novamente.' });
   }
 }

@@ -16,7 +16,11 @@ function buffer(readable) {
 }
 
 export default async function handler(req, res) {
+  if (req.method !== 'POST') return res.status(405).end();
+
   const sig = req.headers['stripe-signature'];
+  if (!sig) return res.status(400).send('Missing signature');
+
   const buf = await buffer(req);
 
   let event;

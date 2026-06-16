@@ -29,6 +29,7 @@ export default async function handler(req, res) {
     });
     res.status(200).json({ url: session.url });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('[portal]', err.message);
+    res.status(500).json({ error: 'Erro ao abrir portal. Tente novamente.' });
   }
 }

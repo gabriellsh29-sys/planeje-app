@@ -34,6 +34,14 @@ export async function requireAuthUser(req, res) {
 // Não substitui uma solução distribuída, mas reduz abuso básico/bots.
 const hits = new Map();
 
+// Limpa entradas expiradas a cada 5 minutos para evitar memory leak.
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, entry] of hits.entries()) {
+    if (now - entry.start > 300_000) hits.delete(id);
+  }
+}, 300_000);
+
 export function rateLimit(req, res, { limit = 5, windowMs = 60_000, key = 'default' } = {}) {
   const ip = (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown').split(',')[0].trim();
   const id = `${key}:${ip}`;
