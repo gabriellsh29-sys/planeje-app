@@ -9,6 +9,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(true);
   const [perfil, setPerfil] = useState(null);
+  const [isRecovery, setIsRecovery] = useState(false);
   const lastUserId = useRef(null);
 
   useEffect(() => {
@@ -16,8 +17,9 @@ export function AuthProvider({ children }) {
       setSession(data.session);
       setLoading(false);
     });
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, newSession) => {
       setSession(newSession);
+      if (event === 'PASSWORD_RECOVERY') setIsRecovery(true);
     });
     return () => listener.subscription.unsubscribe();
   }, []);
@@ -63,6 +65,20 @@ export function AuthProvider({ children }) {
   const signUp = (email, password, nome) =>
     supabase.auth.signUp({ email, password, options: { data: { full_name: nome } } });
 
+  const resetPassword = (email) =>
+    supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: 'https://www.planejeapp.com.br',
+    });
+
+  const updatePassword = async (password) => {
+    const result = await supabase.auth.updateUser({ password });
+    if (!result.error) {
+      setIsRecovery(false);
+      await supabase.auth.signOut();
+    }
+    return result;
+  };
+
   const logout = () => supabase.auth.signOut();
 
   const user = session?.user || null;
@@ -72,7 +88,7 @@ export function AuthProvider({ children }) {
     || (perfil.trial_expira_em && new Date(perfil.trial_expira_em) > new Date());
 
   return (
-    <AuthContext.Provider value={{ user, session, perfil, acessoLiberado, refreshPerfil, loading: loading || (user && syncing), signInWithGoogle, signInWithPassword, signUp, logout }}>
+    <AuthContext.Provider value={{ user, session, perfil, acessoLiberado, isRecovery, refreshPerfil, loading: loading || (user && syncing), signInWithGoogle, signInWithPassword, signUp, resetPassword, updatePassword, logout }}>
       {children}
     </AuthContext.Provider>
   );
