@@ -183,15 +183,6 @@ export default function LoginPage() {
                 </button>
               </div>
 
-              {mode === 'login' && (
-                <div className="text-right -mt-1">
-                  <button type="button" onClick={() => goToMode('recuperar')}
-                    className="text-accent text-xs font-semibold hover:opacity-80 transition-opacity">
-                    Esqueceu sua senha?
-                  </button>
-                </div>
-              )}
-
               {error && (
                 <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-expense text-xs"
                   style={{ background: 'rgba(244,63,94,0.08)', border: '1px solid rgba(244,63,94,0.2)' }}>
@@ -218,7 +209,17 @@ export default function LoginPage() {
               </button>
             </form>
 
-            <p className="text-center mt-4" style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12 }}>
+            {mode === 'login' && (
+              <p className="text-center" style={{ marginTop: 8 }}>
+                <button type="button" onClick={() => goToMode('recuperar')}
+                  style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12 }}
+                  className="hover:text-accent transition-colors">
+                  Esqueceu sua senha?
+                </button>
+              </p>
+            )}
+
+            <p className="text-center mt-3" style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12 }}>
               {mode === 'login' ? 'Ainda não tem conta?' : 'Já tem conta?'}{' '}
               <button onClick={() => goToMode(mode === 'login' ? 'cadastro' : 'login')}
                 className="text-accent font-semibold">
