@@ -5,7 +5,7 @@ const PRICE_MENSAL = import.meta.env.VITE_STRIPE_PRICE_MENSAL;
 const PRICE_ANUAL = import.meta.env.VITE_STRIPE_PRICE_ANUAL;
 
 export default function PaywallPage() {
-  const { logout, user } = useAuth();
+  const { logout, user, session } = useAuth();
   const [loading, setLoading] = useState(null);
 
   const assinar = async (priceId, plano) => {
@@ -13,8 +13,8 @@ export default function PaywallPage() {
     try {
       const res = await fetch('/api/create-checkout-session', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ priceId, userId: user.id, email: user.email }),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ priceId, userId: user.id }),
       });
       const data = await res.json();
       if (data.url) window.location.href = data.url;

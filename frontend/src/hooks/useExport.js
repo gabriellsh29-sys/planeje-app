@@ -4,6 +4,7 @@ const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','A
 
 function fmt(v) { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0); }
 function fmtDate(d) { try { return new Date(d + 'T00:00:00').toLocaleDateString('pt-BR'); } catch { return d || ''; } }
+function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
 function parcelaValor(d) {
   if (d.recorrencia === 'parcelar' && d.totalParcelas > 1) return d.valor / d.totalParcelas;
@@ -130,19 +131,19 @@ export function exportPDF(month, year) {
 
   const rowsDesp = despesas.map(d => `
     <tr>
-      <td>${d.nome || ''}</td>
-      <td>${d.categoria || 'Outros'}</td>
-      <td style="text-align:right">${fmt(parcelaValor(d))}</td>
-      <td>${fmtDate(d.vencimento)}</td>
+      <td>${esc(d.nome)}</td>
+      <td>${esc(d.categoria || 'Outros')}</td>
+      <td style="text-align:right">${esc(fmt(parcelaValor(d)))}</td>
+      <td>${esc(fmtDate(d.vencimento))}</td>
       <td><span class="${d.pago ? 'badge-green' : 'badge-red'}">${d.pago ? 'Pago' : 'Pendente'}</span></td>
     </tr>`).join('');
 
   const rowsRec = receitas.map(r => `
     <tr>
-      <td>${r.nome || ''}</td>
-      <td>${r.categoria || 'Outros'}</td>
-      <td style="text-align:right">${fmt(parseFloat(r.valorConfirmado || r.valor || 0))}</td>
-      <td>${fmtDate(r.dataRecebimento || r.dataBase)}</td>
+      <td>${esc(r.nome)}</td>
+      <td>${esc(r.categoria || 'Outros')}</td>
+      <td style="text-align:right">${esc(fmt(parseFloat(r.valorConfirmado || r.valor || 0)))}</td>
+      <td>${esc(fmtDate(r.dataRecebimento || r.dataBase))}</td>
       <td><span class="${r.recebido ? 'badge-green' : 'badge-yellow'}">${r.recebido ? 'Recebido' : 'A receber'}</span></td>
     </tr>`).join('');
 
