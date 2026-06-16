@@ -186,8 +186,7 @@ export default function LoginPage() {
               {mode === 'login' && (
                 <div className="text-right -mt-1">
                   <button type="button" onClick={() => goToMode('recuperar')}
-                    style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12 }}
-                    className="hover:text-accent transition-colors">
+                    className="text-accent text-xs font-semibold hover:opacity-80 transition-opacity">
                     Esqueceu sua senha?
                   </button>
                 </div>
