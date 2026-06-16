@@ -148,7 +148,7 @@ function AppContent() {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: '#0f172a' }}>
         <div className="flex flex-col items-center gap-4">
-          <img src="/logo.png" alt="Planeje" className="w-24 h-24 object-contain" />
+          <img src="/img/logo/logo-app-icon.png" alt="Planeje" className="w-24 h-24 object-contain rounded-2xl" />
           <div className="w-6 h-6 border-2 rounded-full animate-spin"
             style={{ borderColor: 'rgba(34,197,94,0.2)', borderTopColor: '#22c55e' }} />
         </div>
