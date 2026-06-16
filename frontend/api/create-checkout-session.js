@@ -19,15 +19,15 @@ export default async function handler(req, res) {
   if (user.id !== userId) return res.status(401).json({ error: 'Não autorizado' });
 
   try {
-    const origin = req.headers.origin || `https://${req.headers.host}`;
+    const BASE = 'https://www.planejeapp.com.br';
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
       customer_email: user.email,
       client_reference_id: userId,
-      success_url: `${origin}/?pagamento=sucesso`,
-      cancel_url: `${origin}/?pagamento=cancelado`,
+      success_url: `${BASE}/?pagamento=sucesso`,
+      cancel_url: `${BASE}/?pagamento=cancelado`,
     });
     res.status(200).json({ url: session.url });
   } catch (err) {

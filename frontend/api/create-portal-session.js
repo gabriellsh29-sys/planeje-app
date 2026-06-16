@@ -22,10 +22,9 @@ export default async function handler(req, res) {
     if (error) throw error;
     if (!perfil?.stripe_customer_id) return res.status(400).json({ error: 'Nenhuma assinatura encontrada' });
 
-    const origin = req.headers.origin || `https://${req.headers.host}`;
     const session = await stripe.billingPortal.sessions.create({
       customer: perfil.stripe_customer_id,
-      return_url: `${origin}/?perfil=1`,
+      return_url: 'https://www.planejeapp.com.br/?perfil=1',
     });
     res.status(200).json({ url: session.url });
   } catch (err) {
