@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabaseClient';
+import * as Sentry from '@sentry/react';
 import AvatarCropModal from '../components/AvatarCropModal';
 
 const PRICE_MENSAL = import.meta.env.VITE_STRIPE_PRICE_MENSAL;
@@ -46,7 +47,7 @@ export default function Perfil() {
 }
 
 function DadosTab() {
-  const { user, perfil, refreshPerfil } = useAuth();
+  const { user, perfil, refreshPerfil, session, logout } = useAuth();
   const [nome, setNome] = useState(perfil?.nome || user?.user_metadata?.full_name || '');
   const [salvando, setSalvando] = useState(false);
   const [enviandoFoto, setEnviandoFoto] = useState(false);
@@ -54,6 +55,32 @@ function DadosTab() {
   const [cropSrc, setCropSrc] = useState(null);
 
   const avatarUrl = perfil?.avatar_url;
+
+  const [excluindo, setExcluindo] = useState(false);
+
+  const excluirConta = async () => {
+    const confirmado = window.confirm(
+      'Tem certeza? Essa ação é irreversível.\n\nTodos os seus dados (transações, metas, anotações) serão excluídos permanentemente.'
+    );
+    if (!confirmado) return;
+    const confirmado2 = window.confirm('Última confirmação: excluir conta e todos os dados agora?');
+    if (!confirmado2) return;
+
+    setExcluindo(true);
+    try {
+      const res = await fetch('/api/delete-account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      await logout();
+    } catch (err) {
+      Sentry.captureException(err);
+      alert('Erro ao excluir conta: ' + err.message);
+      setExcluindo(false);
+    }
+  };
 
   const salvarNome = async () => {
     setSalvando(true); setMsg('');
@@ -131,6 +158,15 @@ function DadosTab() {
 
       {msg && <p className="text-text-2 text-xs text-center">{msg}</p>}
 
+      <div className="pt-4 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+        <p className="text-text-3 text-xs mb-2 text-center">Zona de perigo</p>
+        <button onClick={excluirConta} disabled={excluindo}
+          className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-60"
+          style={{ color: '#f87171', border: '1px solid rgba(248,113,113,0.25)', background: 'rgba(248,113,113,0.06)' }}>
+          {excluindo ? 'Excluindo...' : 'Excluir minha conta'}
+        </button>
+      </div>
+
       {cropSrc && (
         <AvatarCropModal src={cropSrc} onCancel={fecharCrop} onConfirm={confirmarFoto} />
       )}
@@ -154,6 +190,7 @@ function PlanosTab() {
       if (data.url) window.location.href = data.url;
       else throw new Error(data.error || 'Erro ao iniciar pagamento');
     } catch (err) {
+      Sentry.captureException(err);
       alert('Erro ao iniciar pagamento: ' + err.message);
       setLoading(null);
     }
@@ -171,6 +208,7 @@ function PlanosTab() {
       if (data.url) window.location.href = data.url;
       else throw new Error(data.error || 'Erro ao abrir portal de assinatura');
     } catch (err) {
+      Sentry.captureException(err);
       alert('Erro ao abrir portal de assinatura: ' + err.message);
       setLoading(null);
     }

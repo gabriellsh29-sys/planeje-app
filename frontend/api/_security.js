@@ -34,7 +34,7 @@ export async function requireAuthUser(req, res) {
 // Não substitui uma solução distribuída, mas reduz abuso básico/bots.
 const hits = new Map();
 
-export function rateLimit(req, res, { limit = 10, windowMs = 60_000, key = 'default' } = {}) {
+export function rateLimit(req, res, { limit = 5, windowMs = 60_000, key = 'default' } = {}) {
   const ip = (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown').split(',')[0].trim();
   const id = `${key}:${ip}`;
   const now = Date.now();
