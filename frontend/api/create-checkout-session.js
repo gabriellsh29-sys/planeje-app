@@ -12,11 +12,11 @@ export default async function handler(req, res) {
 
   const { priceId, userId } = req.body || {};
   if (!priceId || !userId) return res.status(400).json({ error: 'Dados inválidos' });
-  if (!ALLOWED_PRICES.includes(priceId)) return res.status(400).json({ error: 'Plano inválido' });
 
   const user = await requireAuthUser(req, res);
   if (!user) return;
   if (user.id !== userId) return res.status(401).json({ error: 'Não autorizado' });
+  if (!ALLOWED_PRICES.includes(priceId)) return res.status(400).json({ error: 'Plano inválido' });
 
   try {
     const BASE = 'https://www.planejeapp.com.br';
