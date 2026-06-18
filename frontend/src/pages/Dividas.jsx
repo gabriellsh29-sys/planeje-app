@@ -168,7 +168,7 @@ function ConfigurarParcelas({ parcelaInicial, totalParcelas, periodicidade, onCh
   const [per, setPer] = useState(periodicidade);
   const concluir = () => { onChange({ parcelaInicial: pi, totalParcelas: tp, periodicidade: per }); onClose(); };
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center px-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
       <div className="absolute inset-0 bg-black/60" style={{ backdropFilter: 'blur(8px)' }} />
       <div className="relative w-full max-w-sm card-premium overflow-hidden animate-scale-in" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
@@ -946,7 +946,7 @@ export default function Dividas({ month, year }) {
         const situacaoColor = st.pago ? 'text-income' : vencida ? 'text-yellow-500' : 'text-text-2';
 
         return (
-          <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center" onClick={() => setDetalheId(null)}>
+          <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
             <div className="absolute inset-0 bg-black/75" style={{ backdropFilter: 'blur(8px)' }} />
             <div className="relative w-full max-w-md rounded-t-[1.75rem] md:rounded-[1.5rem] shadow-2xl overflow-hidden animate-scale-in"
               style={{ background: '#0d1117', border: '1px solid rgba(255,255,255,0.08)', maxHeight: '92vh', overflowY: 'auto' }}
@@ -1067,7 +1067,7 @@ export default function Dividas({ month, year }) {
 
       {/* Form modal */}
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center" onClick={() => setShowForm(false)}>
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
           <div className="absolute inset-0 bg-black/75" style={{ backdropFilter: 'blur(8px)' }} />
           <div
             className="relative w-full max-w-md rounded-t-[1.75rem] md:rounded-[1.5rem] shadow-2xl overflow-hidden"
@@ -1226,7 +1226,7 @@ export default function Dividas({ month, year }) {
         const original = dividas.find(x => x.id === editId);
         const tipo = original?.recorrencia === 'fixa' ? 'fixa' : 'parcelada';
         return (
-          <div className="fixed inset-0 z-[80] flex items-center justify-center px-4" onClick={() => setPendingEdit(null)}>
+          <div className="fixed inset-0 z-[80] flex items-center justify-center px-4">
             <div className="absolute inset-0 bg-black/70" style={{ backdropFilter: 'blur(8px)' }} />
             <div className="relative card-premium p-6 w-full max-w-sm animate-scale-in" onClick={e => e.stopPropagation()}>
               <h3 className="text-text-1 font-bold text-base mb-2">Como deseja aplicar essas alterações?</h3>
@@ -1263,7 +1263,7 @@ export default function Dividas({ month, year }) {
         const jaPago = st?.valorPago || 0;
         const restante = Math.max(total - jaPago, 0);
         return (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center px-4" onClick={() => setEfetivandoId(null)}>
+        <div className="fixed inset-0 z-[70] flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/70" style={{ backdropFilter: 'blur(8px)' }} />
           <div className="relative card-premium p-6 w-full max-w-xs animate-scale-in" onClick={e => e.stopPropagation()}>
             <div className="flex items-center gap-3 mb-4">

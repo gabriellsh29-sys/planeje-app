@@ -14,6 +14,20 @@ function loadReceitas(){ try { return JSON.parse(localStorage.getItem(RECEITAS_K
 function saveReceitas(l){ localStorage.setItem(RECEITAS_KEY, JSON.stringify(l)); }
 function saveCats(l)   { localStorage.setItem(CAT_KEY, JSON.stringify(l)); }
 
+function parcelaAbrangeMs(r, month, year) {
+  if (!r.data) return false;
+  const [ry, rm] = r.data.split('-').map(Number);
+  const inicio = ry * 12 + (rm - 1);
+  const fim = inicio + ((r.totalParcelas || 1) - 1);
+  const atual = year * 12 + (month - 1);
+  return atual >= inicio && atual <= fim;
+}
+
+function parcelaValor(r) {
+  if (r.recorrencia === 'parcelar' && r.totalParcelas > 1) return r.valor / r.totalParcelas;
+  return r.valor;
+}
+
 function filtrar(receitas, month, year) {
   return receitas.filter(r => {
     if (r.recorrencia === 'fixa') {
@@ -21,6 +35,7 @@ function filtrar(receitas, month, year) {
       const [ry, rm] = r.data.split('-').map(Number);
       return (year * 12 + (month - 1)) >= (ry * 12 + (rm - 1));
     }
+    if (r.recorrencia === 'parcelar') return parcelaAbrangeMs(r, month, year);
     const d = r.recebimentoData || r.data;
     if (!d) return false;
     const [y, m] = d.split('-').map(Number);
@@ -28,7 +43,83 @@ function filtrar(receitas, month, year) {
   });
 }
 
-const emptyForm = () => ({ nome: '', categoria: 'Salário', valor: '', data: new Date().toISOString().slice(0,10), recorrencia: 'nao', periodicidade: 'Mensal', observacao: '' });
+const emptyForm = () => ({
+  nome: '', categoria: 'Salário', valor: '', data: new Date().toISOString().slice(0,10),
+  recorrencia: 'nao', parcelaInicial: 1, totalParcelas: 2, periodicidade: 'Mensal',
+  valorMode: 'total', observacao: '',
+});
+
+const PERIODICIDADES = ['Mensal', 'Quinzenal', 'Semanal', 'Bimestral', 'Trimestral', 'Semestral', 'Anual'];
+
+function Stepper({ label, value, onChange, min = 1, max = 999 }) {
+  const [display, setDisplay] = useState(String(value));
+  useEffect(() => { setDisplay(String(value)); }, [value]);
+  const handleChange = (e) => {
+    const raw = e.target.value.replace(/\D/g, '');
+    setDisplay(raw);
+    const num = parseInt(raw, 10);
+    if (!isNaN(num)) onChange(Math.min(max, Math.max(min, num)));
+  };
+  const handleBlur = () => {
+    const num = parseInt(display, 10);
+    const clamped = isNaN(num) ? min : Math.min(max, Math.max(min, num));
+    onChange(clamped);
+    setDisplay(String(clamped));
+  };
+  return (
+    <div className="flex items-center justify-between py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+      <span className="text-white text-sm">{label}</span>
+      <div className="flex items-center gap-2">
+        <button type="button" onClick={() => onChange(Math.max(min, value - 1))}
+          className="w-8 h-8 rounded-full flex items-center justify-center text-white/40 hover:text-white hover:bg-white/5 transition text-lg"
+          style={{ border: '1px solid rgba(255,255,255,0.1)' }}>−</button>
+        <input
+          type="text"
+          inputMode="numeric"
+          value={display}
+          onChange={handleChange}
+          onBlur={handleBlur}
+          className="text-white font-semibold text-base text-center rounded-lg"
+          style={{ width: 48, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', padding: '4px 0', outline: 'none' }}
+        />
+        <button type="button" onClick={() => onChange(Math.min(max, value + 1))}
+          className="w-8 h-8 rounded-full flex items-center justify-center text-white/40 hover:text-white hover:bg-white/5 transition text-lg"
+          style={{ border: '1px solid rgba(255,255,255,0.1)' }}>+</button>
+      </div>
+    </div>
+  );
+}
+
+function ConfigurarParcelas({ parcelaInicial, totalParcelas, periodicidade, onChange, onClose }) {
+  const [pi, setPi] = useState(parcelaInicial);
+  const [tp, setTp] = useState(totalParcelas);
+  const [per, setPer] = useState(periodicidade);
+  const concluir = () => { onChange({ parcelaInicial: pi, totalParcelas: tp, periodicidade: per }); onClose(); };
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
+      <div className="absolute inset-0 bg-black/60" style={{ backdropFilter: 'blur(8px)' }} />
+      <div className="relative w-full max-w-sm card-premium overflow-hidden animate-scale-in" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition">
+            <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"/></svg>
+          </button>
+          <span className="text-white font-semibold">Configurar Parcelas</span>
+          <button onClick={concluir} className="btn-gold text-sm py-1.5 px-4">Concluir</button>
+        </div>
+        <div className="px-5 py-3">
+          <Stepper label="Parcela inicial" value={pi} onChange={setPi} min={1} max={tp} />
+          <Stepper label="Quantidade de parcelas" value={tp} onChange={v => { setTp(v); if (pi > v) setPi(v); }} min={2} max={360} />
+          <div className="flex items-center justify-between py-3">
+            <span className="text-white text-sm">Periodicidade</span>
+            <select value={per} onChange={e => setPer(e.target.value)} className="input-premium w-auto [color-scheme:dark]">
+              {PERIODICIDADES.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function AcoesMenu({ onEdit, onPagamentoParcial, onDuplicar, onExcluir, vencimentoAtual, openUp }) {
   const [open, setOpen] = useState(false);
@@ -117,6 +208,7 @@ export default function Receitas({ month, year }) {
   const [showCateg,   setShowCateg]   = useState(false);
   const [search,      setSearch]      = useState('');
   const [showCalc,    setShowCalc]    = useState(false);
+  const [showParcelas, setShowParcelas] = useState(false);
 
   const upd = (p) => setForm(f => ({ ...f, ...p }));
 
@@ -126,11 +218,15 @@ export default function Receitas({ month, year }) {
 
   const salvar = () => {
     if (!form.nome.trim() || !form.valor) return;
-    const valor = parseFloat(form.valor) / 100;
+    const valorBase = parseFloat(form.valor) / 100;
+    const isParcelarMode = form.recorrencia === 'parcelar' && form.valorMode === 'parcela';
+    const valor = isParcelarMode ? valorBase * form.totalParcelas : valorBase;
     const item = {
       id: editId || Date.now().toString(),
       nome: form.nome.trim(), categoria: form.categoria, valor, data: form.data,
-      recorrencia: form.recorrencia, periodicidade: form.periodicidade, observacao: form.observacao,
+      recorrencia: form.recorrencia,
+      parcelaInicial: form.parcelaInicial, totalParcelas: form.totalParcelas,
+      periodicidade: form.periodicidade, observacao: form.observacao,
       recebida: editId ? (receitas.find(r => r.id === editId)?.recebida || false) : false,
       recebimentoData: editId ? (receitas.find(r => r.id === editId)?.recebimentoData || null) : null,
     };
@@ -168,7 +264,16 @@ export default function Receitas({ month, year }) {
     const updated = [novo, ...receitas];
     setReceitas(updated); saveReceitas(updated);
   };
-  const openEdit = (r) => { setForm({ nome: r.nome, categoria: r.categoria, valor: Math.round(r.valor * 100).toString(), data: r.data || '', recorrencia: r.recorrencia || 'nao', periodicidade: r.periodicidade || 'Mensal', observacao: r.observacao || '' }); setEditId(r.id); setShowForm(true); };
+  const openEdit = (r) => {
+    setForm({
+      nome: r.nome, categoria: r.categoria, valor: Math.round(r.valor * 100).toString(), data: r.data || '',
+      recorrencia: r.recorrencia || 'nao',
+      parcelaInicial: r.parcelaInicial || 1, totalParcelas: r.totalParcelas || 2,
+      periodicidade: r.periodicidade || 'Mensal', valorMode: 'total',
+      observacao: r.observacao || '',
+    });
+    setEditId(r.id); setShowForm(true);
+  };
 
   const addCateg = () => {
     const n = novaCateg.trim();
@@ -185,8 +290,8 @@ export default function Receitas({ month, year }) {
     return true;
   });
 
-  const totalPendente  = periodo.filter(r => !r.recebida).reduce((s, r) => s + r.valor, 0);
-  const totalRecebido  = periodo.filter(r => r.recebida).reduce((s, r) => s + (r.valorRecebido || r.valor), 0);
+  const totalPendente  = periodo.filter(r => !r.recebida).reduce((s, r) => s + parcelaValor(r), 0);
+  const totalRecebido  = periodo.filter(r => r.recebida).reduce((s, r) => s + (r.valorRecebido || parcelaValor(r)), 0);
 
   return (
     <div className="p-4 md:p-6 pb-24 md:pb-8 animate-fade-in">
@@ -298,11 +403,17 @@ export default function Receitas({ month, year }) {
                           Fixa · {r.periodicidade || 'Mensal'}
                         </span>
                       )}
+                      {r.recorrencia === 'parcelar' && (
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                          style={{ background: 'rgba(34,197,94,0.12)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.2)' }}>
+                          {r.parcelaInicial}/{r.totalParcelas}x · {r.periodicidade || 'Mensal'}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="flex-shrink-0 text-right">
-                    <p className="text-sm font-bold text-income">{fmt(r.valor)}</p>
-                    {r.recebida && r.valorRecebido && r.valorRecebido !== r.valor && (
+                    <p className="text-sm font-bold text-income">{fmt(parcelaValor(r))}</p>
+                    {r.recebida && r.valorRecebido && r.valorRecebido !== parcelaValor(r) && (
                       <p className="text-[10px] text-white/50">recebido {fmt(r.valorRecebido)}</p>
                     )}
                   </div>
@@ -366,7 +477,7 @@ export default function Receitas({ month, year }) {
 
       {/* Modal formulário */}
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center" onClick={() => setShowForm(false)}>
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
           <div className="absolute inset-0 bg-black/75" style={{ backdropFilter: 'blur(8px)' }} />
           <div className="relative w-full max-w-md rounded-t-[1.75rem] md:rounded-[1.5rem] shadow-2xl overflow-hidden"
             style={{ background: '#0d1117', border: '1px solid rgba(255,255,255,0.08)', maxHeight: '92vh', overflowY: 'auto' }}
@@ -434,20 +545,56 @@ export default function Receitas({ month, year }) {
                   <p className="text-white/40 text-[10px] font-semibold uppercase tracking-widest">Recorrência</p>
                 </div>
                 {[
-                  { val: 'nao',  label: 'Entrada única',   desc: 'Pontual, não se repete' },
-                  { val: 'fixa', label: 'Fixa mensal',     desc: 'Repete todo mês (ex: salário)' },
+                  { val: 'nao',      label: 'Não recorrente',      desc: 'Entrada única, pontual' },
+                  { val: 'parcelar', label: 'Parcelar ou repetir', desc: 'Define parcelas e periodicidade' },
+                  { val: 'fixa',     label: 'Fixa mensal',         desc: 'Repete todo mês (ex: salário)' },
                 ].map((opt, i, arr) => (
-                  <label key={opt.val} className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-white/2 transition"
-                    style={{ borderBottom: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
-                    <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${form.recorrencia === opt.val ? 'border-2 border-income' : 'border border-white/30'}`}>
-                      {form.recorrencia === opt.val && <div className="w-2 h-2 rounded-full bg-income" />}
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-white text-sm">{opt.label}</p>
-                      <p className="text-white/40 text-[10px]">{opt.desc}</p>
-                    </div>
-                    <input type="radio" className="hidden" checked={form.recorrencia === opt.val} onChange={() => upd({ recorrencia: opt.val })} />
-                  </label>
+                  <div key={opt.val} style={{ borderBottom: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
+                    <label className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-white/2 transition">
+                      <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${form.recorrencia === opt.val ? 'border-2 border-income' : 'border border-white/30'}`}>
+                        {form.recorrencia === opt.val && <div className="w-2 h-2 rounded-full bg-income" />}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-white text-sm">{opt.label}</p>
+                        <p className="text-white/40 text-[10px]">{opt.desc}</p>
+                      </div>
+                      <input type="radio" className="hidden" checked={form.recorrencia === opt.val} onChange={() => upd({ recorrencia: opt.val })} />
+                    </label>
+                    {opt.val === 'parcelar' && form.recorrencia === 'parcelar' && (
+                      <>
+                        <button type="button" onClick={() => setShowParcelas(true)}
+                          className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/3 transition"
+                          style={{ background: 'rgba(34,197,94,0.04)', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                          <div className="flex items-center gap-2">
+                            <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-income"><path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd"/></svg>
+                            <span className="text-white text-sm">Parcela {form.parcelaInicial}/{form.totalParcelas} · {form.periodicidade}</span>
+                          </div>
+                          <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-white/40"><path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd"/></svg>
+                        </button>
+                        <div className="px-4 py-3" style={{ borderTop: '1px solid rgba(255,255,255,0.04)', background: 'rgba(0,0,0,0.15)' }}>
+                          <p className="text-white/40 text-[10px] font-semibold uppercase tracking-widest mb-2">O valor informado é</p>
+                          <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid rgba(34,197,94,0.2)' }}>
+                            {[['total','Valor total','O total será dividido pelas parcelas'],['parcela','Valor parcela','Cada parcela terá esse valor fixo']].map(([mode, label]) => (
+                              <button key={mode} type="button"
+                                onClick={() => upd({ valorMode: mode })}
+                                className="flex-1 py-2.5 px-2 text-xs font-semibold transition-all text-center"
+                                style={form.valorMode === mode ? {
+                                  background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                                  color: '#0f172a',
+                                } : { color: 'rgba(255,255,255,0.45)', background: 'transparent' }}>
+                                {label}
+                              </button>
+                            ))}
+                          </div>
+                          <p className="text-white/40 text-[10px] mt-1.5">
+                            {form.valorMode === 'total'
+                              ? `Cada parcela = valor ÷ ${form.totalParcelas}`
+                              : `Total = valor × ${form.totalParcelas}`}
+                          </p>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 ))}
               </div>
               <div>
@@ -461,9 +608,18 @@ export default function Receitas({ month, year }) {
         </div>
       )}
 
+      {/* Parcelas modal */}
+      {showParcelas && (
+        <ConfigurarParcelas
+          parcelaInicial={form.parcelaInicial} totalParcelas={form.totalParcelas} periodicidade={form.periodicidade}
+          onChange={({ parcelaInicial, totalParcelas, periodicidade }) => upd({ parcelaInicial, totalParcelas, periodicidade })}
+          onClose={() => setShowParcelas(false)}
+        />
+      )}
+
       {/* Modal confirmar recebimento */}
       {efetivId && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center px-4" onClick={() => setEfetivId(null)}>
+        <div className="fixed inset-0 z-[70] flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/70" style={{ backdropFilter: 'blur(8px)' }} />
           <div className="relative card-premium p-6 w-full max-w-xs animate-scale-in" onClick={e => e.stopPropagation()}>
             <h3 className="text-white font-semibold mb-1">Confirmar recebimento</h3>

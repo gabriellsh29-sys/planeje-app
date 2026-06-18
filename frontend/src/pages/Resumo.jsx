@@ -354,7 +354,7 @@ export default function Resumo({ loading, month, year }) {
 
       {/* Modal ajustar saldo */}
       {editSaldo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4" onClick={() => setEditSaldo(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/75" style={{ backdropFilter: 'blur(10px)' }} />
           <div className="relative card-premium p-6 w-full max-w-xs animate-scale-in" onClick={e => e.stopPropagation()}>
             <h3 className="text-white font-semibold mb-1">Saldo em conta</h3>

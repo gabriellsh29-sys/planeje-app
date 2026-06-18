@@ -377,7 +377,7 @@ export default function Transacoes({ transactions, onDelete, loading, onAdd }) {
 
       {/* Efetivar date modal */}
       {efetivandoId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4" onClick={() => setEfetivandoId(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/70" style={{ backdropFilter: 'blur(8px)' }} />
           <div className="relative card-premium p-6 w-full max-w-xs animate-scale-in" onClick={e => e.stopPropagation()}>
             <div className="flex items-center gap-3 mb-4">

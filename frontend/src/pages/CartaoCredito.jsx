@@ -294,7 +294,7 @@ export default function CartaoCredito({ month, year }) {
 
       {/* ── Modal: Novo/Editar Cartão ── */}
       {showFormCartao && (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center" onClick={() => setShowFormCartao(false)}>
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
           <div className="absolute inset-0 bg-black/75" style={{ backdropFilter: 'blur(8px)' }} />
           <div className="relative w-full max-w-sm rounded-t-[1.75rem] md:rounded-[1.5rem] overflow-hidden"
             style={{ background: '#0d1117', border: '1px solid rgba(255,255,255,0.08)', maxHeight: '90vh', overflowY: 'auto' }}
@@ -359,7 +359,7 @@ export default function CartaoCredito({ month, year }) {
 
       {/* ── Modal: Novo Lançamento ── */}
       {showFormLanc && (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center" onClick={() => setShowFormLanc(false)}>
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
           <div className="absolute inset-0 bg-black/75" style={{ backdropFilter: 'blur(8px)' }} />
           <div className="relative w-full max-w-sm rounded-t-[1.75rem] md:rounded-[1.5rem] overflow-hidden"
             style={{ background: '#0d1117', border: '1px solid rgba(255,255,255,0.08)' }}
@@ -412,7 +412,7 @@ export default function CartaoCredito({ month, year }) {
 
       {/* ── Modal: Confirmar pagamento fatura ── */}
       {showPagar && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4" onClick={() => setShowPagar(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/75" style={{ backdropFilter: 'blur(10px)' }} />
           <div className="relative card-premium p-6 w-full max-w-xs animate-scale-in" onClick={e => e.stopPropagation()}>
             <p className="text-white font-semibold text-center mb-1">
