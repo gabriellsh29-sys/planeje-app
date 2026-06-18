@@ -30,7 +30,13 @@ export default function Perfil() {
 
   return (
     <div className="max-w-xl mx-auto p-4 md:p-6 animate-fade-in">
-      <h1 className="hidden md:block text-text-1 font-bold text-lg mb-4">Perfil</h1>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-text-1 font-bold text-lg">Perfil</h1>
+        <button onClick={logout}
+          className="text-text-3 text-xs font-semibold hover:text-expense transition-colors px-2 py-1">
+          Sair da conta
+        </button>
+      </div>
 
       <div className="flex gap-1 mb-5 rounded-xl p-1" style={{ background: 'rgba(255,255,255,0.04)' }}>
         {TABS.map(t => (
@@ -47,12 +53,6 @@ export default function Perfil() {
       {tab === 'dados' && <DadosTab />}
       {tab === 'planos' && <PlanosTab />}
       {tab === 'senha' && <SenhaTab />}
-
-      <button onClick={logout}
-        className="md:hidden w-full mt-6 py-2.5 rounded-xl text-sm font-medium transition-all"
-        style={{ color: '#f87171', border: '1px solid rgba(248,113,113,0.25)', background: 'rgba(248,113,113,0.06)' }}>
-        Sair da conta
-      </button>
     </div>
   );
 }
@@ -70,6 +70,8 @@ function DadosTab() {
   React.useEffect(() => { setAvatarLoaded(false); }, [avatarUrl]);
 
   const [excluindo, setExcluindo] = useState(false);
+  const [showExcluirModal, setShowExcluirModal] = useState(false);
+  const [confirmText, setConfirmText] = useState('');
 
   const webauthnSuportado = typeof window !== 'undefined' && !!window.PublicKeyCredential;
   const [dispositivos, setDispositivos] = useState([]);
@@ -123,13 +125,7 @@ function DadosTab() {
   };
 
   const excluirConta = async () => {
-    const confirmado = window.confirm(
-      'Tem certeza? Essa ação é irreversível.\n\nTodos os seus dados (transações, metas, anotações) serão excluídos permanentemente.'
-    );
-    if (!confirmado) return;
-    const confirmado2 = window.confirm('Última confirmação: excluir conta e todos os dados agora?');
-    if (!confirmado2) return;
-
+    if (confirmText.trim().toUpperCase() !== 'EXCLUIR') return;
     setExcluindo(true);
     try {
       const res = await fetch('/api/delete-account', {
@@ -257,14 +253,43 @@ function DadosTab() {
         </div>
       )}
 
-      <div className="pt-4 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-        <p className="text-text-3 text-xs mb-2 text-center">Zona de perigo</p>
-        <button onClick={excluirConta} disabled={excluindo}
-          className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-60"
-          style={{ color: '#f87171', border: '1px solid rgba(248,113,113,0.25)', background: 'rgba(248,113,113,0.06)' }}>
-          {excluindo ? 'Excluindo...' : 'Excluir minha conta'}
+      <div className="pt-6 mt-2 text-center" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        <button onClick={() => { setConfirmText(''); setShowExcluirModal(true); }}
+          className="text-text-3 text-xs underline hover:text-expense transition-colors">
+          Quero excluir minha conta permanentemente
         </button>
       </div>
+
+      {showExcluirModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/75" style={{ backdropFilter: 'blur(8px)' }} />
+          <div className="relative card-premium p-6 w-full max-w-sm animate-scale-in" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-text-1 font-bold text-base">Excluir conta</h3>
+              <button onClick={() => setShowExcluirModal(false)}
+                className="w-9 h-9 flex items-center justify-center rounded-lg text-text-3 hover:text-text-1 hover:bg-white/5 transition">
+                <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"/></svg>
+              </button>
+            </div>
+            <p className="text-text-3 text-sm mb-4">
+              Essa ação é <span className="text-expense font-semibold">irreversível</span>. Seus dados — transações, metas, anotações, dispositivos com Face ID e assinatura — serão excluídos permanentemente.
+            </p>
+            <label className="text-text-3 text-xs block mb-1.5">
+              Digite <span className="font-bold text-text-1">EXCLUIR</span> para confirmar
+            </label>
+            <input value={confirmText} onChange={e => setConfirmText(e.target.value)}
+              placeholder="EXCLUIR" autoFocus className="input-premium w-full mb-4" />
+            <div className="flex gap-3">
+              <button onClick={() => setShowExcluirModal(false)} className="btn-ghost flex-1">Cancelar</button>
+              <button onClick={excluirConta} disabled={excluindo || confirmText.trim().toUpperCase() !== 'EXCLUIR'}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-40"
+                style={{ color: '#fff', background: '#dc2626' }}>
+                {excluindo ? 'Excluindo...' : 'Excluir definitivamente'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {cropSrc && (
         <AvatarCropModal src={cropSrc} onCancel={fecharCrop} onConfirm={confirmarFoto} />
