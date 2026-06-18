@@ -302,7 +302,7 @@ export default function CartaoCredito({ month, year }) {
             <div className="md:hidden flex justify-center pt-3 pb-1"><div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.12)' }} /></div>
             <div className="sticky top-0 flex items-center justify-between px-5 py-4 z-10"
               style={{ background: '#0d1117', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-              <button onClick={() => setShowFormCartao(false)} className="w-8 h-8 flex items-center justify-center rounded-lg text-white/40 hover:text-white">×</button>
+              <button onClick={() => setShowFormCartao(false)} className="w-11 h-11 -m-2 flex items-center justify-center rounded-lg text-white/40 hover:text-white text-xl">×</button>
               <h3 className="text-white font-semibold">{editCartaoId ? 'Editar Cartão' : 'Novo Cartão'}</h3>
               <button onClick={salvarCartao} className="btn-gold py-1.5 px-4 text-sm">Salvar</button>
             </div>
@@ -366,7 +366,7 @@ export default function CartaoCredito({ month, year }) {
             onClick={e => e.stopPropagation()}>
             <div className="md:hidden flex justify-center pt-3 pb-1"><div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.12)' }} /></div>
             <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-              <button onClick={() => setShowFormLanc(false)} className="text-white/40">×</button>
+              <button onClick={() => setShowFormLanc(false)} className="w-11 h-11 -m-2 flex items-center justify-center rounded-lg text-white/40 hover:text-white text-xl">×</button>
               <h3 className="text-white font-semibold">Novo Lançamento</h3>
               <button onClick={salvarLancamento} className="btn-gold py-1.5 px-4 text-sm">Salvar</button>
             </div>
