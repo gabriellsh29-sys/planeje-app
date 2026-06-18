@@ -4,6 +4,14 @@ import * as Sentry from '@sentry/react';
 import App from './App';
 import './index.css';
 
+if (import.meta.env.VITE_SUPABASE_URL) {
+  const link = document.createElement('link');
+  link.rel = 'preconnect';
+  link.href = import.meta.env.VITE_SUPABASE_URL;
+  link.crossOrigin = 'anonymous';
+  document.head.appendChild(link);
+}
+
 if (import.meta.env.VITE_SENTRY_DSN) {
   Sentry.init({
     dsn: import.meta.env.VITE_SENTRY_DSN,

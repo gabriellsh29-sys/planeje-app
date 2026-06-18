@@ -55,6 +55,8 @@ function DadosTab() {
   const [cropSrc, setCropSrc] = useState(null);
 
   const avatarUrl = perfil?.avatar_url;
+  const [avatarLoaded, setAvatarLoaded] = useState(false);
+  React.useEffect(() => { setAvatarLoaded(false); }, [avatarUrl]);
 
   const [excluindo, setExcluindo] = useState(false);
 
@@ -129,10 +131,12 @@ function DadosTab() {
       <div className="flex flex-col items-center gap-3">
         <div className="relative w-24 h-24 rounded-full overflow-hidden flex items-center justify-center"
           style={{ background: 'rgba(34,197,94,0.12)', border: '2px solid rgba(34,197,94,0.3)' }}>
-          {avatarUrl ? (
-            <img src={avatarUrl} alt="Foto de perfil" className="w-full h-full object-cover" />
-          ) : (
-            <span className="text-accent text-3xl font-bold">{(nome || user?.email || '?').charAt(0).toUpperCase()}</span>
+          <span className="text-accent text-3xl font-bold">{(nome || user?.email || '?').charAt(0).toUpperCase()}</span>
+          {avatarUrl && (
+            <img src={avatarUrl} alt="Foto de perfil" loading="eager" decoding="async"
+              onLoad={() => setAvatarLoaded(true)}
+              className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
+              style={{ opacity: avatarLoaded ? 1 : 0 }} />
           )}
         </div>
         <label className="text-accent text-xs font-semibold cursor-pointer hover:underline">
