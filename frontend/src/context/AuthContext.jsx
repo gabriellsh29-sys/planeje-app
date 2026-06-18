@@ -33,6 +33,7 @@ export function AuthProvider({ children }) {
     }
     lastUserId.current = userId;
     if (userId) {
+      if (session.user.email) localStorage.setItem('planeje_last_email', session.user.email.toLowerCase());
       setSyncing(true);
       Promise.all([
         pullFromCloud(userId),
@@ -79,6 +80,9 @@ export function AuthProvider({ children }) {
     return result;
   };
 
+  const loginWithToken = (email, token) =>
+    supabase.auth.verifyOtp({ email, token, type: 'magiclink' });
+
   const logout = () => supabase.auth.signOut();
 
   const user = session?.user || null;
@@ -88,7 +92,7 @@ export function AuthProvider({ children }) {
     || (perfil.trial_expira_em && new Date(perfil.trial_expira_em) > new Date());
 
   return (
-    <AuthContext.Provider value={{ user, session, perfil, acessoLiberado, isRecovery, refreshPerfil, loading: loading || (user && syncing), signInWithGoogle, signInWithPassword, signUp, resetPassword, updatePassword, logout }}>
+    <AuthContext.Provider value={{ user, session, perfil, acessoLiberado, isRecovery, refreshPerfil, loading: loading || (user && syncing), signInWithGoogle, signInWithPassword, signUp, resetPassword, updatePassword, loginWithToken, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -3,6 +3,17 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import * as Sentry from '@sentry/react';
 import AvatarCropModal from '../components/AvatarCropModal';
+import { startRegistration } from '@simplewebauthn/browser';
+
+function detectarNomeDispositivo() {
+  const ua = navigator.userAgent;
+  if (/iPhone/.test(ua)) return 'iPhone';
+  if (/iPad/.test(ua)) return 'iPad';
+  if (/Android/.test(ua)) return 'Android';
+  if (/Macintosh/.test(ua)) return 'Mac';
+  if (/Windows/.test(ua)) return 'Windows';
+  return 'Dispositivo';
+}
 
 const PRICE_MENSAL = import.meta.env.VITE_STRIPE_PRICE_MENSAL;
 const PRICE_ANUAL = import.meta.env.VITE_STRIPE_PRICE_ANUAL;
@@ -59,6 +70,57 @@ function DadosTab() {
   React.useEffect(() => { setAvatarLoaded(false); }, [avatarUrl]);
 
   const [excluindo, setExcluindo] = useState(false);
+
+  const webauthnSuportado = typeof window !== 'undefined' && !!window.PublicKeyCredential;
+  const [dispositivos, setDispositivos] = useState([]);
+  const [carregandoDispositivos, setCarregandoDispositivos] = useState(true);
+  const [ativandoFaceId, setAtivandoFaceId] = useState(false);
+  const [faceIdMsg, setFaceIdMsg] = useState('');
+
+  const carregarDispositivos = React.useCallback(async () => {
+    if (!user) return;
+    const { data } = await supabase.from('webauthn_credentials')
+      .select('id, device_name, created_at').eq('user_id', user.id).order('created_at', { ascending: false });
+    setDispositivos(data || []);
+    setCarregandoDispositivos(false);
+  }, [user]);
+
+  React.useEffect(() => { carregarDispositivos(); }, [carregarDispositivos]);
+
+  const ativarFaceId = async () => {
+    setFaceIdMsg(''); setAtivandoFaceId(true);
+    try {
+      const optsRes = await fetch('/api/webauthn-register-options', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      });
+      const options = await optsRes.json();
+      if (!optsRes.ok) throw new Error(options.error || 'Erro ao iniciar cadastro');
+
+      const attestationResponse = await startRegistration({ optionsJSON: options });
+
+      const verifyRes = await fetch('/api/webauthn-register-verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ attestationResponse, deviceName: detectarNomeDispositivo() }),
+      });
+      const verifyData = await verifyRes.json();
+      if (!verifyRes.ok) throw new Error(verifyData.error || 'Erro ao confirmar cadastro');
+
+      setFaceIdMsg('Face ID / Touch ID ativado neste dispositivo!');
+      await carregarDispositivos();
+    } catch (err) {
+      if (err.name !== 'NotAllowedError') Sentry.captureException(err);
+      setFaceIdMsg(err.name === 'NotAllowedError' ? 'Cadastro cancelado.' : 'Erro: ' + err.message);
+    }
+    setAtivandoFaceId(false);
+  };
+
+  const removerDispositivo = async (id) => {
+    if (!window.confirm('Remover este dispositivo? Você precisará reativar o Face ID/Touch ID nele para usar novamente.')) return;
+    await supabase.from('webauthn_credentials').delete().eq('id', id);
+    await carregarDispositivos();
+  };
 
   const excluirConta = async () => {
     const confirmado = window.confirm(
@@ -161,6 +223,39 @@ function DadosTab() {
       </button>
 
       {msg && <p className="text-text-2 text-xs text-center">{msg}</p>}
+
+      {webauthnSuportado && (
+        <div className="pt-4 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+          <p className="text-text-3 text-xs font-semibold uppercase tracking-wider mb-2">Face ID / Touch ID</p>
+
+          {!carregandoDispositivos && dispositivos.length > 0 && (
+            <div className="space-y-2 mb-3">
+              {dispositivos.map(d => (
+                <div key={d.id} className="flex items-center justify-between px-3 py-2 rounded-xl"
+                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div className="flex items-center gap-2">
+                    <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-accent">
+                      <path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" />
+                    </svg>
+                    <div>
+                      <p className="text-text-1 text-sm">{d.device_name || 'Dispositivo'}</p>
+                      <p className="text-text-3 text-[10px]">Ativado em {new Date(d.created_at).toLocaleDateString('pt-BR')}</p>
+                    </div>
+                  </div>
+                  <button onClick={() => removerDispositivo(d.id)} className="text-expense text-xs hover:underline">Remover</button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <button onClick={ativarFaceId} disabled={ativandoFaceId}
+            className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-60"
+            style={{ color: '#22c55e', border: '1px solid rgba(34,197,94,0.3)', background: 'rgba(34,197,94,0.08)' }}>
+            {ativandoFaceId ? 'Aguardando confirmação...' : 'Ativar Face ID / Touch ID neste dispositivo'}
+          </button>
+          {faceIdMsg && <p className="text-text-2 text-xs text-center mt-2">{faceIdMsg}</p>}
+        </div>
+      )}
 
       <div className="pt-4 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
         <p className="text-text-3 text-xs mb-2 text-center">Zona de perigo</p>

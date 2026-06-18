@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { startAuthentication } from '@simplewebauthn/browser';
+
+const LAST_EMAIL_KEY = 'planeje_last_email';
+const webauthnSuportado = typeof window !== 'undefined' && !!window.PublicKeyCredential;
 
 export default function LoginPage() {
-  const { signInWithGoogle, signInWithPassword, signUp, resetPassword } = useAuth();
+  const { signInWithGoogle, signInWithPassword, signUp, resetPassword, loginWithToken } = useAuth();
   const [mode, setMode] = useState('login'); // 'login' | 'cadastro' | 'recuperar'
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
@@ -11,6 +15,37 @@ export default function LoginPage() {
   const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPw, setShowPw] = useState(false);
+  const [faceIdLoading, setFaceIdLoading] = useState(false);
+  const lastEmail = typeof window !== 'undefined' ? localStorage.getItem(LAST_EMAIL_KEY) : null;
+
+  const loginComFaceId = async () => {
+    setError(''); setFaceIdLoading(true);
+    try {
+      const optsRes = await fetch('/api/webauthn-login-options', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: lastEmail }),
+      });
+      const options = await optsRes.json();
+      if (!optsRes.ok) throw new Error(options.error || 'Face ID não disponível');
+
+      const assertionResponse = await startAuthentication({ optionsJSON: options });
+
+      const verifyRes = await fetch('/api/webauthn-login-verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: lastEmail, assertionResponse }),
+      });
+      const verifyData = await verifyRes.json();
+      if (!verifyRes.ok) throw new Error(verifyData.error || 'Não foi possível validar');
+
+      const { error: err } = await loginWithToken(verifyData.email, verifyData.token);
+      if (err) throw err;
+    } catch (err) {
+      setError(err.name === 'NotAllowedError' ? 'Cancelado.' : 'Não foi possível entrar com Face ID.');
+    }
+    setFaceIdLoading(false);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -120,6 +155,24 @@ export default function LoginPage() {
               </button>
             </p>
           </form>
+        )}
+
+        {mode === 'login' && webauthnSuportado && lastEmail && (
+          <>
+            <button onClick={loginComFaceId} type="button" disabled={faceIdLoading}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm transition mb-3 disabled:opacity-60"
+              style={{ background: 'rgba(34,197,94,0.12)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.3)' }}>
+              <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                <path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" />
+              </svg>
+              {faceIdLoading ? 'Aguardando confirmação...' : `Entrar com Face ID (${lastEmail})`}
+            </button>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.08)' }} />
+              <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 11 }}>ou</span>
+              <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.08)' }} />
+            </div>
+          </>
         )}
 
         {mode !== 'recuperar' && (
