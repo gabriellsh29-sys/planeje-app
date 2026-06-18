@@ -165,7 +165,7 @@ export default function LoginPage() {
               <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
                 <path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" />
               </svg>
-              {faceIdLoading ? 'Aguardando confirmação...' : `Entrar com Face ID (${lastEmail})`}
+              {faceIdLoading ? 'Aguardando confirmação...' : 'Entrar com Face ID'}
             </button>
             <div className="flex items-center gap-3 mb-3">
               <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.08)' }} />
