@@ -80,8 +80,10 @@ export function AuthProvider({ children }) {
     return result;
   };
 
-  const loginWithToken = (email, token) =>
-    supabase.auth.verifyOtp({ email, token, type: 'magiclink' });
+  // O token vindo de admin.generateLink é um "hashed_token" (token_hash), não o
+  // código de 6 dígitos — por isso usa o parâmetro token_hash, não token+email.
+  const loginWithToken = (token) =>
+    supabase.auth.verifyOtp({ token_hash: token, type: 'magiclink' });
 
   const logout = () => supabase.auth.signOut();
 

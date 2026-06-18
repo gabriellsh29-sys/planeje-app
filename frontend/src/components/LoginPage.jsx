@@ -39,7 +39,7 @@ export default function LoginPage() {
       const verifyData = await verifyRes.json();
       if (!verifyRes.ok) throw new Error(verifyData.error || 'Não foi possível validar');
 
-      const { error: err } = await loginWithToken(verifyData.email, verifyData.token);
+      const { error: err } = await loginWithToken(verifyData.token);
       if (err) throw err;
     } catch (err) {
       setError(err.name === 'NotAllowedError' ? 'Cancelado.' : 'Não foi possível entrar com Face ID.');
