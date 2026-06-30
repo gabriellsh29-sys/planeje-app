@@ -34,20 +34,31 @@ export default async function handler(req, res) {
     const session = event.data.object;
     const userId = session.client_reference_id;
     if (userId) {
-      await supabase.from('perfis').update({
+      const { error } = await supabase.from('perfis').update({
         plano: 'pago',
         assinatura_status: 'ativa',
         stripe_customer_id: session.customer,
         stripe_subscription_id: session.subscription,
       }).eq('id', userId);
+
+      if (error) {
+        console.error('[webhook] erro ao atualizar perfil:', error.message);
+        return res.status(500).json({ error: error.message });
+      }
     }
   }
 
   if (event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted') {
     const sub = event.data.object;
     const status = sub.status === 'active' || sub.status === 'trialing' ? 'ativa' : 'inativa';
-    await supabase.from('perfis').update({ assinatura_status: status })
+
+    const { error } = await supabase.from('perfis').update({ assinatura_status: status })
       .eq('stripe_subscription_id', sub.id);
+
+    if (error) {
+      console.error('[webhook] erro ao atualizar assinatura:', error.message);
+      return res.status(500).json({ error: error.message });
+    }
   }
 
   res.status(200).json({ received: true });
