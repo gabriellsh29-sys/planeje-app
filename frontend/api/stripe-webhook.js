@@ -15,6 +15,26 @@ function buffer(readable) {
   });
 }
 
+async function notificarErro(assunto, detalhes) {
+  try {
+    await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'Planeje App <onboarding@resend.dev>',
+        to: 'gabriellsh29@gmail.com',
+        subject: `[Planeje] Erro no webhook: ${assunto}`,
+        html: `<p><strong>Erro no webhook do Stripe:</strong></p><pre>${detalhes}</pre>`,
+      }),
+    });
+  } catch (e) {
+    console.error('[webhook] falha ao enviar e-mail de erro:', e.message);
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
@@ -43,6 +63,7 @@ export default async function handler(req, res) {
 
       if (error) {
         console.error('[webhook] erro ao atualizar perfil:', error.message);
+        await notificarErro('checkout.session.completed', `userId: ${userId}\nEmail: ${session.customer_details?.email}\nErro: ${error.message}`);
         return res.status(500).json({ error: error.message });
       }
     }
@@ -57,6 +78,7 @@ export default async function handler(req, res) {
 
     if (error) {
       console.error('[webhook] erro ao atualizar assinatura:', error.message);
+      await notificarErro(event.type, `subscription_id: ${sub.id}\nStatus: ${status}\nErro: ${error.message}`);
       return res.status(500).json({ error: error.message });
     }
   }
