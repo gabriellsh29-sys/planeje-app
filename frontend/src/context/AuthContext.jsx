@@ -64,7 +64,17 @@ export function AuthProvider({ children }) {
     supabase.auth.signInWithPassword({ email, password });
 
   const signUp = (email, password, nome) =>
-    supabase.auth.signUp({ email, password, options: { data: { full_name: nome } } });
+    supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name: nome },
+        emailRedirectTo: 'https://www.planejeapp.com.br',
+      },
+    });
+
+  const resendConfirmation = (email) =>
+    supabase.auth.resend({ type: 'signup', email });
 
   const resetPassword = (email) =>
     supabase.auth.resetPasswordForEmail(email, {
@@ -94,7 +104,7 @@ export function AuthProvider({ children }) {
     || (perfil.trial_expira_em && new Date(perfil.trial_expira_em) > new Date());
 
   return (
-    <AuthContext.Provider value={{ user, session, perfil, acessoLiberado, isRecovery, refreshPerfil, loading: loading || (user && syncing), signInWithGoogle, signInWithPassword, signUp, resetPassword, updatePassword, loginWithToken, logout }}>
+    <AuthContext.Provider value={{ user, session, perfil, acessoLiberado, isRecovery, refreshPerfil, loading: loading || (user && syncing), signInWithGoogle, signInWithPassword, signUp, resendConfirmation, resetPassword, updatePassword, loginWithToken, logout }}>
       {children}
     </AuthContext.Provider>
   );

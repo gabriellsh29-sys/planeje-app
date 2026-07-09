@@ -143,12 +143,36 @@ function Dashboard() {
 }
 
 function AppContent() {
-  const { user, loading, acessoLiberado, isRecovery } = useAuth();
-  if (loading) {
+  const { user, loading, acessoLiberado, isRecovery, refreshPerfil } = useAuth();
+
+  const [waitingPayment, setWaitingPayment] = useState(() =>
+    new URLSearchParams(window.location.search).get('pagamento') === 'sucesso'
+  );
+
+  React.useEffect(() => {
+    if (!waitingPayment || !user) return;
+    if (acessoLiberado) {
+      setWaitingPayment(false);
+      window.history.replaceState({}, '', '/');
+      return;
+    }
+    const interval = setInterval(refreshPerfil, 3000);
+    const timeout  = setTimeout(() => { clearInterval(interval); setWaitingPayment(false); }, 45_000);
+    return () => { clearInterval(interval); clearTimeout(timeout); };
+  }, [waitingPayment, user, acessoLiberado]);
+
+  const isLoading = loading || (waitingPayment && !acessoLiberado && !!user);
+
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: '#0f172a' }}>
         <div className="flex flex-col items-center gap-4">
           <img src="/img/logo/logo-app-icon.png" alt="Planeje" className="w-32 h-32 object-contain rounded-3xl" />
+          {waitingPayment && (
+            <p className="text-sm font-semibold animate-pulse" style={{ color: '#22c55e' }}>
+              Ativando seu plano...
+            </p>
+          )}
           <div className="w-6 h-6 border-2 rounded-full animate-spin"
             style={{ borderColor: 'rgba(34,197,94,0.2)', borderTopColor: '#22c55e' }} />
         </div>

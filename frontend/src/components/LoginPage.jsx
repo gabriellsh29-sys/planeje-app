@@ -6,7 +6,7 @@ const LAST_EMAIL_KEY = 'planeje_last_email';
 const webauthnSuportado = typeof window !== 'undefined' && !!window.PublicKeyCredential;
 
 export default function LoginPage() {
-  const { signInWithGoogle, signInWithPassword, signUp, resetPassword, loginWithToken } = useAuth();
+  const { signInWithGoogle, signInWithPassword, signUp, resendConfirmation, resetPassword, loginWithToken } = useAuth();
   const [mode, setMode] = useState('login'); // 'login' | 'cadastro' | 'recuperar'
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
@@ -15,6 +15,7 @@ export default function LoginPage() {
   const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPw, setShowPw] = useState(false);
+  const [resendSent, setResendSent] = useState(false);
   const [faceIdLoading, setFaceIdLoading] = useState(false);
   const lastEmail = typeof window !== 'undefined' ? localStorage.getItem(LAST_EMAIL_KEY) : null;
 
