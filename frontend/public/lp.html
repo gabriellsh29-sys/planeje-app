@@ -212,17 +212,18 @@ h1.hh{margin-top:24px;font-size:82px;font-weight:800;line-height:1.02;letter-spa
 
 /* ─── GLASS CARD ─────────────────────────────────────── */
 .gc{
-  background:rgba(255,255,255,.028);
-  backdrop-filter:blur(16px);
-  border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(145deg,rgba(255,255,255,.052) 0%,rgba(255,255,255,.022) 100%);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:1px solid rgba(255,255,255,.11);
   border-radius:var(--rc);
-  transition:border-color .22s,background .22s,transform .25s,box-shadow .25s
+  box-shadow:0 2px 16px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.08);
+  transition:border-color .28s cubic-bezier(.4,0,.2,1),background .28s cubic-bezier(.4,0,.2,1),transform .28s cubic-bezier(.4,0,.2,1),box-shadow .28s cubic-bezier(.4,0,.2,1)
 }
 .gc:hover{
-  border-color:rgba(34,197,94,.26);
-  background:rgba(34,197,94,.042);
-  transform:translateY(-5px);
-  box-shadow:0 20px 48px rgba(0,0,0,.30),0 0 0 1px rgba(34,197,94,.12)
+  border-color:rgba(34,197,94,.28);
+  background:linear-gradient(145deg,rgba(34,197,94,.07) 0%,rgba(34,197,94,.028) 100%);
+  transform:translateY(-3px);
+  box-shadow:0 12px 36px rgba(0,0,0,.26),0 0 0 1px rgba(34,197,94,.13),inset 0 1px 0 rgba(255,255,255,.10)
 }
 
 /* ─── PROBLEM ────────────────────────────────────────── */
