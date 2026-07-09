@@ -329,10 +329,13 @@ h1.hh{margin-top:24px;font-size:76px;font-weight:800;line-height:1.02;letter-spa
   align-items:center;justify-content:center;
   border-radius:9px;background:rgba(255,255,255,.06);
   border:1px solid rgba(255,255,255,.11);color:var(--w60);
-  transition:transform .30s cubic-bezier(.4,0,.2,1),background .22s,color .22s,border-color .22s
+  transition:background .22s,color .22s,border-color .22s
 }
 .faq-ic svg{width:15px;height:15px}
-.faq-item.open .faq-ic{transform:rotate(45deg);background:var(--tf2);color:var(--c-green);border-color:var(--tl2)}
+.faq-ic .fi-minus{display:none}
+.faq-item.open .faq-ic{background:var(--tf2);color:var(--c-green);border-color:var(--tl2)}
+.faq-item.open .faq-ic .fi-plus{display:none}
+.faq-item.open .faq-ic .fi-minus{display:inline}
 .faq-a{max-height:0;overflow:hidden;transition:max-height .40s cubic-bezier(.4,0,.2,1)}
 .faq-ai{padding-bottom:22px;font-size:15px;color:var(--w60);line-height:1.78}
 .faq-item.open .faq-a{max-height:240px}
@@ -824,7 +827,7 @@ footer{border-top:1px solid var(--tl);padding:30px 44px;display:flex;align-items
       <div class="faq-item reveal">
         <button class="faq-q">
           Preciso informar cartão para testar?
-          <span class="faq-ic"><i data-lucide="plus"></i></span>
+          <span class="faq-ic"><svg class="fi-plus" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><svg class="fi-minus" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
         </button>
         <div class="faq-a"><div class="faq-ai">Não. O período de teste é 100% grátis por 7 dias, sem nenhuma informação de pagamento. Você só informa dados do cartão se decidir continuar depois do teste.</div></div>
       </div>
@@ -832,7 +835,7 @@ footer{border-top:1px solid var(--tl);padding:30px 44px;display:flex;align-items
       <div class="faq-item reveal d1">
         <button class="faq-q">
           Meus dados financeiros são seguros?
-          <span class="faq-ic"><i data-lucide="plus"></i></span>
+          <span class="faq-ic"><svg class="fi-plus" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><svg class="fi-minus" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
         </button>
         <div class="faq-a"><div class="faq-ai">Sim. Todos os dados são criptografados em trânsito e em repouso. Você registra as informações manualmente — suas senhas e dados bancários nunca passam pelo sistema.</div></div>
       </div>
@@ -840,7 +843,7 @@ footer{border-top:1px solid var(--tl);padding:30px 44px;display:flex;align-items
       <div class="faq-item reveal d2">
         <button class="faq-q">
           Posso cancelar quando quiser?
-          <span class="faq-ic"><i data-lucide="plus"></i></span>
+          <span class="faq-ic"><svg class="fi-plus" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><svg class="fi-minus" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
         </button>
         <div class="faq-a"><div class="faq-ai">Sim. Um clique nas configurações da conta. Sem ligação, sem multa, sem burocracia. O acesso continua garantido até o fim do período pago.</div></div>
       </div>
@@ -848,7 +851,7 @@ footer{border-top:1px solid var(--tl);padding:30px 44px;display:flex;align-items
       <div class="faq-item reveal d3">
         <button class="faq-q">
           Funciona no celular?
-          <span class="faq-ic"><i data-lucide="plus"></i></span>
+          <span class="faq-ic"><svg class="fi-plus" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><svg class="fi-minus" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
         </button>
         <div class="faq-a"><div class="faq-ai">Sim. O Planeje foi feito com foco em mobile. Funciona direto no navegador do celular, sem precisar instalar nenhum aplicativo.</div></div>
       </div>
@@ -856,7 +859,7 @@ footer{border-top:1px solid var(--tl);padding:30px 44px;display:flex;align-items
       <div class="faq-item reveal d4">
         <button class="faq-q">
           Posso usar para organizar as finanças do casal?
-          <span class="faq-ic"><i data-lucide="plus"></i></span>
+          <span class="faq-ic"><svg class="fi-plus" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><svg class="fi-minus" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
         </button>
         <div class="faq-a"><div class="faq-ai">Sim. Muitos usuários usam uma conta compartilhada para organizar as finanças da família ou do casal. Funciona muito bem para esse caso.</div></div>
       </div>
