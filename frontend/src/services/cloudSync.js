@@ -20,6 +20,8 @@ function snapshotLocal() {
 
 async function pushToCloud(userId) {
   const data = snapshotLocal();
+  // Nunca sobrescreve a nuvem com snapshot vazio — evita wipe acidental
+  if (Object.keys(data).length === 0) return;
   await supabase
     .from('user_data')
     .upsert({ user_id: userId, data, updated_at: new Date().toISOString() });
@@ -30,11 +32,12 @@ function schedulePush(userId) {
   pushTimer = setTimeout(() => pushToCloud(userId), 1500);
 }
 
-// Aplica dados da nuvem sem disparar novo push (usa setItem nativo)
+// Aplica dados da nuvem sem disparar novo push (usa setItem nativo).
+// Nunca apaga dados locais se a nuvem vier vazia.
 function applyCloudData(data) {
+  if (!data || Object.keys(data).length === 0) return;
   DATA_KEYS.forEach(key => {
     if (data[key] !== undefined) _native(key, data[key]);
-    else localStorage.removeItem(key);
   });
 }
 
@@ -46,10 +49,16 @@ export async function pullFromCloud(userId) {
     .maybeSingle();
 
   if (row?.data && Object.keys(row.data).length > 0) {
+    // Nuvem tem dados: aplica localmente
     applyCloudData(row.data);
   } else {
-    // Primeiro acesso: envia o que houver localmente
-    await pushToCloud(userId);
+    // Sem dados na nuvem: envia o que houver localmente (só se não estiver vazio)
+    const snap = snapshotLocal();
+    if (Object.keys(snap).length > 0) {
+      await supabase
+        .from('user_data')
+        .upsert({ user_id: userId, data: snap, updated_at: new Date().toISOString() });
+    }
   }
 }
 
