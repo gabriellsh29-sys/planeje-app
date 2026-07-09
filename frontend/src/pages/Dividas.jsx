@@ -329,6 +329,12 @@ export default function Dividas({ month, year }) {
   const y = localYear;
   const [dividas, setDividas] = useState(loadDividas);
   const [categorias, setCategorias] = useState(loadCategorias);
+
+  useEffect(() => {
+    const reload = () => { setDividas(loadDividas()); setCategorias(loadCategorias()); };
+    window.addEventListener('planeje-sync', reload);
+    return () => window.removeEventListener('planeje-sync', reload);
+  }, []);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm());
   const [editId, setEditId] = useState(null);

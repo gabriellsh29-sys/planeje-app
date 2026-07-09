@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LabelList, Text } from 'recharts';
 
 const fmt = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
@@ -122,7 +122,14 @@ const tooltipStyle = {
 };
 
 export default function Graficos({ month, year }) {
-  const transactions = useMemo(() => [...loadTransacoes(month, year), ...loadReceitas(month, year)], [month, year]);
+  const [syncVer, setSyncVer] = useState(0);
+  useEffect(() => {
+    const reload = () => setSyncVer(v => v + 1);
+    window.addEventListener('planeje-sync', reload);
+    return () => window.removeEventListener('planeje-sync', reload);
+  }, []);
+
+  const transactions = useMemo(() => [...loadTransacoes(month, year), ...loadReceitas(month, year)], [month, year, syncVer]);
   const expenseByCategory = useMemo(() => {
     const bycat = {};
     transactions.filter(t => t.type === 'expense').forEach(tx => {

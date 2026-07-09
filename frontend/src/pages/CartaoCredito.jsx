@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import CalculatorModal from '../components/CalculatorModal';
 
 const CARTAO_KEY  = 'planeje_cartoes';
@@ -45,6 +45,12 @@ const CATEGORIAS_FATURA = ['Alimentação','Transporte','Saúde','Lazer','Compra
 
 export default function CartaoCredito({ month, year }) {
   const [cartoes,    setCartoes]    = useState(() => load(CARTAO_KEY, []));
+
+  useEffect(() => {
+    const reload = () => { setCartoes(load(CARTAO_KEY, [])); };
+    window.addEventListener('planeje-sync', reload);
+    return () => window.removeEventListener('planeje-sync', reload);
+  }, []);
   const [cartaoAtivo, setCartaoAtivo] = useState(null);
   const [showFormCartao, setShowFormCartao] = useState(false);
   const [editCartaoId,   setEditCartaoId]   = useState(null);

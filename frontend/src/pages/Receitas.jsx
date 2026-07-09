@@ -196,6 +196,12 @@ export default function Receitas({ month, year }) {
 
   const [receitas,    setReceitas]    = useState(loadReceitas);
   const [categorias,  setCategorias]  = useState(loadCats);
+
+  useEffect(() => {
+    const reload = () => { setReceitas(loadReceitas()); setCategorias(loadCats()); };
+    window.addEventListener('planeje-sync', reload);
+    return () => window.removeEventListener('planeje-sync', reload);
+  }, []);
   const [showForm,    setShowForm]    = useState(false);
   const [form,        setForm]        = useState(emptyForm());
   const [editId,      setEditId]      = useState(null);

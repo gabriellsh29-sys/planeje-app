@@ -76,6 +76,8 @@ function applyCloudData(data) {
       _native(key, mergeKey(cloudVal, localVal));
     }
   });
+  // Avisa todos os componentes React para recarregarem do localStorage
+  window.dispatchEvent(new CustomEvent('planeje-sync'));
 }
 
 export async function pullFromCloud(userId) {
@@ -85,15 +87,20 @@ export async function pullFromCloud(userId) {
     .eq('user_id', userId)
     .maybeSingle();
 
+  // Aplica dados da nuvem ao local (merge sem apagar nada)
   if (row?.data && Object.keys(row.data).length > 0) {
     applyCloudData(row.data);
-  } else {
-    const snap = snapshotLocal();
-    if (Object.keys(snap).length > 0) {
-      await supabase
-        .from('user_data')
-        .upsert({ user_id: userId, data: snap, updated_at: new Date().toISOString() });
-    }
+  }
+
+  // Sempre empurra o snapshot local completo para a nuvem.
+  // Garante que a nuvem tenha TODAS as chaves do usuário, mesmo que
+  // apenas parte delas estivesse salva anteriormente.
+  const snap = snapshotLocal();
+  if (Object.keys(snap).length > 0) {
+    await archiveCurrentCloud(userId);
+    await supabase
+      .from('user_data')
+      .upsert({ user_id: userId, data: snap, updated_at: new Date().toISOString() });
   }
 }
 

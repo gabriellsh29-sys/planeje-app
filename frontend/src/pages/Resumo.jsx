@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { AreaChart, Area, ResponsiveContainer, Tooltip, XAxis, YAxis, PieChart, Pie, Cell } from 'recharts';
 import { exportCSV, exportPDF } from '../hooks/useExport';
 
@@ -148,11 +148,18 @@ export default function Resumo({ loading, month, year }) {
   const [editSaldo,    setEditSaldo]  = useState(false);
   const [saldoInput,   setSaldoInput] = useState('');
   const [showExport,   setShowExport] = useState(false);
+  const [syncVer,      setSyncVer]    = useState(0);
 
-  const despesas = useMemo(() => [...loadDespesas(month, year), ...loadFaturas(month, year)], [month, year]);
-  const receitas = useMemo(() => loadReceitas(month, year), [month, year]);
+  useEffect(() => {
+    const reload = () => { setSaldo(getSaldoInicial()); setSyncVer(v => v + 1); };
+    window.addEventListener('planeje-sync', reload);
+    return () => window.removeEventListener('planeje-sync', reload);
+  }, []);
+
+  const despesas = useMemo(() => [...loadDespesas(month, year), ...loadFaturas(month, year)], [month, year, syncVer]);
+  const receitas = useMemo(() => loadReceitas(month, year), [month, year, syncVer]);
   // Contas fixas vencidas em meses anteriores, mas pagas neste mês.
-  const pagamentosAtrasados = useMemo(() => loadPagamentosAtrasadosNoMes(month, year), [month, year]);
+  const pagamentosAtrasados = useMemo(() => loadPagamentosAtrasadosNoMes(month, year), [month, year, syncVer]);
 
   const totalExpense   = despesas.reduce((s, t) => s + parseFloat(t.amount || 0), 0);
   const totalIncome    = receitas.reduce((s, t) => s + parseFloat(t.amount || 0), 0);

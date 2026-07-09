@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { AppIcon, GOAL_ICONS } from '../lib/icons';
 
 const ORCAMENTO_KEY = 'planeje_orcamentos';
@@ -69,6 +69,12 @@ function Orcamento({ month, year }) {
   const [formLimite, setFormLimite] = useState('');
   const [novaCategoria, setNovaCategoria] = useState('');
   const [categoriasExtra, setCategoriasExtra] = useState(() => load(CATEGORIAS_KEY, []));
+
+  useEffect(() => {
+    const reload = () => { setOrcamentos(load(ORCAMENTO_KEY, [])); setCategoriasExtra(load(CATEGORIAS_KEY, [])); };
+    window.addEventListener('planeje-sync', reload);
+    return () => window.removeEventListener('planeje-sync', reload);
+  }, []);
 
   const categoriasDividas = useMemo(getCategoriasDividas, []);
 
@@ -237,6 +243,12 @@ function Orcamento({ month, year }) {
 function Metas() {
   const [metas,    setMetas]    = useState(() => load(METAS_KEY, []));
   const [showForm, setShowForm] = useState(false);
+
+  useEffect(() => {
+    const reload = () => setMetas(load(METAS_KEY, []));
+    window.addEventListener('planeje-sync', reload);
+    return () => window.removeEventListener('planeje-sync', reload);
+  }, []);
   const [editId,   setEditId]   = useState(null);
   const [showDep,  setShowDep]  = useState(null);
   const [depValor, setDepValor] = useState('');

@@ -32,6 +32,17 @@ export default function Anotacoes() {
   const [grupos,        setGrupos]        = useState(loadGrupos);
   const [etiquetas,     setEtiquetas]     = useState(() => load(ETIQUETAS_KEY, ETIQUETAS_PADRAO));
   const [grupoAtivo,    setGrupoAtivo]    = useState(() => { const gs = loadGrupos(); return gs[0]?.id || null; });
+
+  useEffect(() => {
+    const reload = () => {
+      setTarefas(loadTarefas());
+      const gs = loadGrupos(); setGrupos(gs);
+      setEtiquetas(load(ETIQUETAS_KEY, ETIQUETAS_PADRAO));
+      setGrupoAtivo(a => a ?? (gs[0]?.id || null));
+    };
+    window.addEventListener('planeje-sync', reload);
+    return () => window.removeEventListener('planeje-sync', reload);
+  }, []);
   const [filtroEtiq,    setFiltroEtiq]    = useState(null);
   const [novaTexto,     setNovaTexto]     = useState('');
   const [novaTags,      setNovaTags]      = useState([]);
