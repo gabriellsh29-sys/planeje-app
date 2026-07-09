@@ -156,20 +156,21 @@ h1.hh{margin-top:24px;font-size:82px;font-weight:800;line-height:1.02;letter-spa
 .mock-outer{position:relative;padding:26px 10px 38px 26px}
 .mock-card{
   position:relative;overflow:hidden;
-  background:rgba(14,24,46,.92);
-  backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);
-  border:1px solid rgba(34,197,94,.22);
+  background:linear-gradient(160deg,rgba(12,22,50,.97) 0%,rgba(7,14,36,.99) 100%);
+  backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);
+  border:1px solid rgba(34,197,94,.30);
   border-radius:26px;padding:30px;
-  box-shadow:var(--sh),0 0 120px rgba(34,197,94,.09);
+  box-shadow:var(--sh),0 0 0 1px rgba(34,197,94,.07),0 0 80px rgba(34,197,94,.14),0 0 180px rgba(34,197,94,.05);
   animation:float 8s ease-in-out infinite
 }
-.mock-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(34,197,94,.065) 0%,transparent 55%);pointer-events:none;border-radius:26px}
+.mock-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(34,197,94,.10) 0%,transparent 52%);pointer-events:none;border-radius:26px}
+.mock-card::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(34,197,94,.45),transparent);pointer-events:none;border-radius:26px 26px 0 0}
 .ml{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--w40)}
 .mb{font-family:var(--fd);font-weight:800;font-size:40px;color:#fff;letter-spacing:-.03em;margin-top:4px}
 .mb small{font-size:23px;opacity:.85}
 .ms{font-size:11px;color:var(--w40);margin-top:3px}
 .mgrid{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:22px}
-.mtile{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);border-radius:13px;padding:14px}
+.mtile{background:rgba(255,255,255,.062);border:1px solid rgba(255,255,255,.12);border-radius:13px;padding:14px;box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}
 .mtile .ml{margin-bottom:5px}
 .mtile .mv{font-family:var(--fd);font-weight:700;font-size:18px}
 .mchart{margin-top:22px}
@@ -178,7 +179,7 @@ h1.hh{margin-top:24px;font-size:82px;font-weight:800;line-height:1.02;letter-spa
 .bar{flex:1;border-radius:5px 5px 0 0;transform-origin:bottom center;transform:scaleY(0)}
 .bar.bi{animation:bar-in .55s cubic-bezier(.34,1.56,.64,1) forwards}
 .bm{background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.12)}
-.ba{background:var(--grad);border:none;box-shadow:0 -7px 22px rgba(34,197,94,.42)}
+.ba{background:var(--grad);border:none;box-shadow:0 -10px 28px rgba(34,197,94,.54)}
 .mtxs{margin-top:22px;display:flex;flex-direction:column;gap:10px}
 .mtxs-l{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--w40);margin-bottom:4px}
 .tx{display:flex;align-items:center;gap:11px}
@@ -191,11 +192,11 @@ h1.hh{margin-top:24px;font-size:82px;font-weight:800;line-height:1.02;letter-spa
 /* Floating cards */
 .fc{
   position:absolute;
-  background:rgba(12,20,43,.94);
-  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
-  border:1px solid var(--w12);border-radius:16px;
+  background:linear-gradient(145deg,rgba(10,18,44,.97) 0%,rgba(7,13,36,.99) 100%);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border:1px solid rgba(255,255,255,.15);border-radius:16px;
   padding:13px 18px;display:flex;align-items:center;gap:12px;
-  box-shadow:0 14px 44px rgba(0,0,0,.48),0 2px 8px rgba(0,0,0,.28);
+  box-shadow:0 20px 60px rgba(0,0,0,.60),0 4px 16px rgba(0,0,0,.36),inset 0 1px 0 rgba(255,255,255,.09);
   white-space:nowrap;z-index:10
 }
 .fcic{width:36px;height:36px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
@@ -258,15 +259,25 @@ h1.hh{margin-top:24px;font-size:82px;font-weight:800;line-height:1.02;letter-spa
 .slist{margin-top:24px;display:flex;flex-direction:column;gap:13px}
 .si{display:flex;align-items:center;gap:12px;font-size:14.5px;font-weight:600;color:var(--w80)}
 .sck{width:20px;height:20px;border-radius:6px;flex-shrink:0;background:var(--tf2);border:1px solid var(--tl2);background-image:url("data:image/svg+xml,%3Csvg width='11' height='9' viewBox='0 0 11 9' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 4.5L4 7.5L10 1' stroke='%2322C55E' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:center}
-.sviz{background:rgba(14,24,48,.86);backdrop-filter:blur(22px);border:1px solid rgba(34,197,94,.18);border-radius:var(--rc);padding:28px;box-shadow:var(--sh),0 0 90px rgba(34,197,94,.07);position:relative;overflow:hidden}
-.sviz::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(34,197,94,.06) 0%,transparent 50%);pointer-events:none}
+.sviz{
+  background:linear-gradient(155deg,rgba(10,20,48,.94) 0%,rgba(7,14,38,.97) 100%);
+  backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);
+  border:1px solid rgba(34,197,94,.24);
+  border-radius:var(--rc);padding:28px;
+  box-shadow:var(--sh),0 0 0 1px rgba(34,197,94,.06),0 0 60px rgba(34,197,94,.10);
+  position:relative;overflow:hidden;
+  transition:box-shadow .30s ease,border-color .30s ease
+}
+.sviz:hover{border-color:rgba(34,197,94,.34);box-shadow:var(--sh),0 0 0 1px rgba(34,197,94,.10),0 0 80px rgba(34,197,94,.15)}
+.sviz::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(34,197,94,.08) 0%,transparent 48%);pointer-events:none}
+.sviz::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(34,197,94,.32),transparent);pointer-events:none}
 
 /* spend rows */
 .sr{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px}
 .sc{display:flex;align-items:center;gap:10px;min-width:115px}
 .sd{width:10px;height:10px;border-radius:50%;flex-shrink:0}
 .sn2{font-size:13px;font-weight:600;color:var(--w80)}
-.sbw{flex:1;height:6px;background:rgba(255,255,255,.06);border-radius:99px;margin:0 14px;overflow:hidden}
+.sbw{flex:1;height:6px;background:rgba(255,255,255,.09);border-radius:99px;margin:0 14px;overflow:hidden}
 .sb{height:100%;border-radius:99px}
 .sp{font-size:12px;font-weight:700;color:var(--w60);width:32px;text-align:right}
 
