@@ -36,11 +36,12 @@ export function AuthProvider({ children }) {
       if (session.user.email) localStorage.setItem('planeje_last_email', session.user.email.toLowerCase());
       setSyncing(true);
       Promise.all([
-        pullFromCloud(userId),
+        pullFromCloud(userId).catch(() => {}),
         supabase.from('perfis').select('nome, plano, trial_expira_em, assinatura_status, avatar_url').eq('id', userId).maybeSingle(),
       ]).then(([, { data }]) => {
         setPerfil(data);
         startCloudSync(userId);
+      }).catch(() => {}).finally(() => {
         setSyncing(false);
       });
     } else {
