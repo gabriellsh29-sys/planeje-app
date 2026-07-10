@@ -191,7 +191,7 @@ export function startCloudSync(userId) {
   if (!pollInterval) {
     pollInterval = setInterval(() => {
       if (currentUserId) autoSyncCycle(currentUserId);
-    }, 15000);
+    }, 5000);
   }
 }
 

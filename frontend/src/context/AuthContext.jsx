@@ -43,13 +43,14 @@ export function AuthProvider({ children }) {
       if (prevUserId && prevUserId !== userId) {
         clearLocalData();
       }
+      // startCloudSync é chamado imediatamente — não pode depender de queries que podem falhar
+      startCloudSync(userId);
       Promise.all([
         pullFromCloud(userId).catch(() => {}),
-        supabase.from('perfis').select('nome, plano, trial_expira_em, assinatura_status, avatar_url').eq('id', userId).maybeSingle(),
-      ]).then(([, { data }]) => {
-        setPerfil(data);
-        startCloudSync(userId);
-      }).catch(() => {}).finally(() => {
+        supabase.from('perfis').select('nome, plano, trial_expira_em, assinatura_status, avatar_url').eq('id', userId).maybeSingle()
+          .then(({ data }) => setPerfil(data))
+          .catch(() => {}),
+      ]).finally(() => {
         setSyncing(false);
       });
     } else {
