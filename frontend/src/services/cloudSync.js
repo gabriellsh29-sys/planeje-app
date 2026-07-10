@@ -183,7 +183,7 @@ export function startCloudSync(userId) {
   }
 
   const onVisibility = () => {
-    if (document.visibilityState === 'visible' && currentUserId) pullFromCloud(currentUserId).catch(() => {});
+    if (document.visibilityState === 'visible' && currentUserId) autoSyncCycle(currentUserId).catch(() => {});
   };
   document.addEventListener('visibilitychange', onVisibility);
   visibilityCleanup = () => document.removeEventListener('visibilitychange', onVisibility);

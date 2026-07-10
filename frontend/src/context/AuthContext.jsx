@@ -45,11 +45,15 @@ export function AuthProvider({ children }) {
       }
       // startCloudSync é chamado imediatamente — não pode depender de queries que podem falhar
       startCloudSync(userId);
+
+      const fetchPerfil = (attempt = 0) =>
+        supabase.from('perfis').select('nome, plano, trial_expira_em, assinatura_status, avatar_url').eq('id', userId).maybeSingle()
+          .then(({ data }) => { if (data) setPerfil(data); else if (attempt < 3) setTimeout(() => fetchPerfil(attempt + 1), 2000 * (attempt + 1)); })
+          .catch(() => { if (attempt < 3) setTimeout(() => fetchPerfil(attempt + 1), 2000 * (attempt + 1)); });
+
       Promise.all([
         pullFromCloud(userId).catch(() => {}),
-        supabase.from('perfis').select('nome, plano, trial_expira_em, assinatura_status, avatar_url').eq('id', userId).maybeSingle()
-          .then(({ data }) => setPerfil(data))
-          .catch(() => {}),
+        fetchPerfil(),
       ]).finally(() => {
         setSyncing(false);
       });

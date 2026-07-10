@@ -13,7 +13,7 @@ const NAV = [
 ];
 
 export default function Sidebar({ page, setPage, month, year, onPrev, onNext, onToday }) {
-  const { user, logout } = useAuth();
+  const { user, logout, perfil } = useAuth();
 
   return (
     <>
@@ -39,7 +39,7 @@ export default function Sidebar({ page, setPage, month, year, onPrev, onNext, on
           </div>
           <div className="flex items-center gap-1.5 mt-3 px-0.5">
             <div className="w-1.5 h-1.5 rounded-full bg-income flex-shrink-0" />
-            <p className="text-text-3 text-[10px] truncate">{user?.name || 'Usuário'}</p>
+            <p className="text-text-3 text-[10px] truncate">{perfil?.nome || user?.user_metadata?.full_name || user?.email || 'Usuário'}</p>
           </div>
         </div>
 
