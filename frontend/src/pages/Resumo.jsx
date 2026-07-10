@@ -1,8 +1,6 @@
-import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { AreaChart, Area, ResponsiveContainer, Tooltip, XAxis, YAxis, PieChart, Pie, Cell } from 'recharts';
 import { exportCSV, exportPDF } from '../hooks/useExport';
-import { forceSyncNow } from '../services/cloudSync';
-import { useAuth } from '../context/AuthContext';
 
 const fmt = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
 const fmtShort = (v) => { if (v >= 1000) return `${(v / 1000).toFixed(0)}k`; return v.toFixed(0); };
@@ -146,26 +144,17 @@ function loadReceitas(month, year) {
 }
 
 export default function Resumo({ loading, month, year }) {
-  const { user } = useAuth();
   const [saldoInicial, setSaldo] = useState(getSaldoInicial);
   const [editSaldo,    setEditSaldo]  = useState(false);
   const [saldoInput,   setSaldoInput] = useState('');
   const [showExport,   setShowExport] = useState(false);
   const [syncVer,      setSyncVer]    = useState(0);
-  const [syncing,      setSyncing]    = useState(false);
 
   useEffect(() => {
     const reload = () => { setSaldo(getSaldoInicial()); setSyncVer(v => v + 1); };
     window.addEventListener('planeje-sync', reload);
     return () => window.removeEventListener('planeje-sync', reload);
   }, []);
-
-  const handleSync = useCallback(async () => {
-    if (!user?.id || syncing) return;
-    setSyncing(true);
-    await forceSyncNow(user.id).catch(() => {});
-    setSyncing(false);
-  }, [user, syncing]);
 
   const despesas = useMemo(() => [...loadDespesas(month, year), ...loadFaturas(month, year)], [month, year, syncVer]);
   const receitas = useMemo(() => loadReceitas(month, year), [month, year, syncVer]);
@@ -208,20 +197,8 @@ export default function Resumo({ loading, month, year }) {
   return (
     <div className="p-4 md:p-5 pb-24 md:pb-8 space-y-3 animate-fade-in">
 
-      {/* ── EXPORTAR + SYNC ── */}
-      <div className="flex justify-end gap-2">
-        <button
-          onClick={handleSync}
-          disabled={syncing}
-          title="Sincronizar com a nuvem"
-          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl transition-all disabled:opacity-50"
-          style={{ background: 'rgba(59,130,246,0.1)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.2)' }}>
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8"
-            className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-          </svg>
-          {syncing ? 'Sincronizando...' : 'Sincronizar'}
-        </button>
+      {/* ── EXPORTAR ── */}
+      <div className="flex justify-end">
         <div className="relative">
           <button onClick={() => setShowExport(s => !s)}
             className="flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-xl transition-all"

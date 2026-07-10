@@ -32,6 +32,7 @@ async function archiveCurrentCloud(userId) {
   } catch {}
 }
 
+// Push completo com arquivo histórico (usado no login e logout)
 async function pushToCloud(userId) {
   const snap = snapshotLocal();
   if (Object.keys(snap).length === 0) return; // REGRA 1: nunca envia vazio
@@ -43,9 +44,21 @@ async function pushToCloud(userId) {
   } catch {}
 }
 
+// Push leve sem arquivo (usado no polling e schedulePush — frequente)
+async function lightPushToCloud(userId) {
+  const snap = snapshotLocal();
+  if (Object.keys(snap).length === 0) return; // REGRA 1
+  try {
+    await supabase
+      .from('user_data')
+      .upsert({ user_id: userId, data: snap, updated_at: new Date().toISOString() });
+  } catch {}
+}
+
+// Timer de push reduzido para 500ms — dados chegam à nuvem quase imediatamente
 function schedulePush(userId) {
   if (pushTimer) clearTimeout(pushTimer);
-  pushTimer = setTimeout(() => pushToCloud(userId), 1500);
+  pushTimer = setTimeout(() => lightPushToCloud(userId), 500);
 }
 
 function mergeKey(cloudVal, localVal) {
@@ -78,8 +91,9 @@ function applyCloudData(data) {
   if (changed) window.dispatchEvent(new CustomEvent('planeje-sync'));
 }
 
-// Puxa sem fazer push-back — usado no polling para não criar writes excessivos
-async function softPullFromCloud(userId) {
+// Ciclo de sync a cada 15s: pull da nuvem + push do local
+// Garante sync automático mesmo se Realtime falhar ou push anterior tiver falhado
+async function autoSyncCycle(userId) {
   try {
     const { data: row } = await supabase
       .from('user_data')
@@ -90,9 +104,11 @@ async function softPullFromCloud(userId) {
       applyCloudData(row.data);
     }
   } catch {}
+  // Depois do pull, empurra o snapshot local (que pode ter dados não enviados ainda)
+  await lightPushToCloud(userId);
 }
 
-// Pull completo: aplica nuvem → depois empurra snapshot local completo de volta
+// Pull completo: aplica nuvem + empurra snapshot completo com arquivo
 export async function pullFromCloud(userId) {
   try {
     const { data: row } = await supabase
@@ -136,7 +152,7 @@ export function startCloudSync(userId) {
       .subscribe();
   }
 
-  // Fallback visibilitychange: re-puxa quando app volta ao foco
+  // Fallback visibilitychange: full sync quando app volta ao foco (troca de aba/app)
   const onVisibility = () => {
     if (document.visibilityState === 'visible' && currentUserId) {
       pullFromCloud(currentUserId).catch(() => {});
@@ -145,11 +161,12 @@ export function startCloudSync(userId) {
   document.addEventListener('visibilitychange', onVisibility);
   visibilityCleanup = () => document.removeEventListener('visibilitychange', onVisibility);
 
-  // Polling a cada 30s: garante sync mesmo se Realtime falhar
+  // Polling bidirecional a cada 15s: pull + push leve
+  // Garante que dados de qualquer dispositivo cheguem ao outro em ≤15s
   if (!pollInterval) {
     pollInterval = setInterval(() => {
-      if (currentUserId) softPullFromCloud(currentUserId);
-    }, 30000);
+      if (currentUserId) autoSyncCycle(currentUserId);
+    }, 15000);
   }
 }
 
@@ -165,16 +182,4 @@ export async function stopCloudSync(finalPush = false) {
 
 export function clearLocalData() {
   DATA_KEYS.forEach(key => localStorage.removeItem(key));
-}
-
-// Exporta para uso manual (ex: botão "Sincronizar")
-export async function forceSyncNow(userId) {
-  if (!userId) return;
-  await pullFromCloud(userId);
-  const snap = snapshotLocal();
-  if (Object.keys(snap).length > 0) {
-    await supabase
-      .from('user_data')
-      .upsert({ user_id: userId, data: snap, updated_at: new Date().toISOString() });
-  }
 }
