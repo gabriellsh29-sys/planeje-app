@@ -611,7 +611,13 @@ export default function Receitas({ month, year }) {
                 <input value={form.observacao} onChange={e => upd({ observacao: e.target.value })}
                   placeholder="Opcional..." className="input-premium" />
               </div>
-              <div className="pb-2" />
+              <button
+                onClick={salvar}
+                disabled={!form.nome.trim() || !form.valor}
+                className="btn-gold w-full text-center disabled:opacity-40"
+              >
+                Salvar
+              </button>
             </div>
           </div>
         </div>

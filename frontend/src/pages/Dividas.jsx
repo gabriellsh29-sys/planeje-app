@@ -1225,7 +1225,13 @@ export default function Dividas({ month, year }) {
                 <input value={form.observacao} onChange={e => updateForm({ observacao: e.target.value })}
                   placeholder="Opcional..." className="input-premium" />
               </div>
-              <div className="pb-2" />
+              <button
+                onClick={saveItem}
+                disabled={!form.nome.trim() || !form.valor}
+                className="btn-gold w-full text-center disabled:opacity-40"
+              >
+                Salvar
+              </button>
             </div>
           </div>
         </div>
