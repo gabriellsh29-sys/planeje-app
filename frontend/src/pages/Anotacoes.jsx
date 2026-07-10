@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AppIcon, LIST_ICONS } from '../lib/icons';
+import { newId } from '../lib/ids';
 
 const TAREFAS_KEY   = 'planeje_tarefas';
 const GRUPOS_KEY    = 'planeje_grupos';
@@ -13,7 +14,7 @@ function loadTarefas() {
   if (salvas !== null) return salvas.map(t => ({ secao: null, etiquetas: [], concluido: false, ...t }));
   // Migra notas antigas se existirem
   const antigas = load('financeiro_notas', []);
-  return antigas.map(n => ({ id: n.id || Date.now() + Math.random(), texto: n.texto || '', concluido: false, grupo: null, secao: null, etiquetas: [], criadoEm: n.criadoEm || new Date().toISOString() }));
+  return antigas.map(n => ({ id: n.id || newId(), texto: n.texto || '', concluido: false, grupo: null, secao: null, etiquetas: [], criadoEm: n.criadoEm || new Date().toISOString() }));
 }
 
 function loadGrupos() {
@@ -75,7 +76,7 @@ export default function Anotacoes() {
   const addTarefa = (secaoId) => {
     const t = novaTexto.trim();
     if (!t) { setAdicionando(null); return; }
-    setTarefas(prev => [{ id: Date.now(), texto: t, concluido: false, grupo: grupoAtivo, secao: secaoId || null, etiquetas: novaTags, criadoEm: new Date().toISOString() }, ...prev]);
+    setTarefas(prev => [{ id: newId(), texto: t, concluido: false, grupo: grupoAtivo, secao: secaoId || null, etiquetas: novaTags, criadoEm: new Date().toISOString(), updatedAt: new Date().toISOString() }, ...prev]);
     setNovaTexto(''); setNovaTags([]);
   };
 
@@ -83,11 +84,11 @@ export default function Anotacoes() {
     const tarefa = tarefas.find(t => t.id === id);
     if (!tarefa) return;
     if (!tarefa.concluido) {
-      setTarefas(prev => prev.map(t => t.id === id ? { ...t, concluido: true, concluidoEm: new Date().toISOString() } : t));
+      setTarefas(prev => prev.map(t => t.id === id ? { ...t, concluido: true, concluidoEm: new Date().toISOString(), updatedAt: new Date().toISOString() } : t));
       const timer = setTimeout(() => setUndo(null), 4000);
       setUndo({ id, texto: tarefa.texto, timer });
     } else {
-      setTarefas(prev => prev.map(t => t.id === id ? { ...t, concluido: false, concluidoEm: null } : t));
+      setTarefas(prev => prev.map(t => t.id === id ? { ...t, concluido: false, concluidoEm: null, updatedAt: new Date().toISOString() } : t));
     }
   };
 
@@ -102,7 +103,7 @@ export default function Anotacoes() {
 
   const saveEdit = (id) => {
     const t = editTexto.trim();
-    if (t) setTarefas(prev => prev.map(x => x.id === id ? { ...x, texto: t, etiquetas: editTags } : x));
+    if (t) setTarefas(prev => prev.map(x => x.id === id ? { ...x, texto: t, etiquetas: editTags, updatedAt: new Date().toISOString() } : x));
     setEditId(null); setEditTexto(''); setEditTags([]);
   };
 
@@ -116,10 +117,10 @@ export default function Anotacoes() {
   // ── Grupos ─────────────────────────────────────────────────────
   const saveGrupo = ({ nome, emoji, cor }, editGrupoId) => {
     if (editGrupoId) {
-      setGrupos(prev => prev.map(g => g.id === editGrupoId ? { ...g, nome, emoji, cor } : g));
+      setGrupos(prev => prev.map(g => g.id === editGrupoId ? { ...g, nome, emoji, cor, updatedAt: new Date().toISOString() } : g));
     } else {
-      const id = 'g_' + Date.now();
-      setGrupos(prev => [...prev, { id, nome, emoji, cor, secoes: [] }]);
+      const id = 'g_' + newId();
+      setGrupos(prev => [...prev, { id, nome, emoji, cor, secoes: [], updatedAt: new Date().toISOString() }]);
       setGrupoAtivo(id);
     }
     setListModal(null);
@@ -136,8 +137,8 @@ export default function Anotacoes() {
   const addSecao = () => {
     const nome = novaSecaoNome.trim();
     if (!nome) { setAddingSecao(false); return; }
-    const id = 's_' + Date.now();
-    setGrupos(prev => prev.map(g => g.id === grupoAtivo ? { ...g, secoes: [...(g.secoes || []), { id, nome }] } : g));
+    const id = 's_' + newId();
+    setGrupos(prev => prev.map(g => g.id === grupoAtivo ? { ...g, secoes: [...(g.secoes || []), { id, nome }], updatedAt: new Date().toISOString() } : g));
     setNovaSecaoNome(''); setAddingSecao(false);
   };
 
@@ -160,7 +161,7 @@ export default function Anotacoes() {
   const addEtiqueta = () => {
     const nome = novaEtiqNome.trim();
     if (!nome) return;
-    setEtiquetas(prev => [...prev, { id: 'e_' + Date.now(), nome, cor: novaEtiqCor }]);
+    setEtiquetas(prev => [...prev, { id: 'e_' + newId(), nome, cor: novaEtiqCor, updatedAt: new Date().toISOString() }]);
     setNovaEtiqNome('');
   };
 

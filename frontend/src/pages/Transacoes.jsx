@@ -105,7 +105,7 @@ export default function Transacoes({ transactions, onDelete, loading, onAdd }) {
     if (!efetivandoId) return;
     if (efetivIsDivida) {
       const updated = dividas.map(d =>
-        d.id === efetivandoId ? { ...d, pago: true, pagamentoData: efetivDate } : d
+        d.id === efetivandoId ? { ...d, pago: true, pagamentoData: efetivDate, updatedAt: new Date().toISOString() } : d
       );
       setDividas(updated);
       localStorage.setItem(DIVIDA_KEY, JSON.stringify(updated));
@@ -120,7 +120,7 @@ export default function Transacoes({ transactions, onDelete, loading, onAdd }) {
   const removeEfetivacao = (record) => {
     if (record.isDivida) {
       const updated = dividas.map(d =>
-        d.id === record._dividaId ? { ...d, pago: false, pagamentoData: null } : d
+        d.id === record._dividaId ? { ...d, pago: false, pagamentoData: null, updatedAt: new Date().toISOString() } : d
       );
       setDividas(updated);
       localStorage.setItem(DIVIDA_KEY, JSON.stringify(updated));

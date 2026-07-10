@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { newId } from '../lib/ids';
 
 const DIVIDA_KEY   = 'financeiro_dividas';
 const RECEITA_KEY  = 'financeiro_receitas';
@@ -14,7 +15,7 @@ export function useTransactions() {
       if (data.type === 'income') {
         const all = JSON.parse(localStorage.getItem(RECEITA_KEY) || '[]');
         all.push({
-          id: Date.now().toString(),
+          id: newId(),
           nome: data.description || '',
           valor,
           categoria: data.category || 'Outros',
@@ -25,6 +26,7 @@ export function useTransactions() {
           recebida: true,
           recebimentoData: dataLanc,
           valorRecebido: valor,
+          updatedAt: new Date().toISOString(),
         });
         localStorage.setItem(RECEITA_KEY, JSON.stringify(all));
         return;
@@ -32,7 +34,7 @@ export function useTransactions() {
 
       const all = JSON.parse(localStorage.getItem(DIVIDA_KEY) || '[]');
       all.push({
-        id: Date.now().toString(),
+        id: newId(),
         nome: data.description || '',
         valor,
         vencimento: dataLanc,
@@ -41,6 +43,7 @@ export function useTransactions() {
         pago: true,
         pagamentoData: dataLanc,
         valorPago: valor,
+        updatedAt: new Date().toISOString(),
       });
       localStorage.setItem(DIVIDA_KEY, JSON.stringify(all));
     } catch (err) {

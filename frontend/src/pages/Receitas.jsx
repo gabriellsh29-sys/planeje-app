@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import CalculatorModal from '../components/CalculatorModal';
+import { newId } from '../lib/ids';
 
 const RECEITAS_KEY  = 'financeiro_receitas';
 const CAT_KEY       = 'financeiro_categorias_receita';
@@ -228,13 +229,14 @@ export default function Receitas({ month, year }) {
     const isParcelarMode = form.recorrencia === 'parcelar' && form.valorMode === 'parcela';
     const valor = isParcelarMode ? valorBase * form.totalParcelas : valorBase;
     const item = {
-      id: editId || Date.now().toString(),
+      id: editId || newId(),
       nome: form.nome.trim(), categoria: form.categoria, valor, data: form.data,
       recorrencia: form.recorrencia,
       parcelaInicial: form.parcelaInicial, totalParcelas: form.totalParcelas,
       periodicidade: form.periodicidade, observacao: form.observacao,
       recebida: editId ? (receitas.find(r => r.id === editId)?.recebida || false) : false,
       recebimentoData: editId ? (receitas.find(r => r.id === editId)?.recebimentoData || null) : null,
+      updatedAt: new Date().toISOString(),
     };
     const updated = editId ? receitas.map(r => r.id === editId ? item : r) : [item, ...receitas];
     setReceitas(updated); saveReceitas(updated);
@@ -249,12 +251,12 @@ export default function Receitas({ month, year }) {
   };
 
   const confirmarEfetivar = () => {
-    const updated = receitas.map(r => r.id === efetivId ? { ...r, recebida: true, recebimentoData: efDate, valorRecebido: parseFloat(efValor) || r.valor } : r);
+    const updated = receitas.map(r => r.id === efetivId ? { ...r, recebida: true, recebimentoData: efDate, valorRecebido: parseFloat(efValor) || r.valor, updatedAt: new Date().toISOString() } : r);
     setReceitas(updated); saveReceitas(updated); setEfetivId(null);
   };
 
   const desfazer = (id) => {
-    const updated = receitas.map(r => r.id === id ? { ...r, recebida: false, recebimentoData: null } : r);
+    const updated = receitas.map(r => r.id === id ? { ...r, recebida: false, recebimentoData: null, updatedAt: new Date().toISOString() } : r);
     setReceitas(updated); saveReceitas(updated);
   };
 
@@ -262,10 +264,11 @@ export default function Receitas({ month, year }) {
 
   const duplicar = (r, dataStr) => {
     const novo = {
-      id: Date.now().toString(),
+      id: newId(),
       nome: r.nome, categoria: r.categoria, valor: r.valor, data: dataStr,
       recorrencia: 'nao', periodicidade: 'Mensal', observacao: r.observacao || '',
       recebida: false, recebimentoData: null,
+      updatedAt: new Date().toISOString(),
     };
     const updated = [novo, ...receitas];
     setReceitas(updated); saveReceitas(updated);

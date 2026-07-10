@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import CalculatorModal from '../components/CalculatorModal';
+import { newId } from '../lib/ids';
 
 const CARTAO_KEY  = 'planeje_cartoes';
 const FATURA_KEY  = 'planeje_faturas';
@@ -79,12 +80,13 @@ export default function CartaoCredito({ month, year }) {
   const salvarCartao = () => {
     if (!formC.nome.trim() || !formC.limite) return;
     const item = {
-      id: editCartaoId || Date.now().toString(),
+      id: editCartaoId || newId(),
       nome: formC.nome.trim(), bandeira: formC.bandeira,
       limite: parseFloat(formC.limite.replace(',','.')) || 0,
       diaFechamento: parseInt(formC.diaFechamento) || 1,
       diaPagamento: parseInt(formC.diaPagamento) || 10,
       cor: formC.cor, faturasPagas: editCartaoId ? (cartoes.find(c=>c.id===editCartaoId)?.faturasPagas || {}) : {},
+      updatedAt: new Date().toISOString(),
     };
     const updated = editCartaoId ? cartoes.map(c => c.id === editCartaoId ? item : c) : [...cartoes, item];
     setCartoes(updated); save(CARTAO_KEY, updated);
@@ -111,13 +113,14 @@ export default function CartaoCredito({ month, year }) {
       const d = new Date(formL.data + 'T00:00:00');
       d.setMonth(d.getMonth() + p);
       addLancamento({
-        id: `${Date.now()}_${p}`,
+        id: newId(),
         cartaoId: cartaoSelecionado.id,
         descricao: `${formL.descricao.trim()}${parcelas > 1 ? ` (${p+1}/${parcelas})` : ''}`,
         valor, categoria: formL.categoria, parcelas,
         parcelaAtual: p + 1,
         mes: d.getMonth() + 1, ano: d.getFullYear(),
         data: formL.data,
+        updatedAt: new Date().toISOString(),
       });
     }
     setShowFormLanc(false);
@@ -128,7 +131,7 @@ export default function CartaoCredito({ month, year }) {
     if (!cartaoSelecionado) return;
     const key = `${year}-${month}`;
     const updated = cartoes.map(c => c.id === cartaoSelecionado.id
-      ? { ...c, faturasPagas: { ...(c.faturasPagas || {}), [key]: !faturaPaga } }
+      ? { ...c, faturasPagas: { ...(c.faturasPagas || {}), [key]: !faturaPaga }, updatedAt: new Date().toISOString() }
       : c);
     setCartoes(updated); save(CARTAO_KEY, updated); setShowPagar(false);
   };

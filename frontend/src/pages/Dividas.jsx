@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import CalculatorModal from '../components/CalculatorModal';
+import { newId } from '../lib/ids';
 
 const fmt = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
 const fmtDate = (d) => {
@@ -75,10 +76,11 @@ function statusMes(d, month, year) {
 }
 
 function aplicarStatusMes(d, month, year, status) {
+  const stamp = new Date().toISOString();
   if (d.recorrencia === 'fixa') {
-    return { ...d, pagamentos: { ...(d.pagamentos || {}), [mesKey(month, year)]: status } };
+    return { ...d, pagamentos: { ...(d.pagamentos || {}), [mesKey(month, year)]: status }, updatedAt: stamp };
   }
-  return { ...d, ...status };
+  return { ...d, ...status, updatedAt: stamp };
 }
 
 // Retorna a chave 'YYYY-MM' do mês anterior à chave informada
@@ -456,7 +458,7 @@ export default function Dividas({ month, year }) {
       }
     } else {
       item = {
-        id: Date.now().toString(),
+        id: newId(),
         ...novosCampos,
         recorrencia: form.recorrencia,
         parcelaInicial: form.parcelaInicial, totalParcelas: form.totalParcelas,
@@ -477,6 +479,7 @@ export default function Dividas({ month, year }) {
       }
     }
 
+    item = { ...item, updatedAt: new Date().toISOString() };
     const updated = editId ? dividas.map(d => d.id === editId ? item : d) : [item, ...dividas];
     setDividas(updated); saveDividas(updated);
     setShowForm(false); setForm(emptyForm()); setEditId(null); setPendingEdit(null);
@@ -524,7 +527,7 @@ export default function Dividas({ month, year }) {
   const duplicar = (d, dataStr) => {
     const campos = getCamposMes(d, m, y);
     const novo = {
-      id: Date.now().toString(),
+      id: newId(),
       nome: campos.nome,
       categoria: campos.categoria,
       valor: parcelaValorMes(d, m, y),
@@ -533,6 +536,7 @@ export default function Dividas({ month, year }) {
       recorrencia: 'nao',
       pago: false, pagamentoData: null, valorPago: null,
       criadoEm: Date.now(),
+      updatedAt: new Date().toISOString(),
     };
     const updated = [novo, ...dividas];
     setDividas(updated); saveDividas(updated);

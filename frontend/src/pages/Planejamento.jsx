@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { AppIcon, GOAL_ICONS } from '../lib/icons';
+import { newId } from '../lib/ids';
 
 const ORCAMENTO_KEY = 'planeje_orcamentos';
 const METAS_KEY     = 'planeje_metas';
@@ -91,7 +92,7 @@ function Orcamento({ month, year }) {
     if (!categoria || !formLimite) return;
     const limite = parseFloat(formLimite.replace(',', '.')) || 0;
     if (!limite) return;
-    const item = { id: editId || Date.now().toString(), categoria, limite };
+    const item = { id: editId || newId(), categoria, limite, updatedAt: new Date().toISOString() };
     const updated = editId
       ? orcamentos.map(o => o.id === editId ? item : o)
       : [...orcamentos, item];
@@ -259,12 +260,13 @@ function Metas() {
   const salvar = () => {
     if (!form.nome.trim() || !form.valorAlvo) return;
     const item = {
-      id: editId || Date.now().toString(),
+      id: editId || newId(),
       nome: form.nome.trim(),
       valorAlvo: parseFloat(form.valorAlvo.replace(',','.')) || 0,
       valorAtual: editId ? (metas.find(m => m.id === editId)?.valorAtual || 0) : 0,
       prazo: form.prazo, emoji: form.emoji, cor: form.cor,
       criadoEm: editId ? (metas.find(m => m.id === editId)?.criadoEm || new Date().toISOString()) : new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
     const updated = editId ? metas.map(m => m.id === editId ? item : m) : [...metas, item];
     setMetas(updated); save(METAS_KEY, updated);
@@ -281,7 +283,7 @@ function Metas() {
   const depositar = (id) => {
     const valor = parseFloat(depValor.replace(',','.')) || 0;
     if (!valor) return;
-    const updated = metas.map(m => m.id === id ? { ...m, valorAtual: Math.min(m.valorAlvo, (m.valorAtual || 0) + valor) } : m);
+    const updated = metas.map(m => m.id === id ? { ...m, valorAtual: Math.min(m.valorAlvo, (m.valorAtual || 0) + valor), updatedAt: new Date().toISOString() } : m);
     setMetas(updated); save(METAS_KEY, updated); setShowDep(null); setDepValor('');
   };
 
