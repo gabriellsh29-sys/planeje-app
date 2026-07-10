@@ -57,9 +57,9 @@ export default {
         shimmer:    { '0%': { transform: 'translateX(-100%)' }, '100%': { transform: 'translateX(100%)' } },
       },
       animation: {
-        'fade-in':  'fade-in 0.3s ease-out',
-        'slide-in': 'slide-in 0.25s ease-out',
-        'scale-in': 'scale-in 0.2s ease-out',
+        'fade-in':  'fade-in 0.3s ease-out forwards',
+        'slide-in': 'slide-in 0.25s ease-out forwards',
+        'scale-in': 'scale-in 0.2s ease-out forwards',
         shimmer:    'shimmer 1.5s infinite',
       },
     },
