@@ -1080,8 +1080,8 @@ export default function Dividas({ month, year }) {
         <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
           <div className="absolute inset-0 bg-black/75" style={{ backdropFilter: 'blur(8px)' }} />
           <div
-            className="relative w-full max-w-md rounded-t-[1.75rem] md:rounded-[1.5rem] shadow-2xl overflow-hidden"
-            style={{ background: '#0d1117', border: '1px solid rgba(255,255,255,0.08)', maxHeight: '92vh', overflowY: 'auto' }}
+            className="relative w-full max-w-md rounded-t-[1.75rem] md:rounded-[1.5rem] shadow-2xl overflow-x-hidden overflow-y-auto"
+            style={{ background: '#0d1117', border: '1px solid rgba(255,255,255,0.08)', maxHeight: '92vh' }}
             onClick={e => e.stopPropagation()}
           >
             <div className="md:hidden flex justify-center pt-3 pb-1">
