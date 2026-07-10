@@ -9,7 +9,7 @@ const MONTHS_LABEL  = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Ju
 const fmt     = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
 const fmtDate = (d) => { if (!d) return '-'; return new Date(d + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }); };
 
-function loadCats()    { try { return JSON.parse(localStorage.getItem(CAT_KEY) || 'null') || CATEGORIAS_PADRAO; } catch { return CATEGORIAS_PADRAO; } }
+function loadCats()    { try { const s = JSON.parse(localStorage.getItem(CAT_KEY) || 'null'); return (s && s.length) ? s : CATEGORIAS_PADRAO; } catch { return CATEGORIAS_PADRAO; } }
 function loadReceitas(){ try { return JSON.parse(localStorage.getItem(RECEITAS_KEY) || '[]'); } catch { return []; } }
 function saveReceitas(l){ localStorage.setItem(RECEITAS_KEY, JSON.stringify(l)); }
 function saveCats(l)   { localStorage.setItem(CAT_KEY, JSON.stringify(l)); }

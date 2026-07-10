@@ -12,7 +12,7 @@ const CAT_KEY = 'financeiro_categorias_divida';
 const CATEGORIAS_PADRAO = ['Cartão de Crédito','Empréstimo','Financiamento','Cheque Especial','Conta/Serviço','Outros'];
 const PERIODICIDADES = ['Mensal','Quinzenal','Semanal','Bimestral','Trimestral','Semestral','Anual'];
 
-function loadCategorias() { try { return JSON.parse(localStorage.getItem(CAT_KEY) || 'null') || CATEGORIAS_PADRAO; } catch { return CATEGORIAS_PADRAO; } }
+function loadCategorias() { try { const s = JSON.parse(localStorage.getItem(CAT_KEY) || 'null'); return (s && s.length) ? s : CATEGORIAS_PADRAO; } catch { return CATEGORIAS_PADRAO; } }
 function saveCategorias(list) { localStorage.setItem(CAT_KEY, JSON.stringify(list)); }
 function loadDividas() {
   try {

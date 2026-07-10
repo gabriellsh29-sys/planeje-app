@@ -122,7 +122,8 @@ function applyCloudData(data) {
           : cloudVal;
       } catch { merged = cloudVal; }
     }
-    if (merged !== localVal) {
+    // Nunca sobrescreve dado existente com array vazio
+    if (merged !== localVal && merged !== '[]') {
       _native(key, merged);
       changed = true;
     }
