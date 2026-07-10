@@ -27,14 +27,22 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const userId = session?.user?.id || null;
     if (userId === lastUserId.current) return;
-    if (lastUserId.current && !userId) {
-      // logout: garante que o último estado foi enviado, depois limpa dados locais
-      stopCloudSync(true).then(clearLocalData);
-    }
+    const prevUserId = lastUserId.current;
     lastUserId.current = userId;
+    if (prevUserId && !userId) {
+      // logout: envia último estado mas NUNCA apaga dados locais
+      // (clearLocalData foi removido — apagar local quando push pode ter falhado = perda irrecuperável)
+      stopCloudSync(true).catch(() => {});
+      setPerfil(null);
+      return;
+    }
     if (userId) {
       if (session.user.email) localStorage.setItem('planeje_last_email', session.user.email.toLowerCase());
       setSyncing(true);
+      // Só limpa local ao trocar de usuário na mesma sessão (ex: logout/login de outra conta no mesmo device)
+      if (prevUserId && prevUserId !== userId) {
+        clearLocalData();
+      }
       Promise.all([
         pullFromCloud(userId).catch(() => {}),
         supabase.from('perfis').select('nome, plano, trial_expira_em, assinatura_status, avatar_url').eq('id', userId).maybeSingle(),
