@@ -43,7 +43,9 @@ export function useTransactions() {
         valorPago: valor,
       });
       localStorage.setItem(DIVIDA_KEY, JSON.stringify(all));
-    } catch { /* ignore */ }
+    } catch (err) {
+      console.error('[useTransactions] addTransaction falhou:', err?.message ?? err);
+    }
   };
 
   const removeTransaction = () => {};

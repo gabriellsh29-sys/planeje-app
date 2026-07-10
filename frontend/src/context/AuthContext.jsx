@@ -46,17 +46,29 @@ export function AuthProvider({ children }) {
       // startCloudSync é chamado imediatamente — não pode depender de queries que podem falhar
       startCloudSync(userId);
 
+      // cancelled evita que retries de um userId anterior atualizem o perfil
+      // depois de logout ou troca de conta (cross-account bleed)
+      let cancelled = false;
       const fetchPerfil = (attempt = 0) =>
         supabase.from('perfis').select('nome, plano, trial_expira_em, assinatura_status, avatar_url').eq('id', userId).maybeSingle()
-          .then(({ data }) => { if (data) setPerfil(data); else if (attempt < 3) setTimeout(() => fetchPerfil(attempt + 1), 2000 * (attempt + 1)); })
-          .catch(() => { if (attempt < 3) setTimeout(() => fetchPerfil(attempt + 1), 2000 * (attempt + 1)); });
+          .then(({ data }) => {
+            if (cancelled) return;
+            if (data) setPerfil(data);
+            else if (attempt < 3) setTimeout(() => { if (!cancelled) fetchPerfil(attempt + 1); }, 2000 * (attempt + 1));
+          })
+          .catch(() => {
+            if (cancelled) return;
+            if (attempt < 3) setTimeout(() => { if (!cancelled) fetchPerfil(attempt + 1); }, 2000 * (attempt + 1));
+          });
 
       Promise.all([
         pullFromCloud(userId).catch(() => {}),
         fetchPerfil(),
       ]).finally(() => {
-        setSyncing(false);
+        if (!cancelled) setSyncing(false);
       });
+
+      return () => { cancelled = true; };
     } else {
       setPerfil(null);
     }

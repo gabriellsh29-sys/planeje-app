@@ -46,7 +46,7 @@ export default function TransactionForm({ onSave, onClose, defaultType }) {
   const [showCalc, setShowCalc] = useState(false);
   const descRef = useRef(null);
 
-  useEffect(() => { setTimeout(() => descRef.current?.focus(), 80); }, []);
+  useEffect(() => { const t = setTimeout(() => descRef.current?.focus(), 80); return () => clearTimeout(t); }, []);
   useEffect(() => {
     setCategory('Outros');
     setCategories(type === 'expense'

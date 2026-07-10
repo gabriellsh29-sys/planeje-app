@@ -159,7 +159,7 @@ function AppContent() {
     const interval = setInterval(refreshPerfil, 3000);
     const timeout  = setTimeout(() => { clearInterval(interval); setWaitingPayment(false); }, 45_000);
     return () => { clearInterval(interval); clearTimeout(timeout); };
-  }, [waitingPayment, user, acessoLiberado]);
+  }, [waitingPayment, user, acessoLiberado, refreshPerfil]);
 
   const isLoading = loading || (waitingPayment && !acessoLiberado && !!user);
 

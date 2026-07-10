@@ -46,17 +46,23 @@ async function archiveCurrentCloud(userId) {
     if (row?.data && Object.keys(row.data).length > 0) {
       await supabase.from('user_data_history').insert({ user_id: userId, data: row.data });
     }
-  } catch {}
+  } catch (err) {
+    console.error('[cloudSync] archiveCurrentCloud falhou:', err?.message ?? err);
+  }
 }
 
 async function pushToCloud(userId) {
   const snap = snapshotLocal();
   if (Object.keys(snap).length === 0) return;
-  try { await archiveCurrentCloud(userId); } catch {}
+  try { await archiveCurrentCloud(userId); } catch (err) {
+    console.error('[cloudSync] pushToCloud/archive falhou:', err?.message ?? err);
+  }
   try {
     await supabase.from('user_data')
       .upsert({ user_id: userId, data: snap, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
-  } catch {}
+  } catch (err) {
+    console.error('[cloudSync] pushToCloud/upsert falhou:', err?.message ?? err);
+  }
 }
 
 async function lightPushToCloud(userId) {
@@ -66,7 +72,9 @@ async function lightPushToCloud(userId) {
     await supabase.from('user_data')
       .upsert({ user_id: userId, data: snap, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
     dirtyKeys.clear();
-  } catch {}
+  } catch (err) {
+    console.error('[cloudSync] lightPushToCloud falhou:', err?.message ?? err);
+  }
 }
 
 function schedulePush(userId) {
@@ -129,7 +137,7 @@ function applyCloudData(data) {
       try {
         const arr = JSON.parse(cloudVal);
         merged = Array.isArray(arr) && tombstones.size
-          ? JSON.stringify(arr.filter(item => !tombstones.has(item.id)))
+          ? JSON.stringify(arr.filter(item => !tombstones.has(String(item.id))))
           : cloudVal;
       } catch { merged = cloudVal; }
     }
@@ -148,7 +156,9 @@ async function autoSyncCycle(userId) {
     if (row?.data && Object.keys(row.data).length > 0) {
       applyCloudData(row.data);
     }
-  } catch {}
+  } catch (err) {
+    console.error('[cloudSync] autoSyncCycle/pull falhou:', err?.message ?? err);
+  }
   await lightPushToCloud(userId);
 }
 
@@ -158,7 +168,9 @@ export async function pullFromCloud(userId) {
     if (row?.data && Object.keys(row.data).length > 0) {
       applyCloudData(row.data);
     }
-  } catch {}
+  } catch (err) {
+    console.error('[cloudSync] pullFromCloud/fetch falhou:', err?.message ?? err);
+  }
   try {
     const snap = snapshotLocal();
     if (Object.keys(snap).length > 0) {
@@ -166,7 +178,9 @@ export async function pullFromCloud(userId) {
       await supabase.from('user_data')
         .upsert({ user_id: userId, data: snap, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
     }
-  } catch {}
+  } catch (err) {
+    console.error('[cloudSync] pullFromCloud/push falhou:', err?.message ?? err);
+  }
 }
 
 export function startCloudSync(userId) {
