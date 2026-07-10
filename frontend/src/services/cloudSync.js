@@ -75,10 +75,15 @@ function mergeKey(cloudVal, localVal, tombstones = new Set()) {
     const cArr = JSON.parse(cloudVal);
     const lArr = JSON.parse(localVal);
     if (Array.isArray(cArr) && Array.isArray(lArr)) {
-      // Filtra itens deletados (tombstones) de ambos os lados
+      // Detecta se é array de objetos com ID (transações) ou array de primitivos (categorias)
+      const firstItem = cArr[0] ?? lArr[0];
+      if (firstItem == null || typeof firstItem !== 'object') {
+        // Arrays de strings/primitivos (categorias): retorna a união preservando adições locais
+        return JSON.stringify([...new Set([...cArr, ...lArr])]);
+      }
+      // Arrays de objetos com ID: filtra tombstones e mescla
       const cFiltered = cArr.filter(item => item.id && !tombstones.has(item.id));
       const lFiltered = lArr.filter(item => item.id && !tombstones.has(item.id));
-      // Cloud items + itens locais que a nuvem ainda não tem
       const cloudIds = new Set(cFiltered.map(item => item.id));
       const onlyLocal = lFiltered.filter(item => !cloudIds.has(item.id));
       return JSON.stringify([...cFiltered, ...onlyLocal]);
