@@ -143,7 +143,7 @@ function Dashboard() {
 }
 
 function AppContent() {
-  const { user, loading, acessoLiberado, isRecovery, refreshPerfil } = useAuth();
+  const { user, loading, acessoLiberado, perfilStatus, retryPerfil, isRecovery, refreshPerfil } = useAuth();
 
   const [waitingPayment, setWaitingPayment] = useState(() =>
     new URLSearchParams(window.location.search).get('pagamento') === 'sucesso'
@@ -161,7 +161,9 @@ function AppContent() {
     return () => { clearInterval(interval); clearTimeout(timeout); };
   }, [waitingPayment, user, acessoLiberado, refreshPerfil]);
 
-  const isLoading = loading || (waitingPayment && !acessoLiberado && !!user);
+  // Spinner enquanto auth/sync carrega OU enquanto aguarda ativação do pagamento.
+  // TAMBÉM exibe spinner enquanto perfilStatus === 'loading' (fail-closed: acesso negado durante fetch).
+  const isLoading = loading || (user && perfilStatus === 'loading') || (waitingPayment && !acessoLiberado && !!user);
 
   if (isLoading) {
     return (
@@ -181,6 +183,26 @@ function AppContent() {
   }
   if (!user) return <LoginPage />;
   if (isRecovery) return <ResetPasswordPage />;
+  // Falha definitiva ao buscar perfil: exibe tela de erro com retry (acesso negado).
+  // NUNCA trata falha de rede como assinatura válida.
+  if (user && perfilStatus === 'error') {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#0f172a' }}>
+        <div className="flex flex-col items-center gap-5 text-center px-6">
+          <img src="/img/logo/logo-app-icon.png" alt="Planeje" className="w-24 h-24 object-contain rounded-3xl opacity-60" />
+          <p className="text-base font-semibold" style={{ color: '#f87171' }}>
+            Erro ao verificar assinatura. Tente novamente.
+          </p>
+          <button
+            onClick={retryPerfil}
+            className="px-6 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-95"
+            style={{ background: 'linear-gradient(135deg,#22c55e,#16a34a)', color: '#07090f' }}>
+            Tentar novamente
+          </button>
+        </div>
+      </div>
+    );
+  }
   if (!acessoLiberado) return <PaywallPage />;
   return <Dashboard />;
 }

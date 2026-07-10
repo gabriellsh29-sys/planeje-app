@@ -9,6 +9,11 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(true);
   const [perfil, setPerfil] = useState(null);
+  // Estado do fetch do perfil para gating fail-closed do acesso:
+  //   'loading' -> ainda buscando (mostra spinner, acesso NEGADO)
+  //   'loaded'  -> perfil confirmado do servidor (avalia plano)
+  //   'error'   -> falha definitiva após retries (acesso NEGADO, mostra retry)
+  const [perfilStatus, setPerfilStatus] = useState('loading');
   const [isRecovery, setIsRecovery] = useState(false);
   const lastUserId = useRef(null);
 
@@ -34,11 +39,14 @@ export function AuthProvider({ children }) {
       // (clearLocalData foi removido — apagar local quando push pode ter falhado = perda irrecuperável)
       stopCloudSync(true).catch(() => {});
       setPerfil(null);
+      setPerfilStatus('loading');
       return;
     }
     if (userId) {
       if (session.user.email) localStorage.setItem('planeje_last_email', session.user.email.toLowerCase());
       setSyncing(true);
+      // Fail-closed: até o perfil ser confirmado, acesso permanece negado.
+      setPerfilStatus('loading');
       // Só limpa local ao trocar de usuário na mesma sessão (ex: logout/login de outra conta no mesmo device)
       if (prevUserId && prevUserId !== userId) {
         clearLocalData();
@@ -49,16 +57,23 @@ export function AuthProvider({ children }) {
       // cancelled evita que retries de um userId anterior atualizem o perfil
       // depois de logout ou troca de conta (cross-account bleed)
       let cancelled = false;
+      // Agenda retry; se os retries se esgotarem, marca ERRO (fail-closed) —
+      // nunca deixa o perfil indefinido virar "acesso liberado".
+      const retryOrFail = (attempt) => {
+        if (attempt < 3) setTimeout(() => { if (!cancelled) fetchPerfil(attempt + 1); }, 2000 * (attempt + 1));
+        else if (!cancelled) setPerfilStatus('error');
+      };
       const fetchPerfil = (attempt = 0) =>
         supabase.from('perfis').select('nome, plano, trial_expira_em, assinatura_status, avatar_url').eq('id', userId).maybeSingle()
-          .then(({ data }) => {
+          .then(({ data, error }) => {
             if (cancelled) return;
-            if (data) setPerfil(data);
-            else if (attempt < 3) setTimeout(() => { if (!cancelled) fetchPerfil(attempt + 1); }, 2000 * (attempt + 1));
+            if (error) { retryOrFail(attempt); return; }
+            if (data) { setPerfil(data); setPerfilStatus('loaded'); }
+            else retryOrFail(attempt);
           })
           .catch(() => {
             if (cancelled) return;
-            if (attempt < 3) setTimeout(() => { if (!cancelled) fetchPerfil(attempt + 1); }, 2000 * (attempt + 1));
+            retryOrFail(attempt);
           });
 
       Promise.all([
@@ -78,7 +93,24 @@ export function AuthProvider({ children }) {
     const userId = session?.user?.id;
     if (!userId) return;
     const { data } = await supabase.from('perfis').select('nome, plano, trial_expira_em, assinatura_status, avatar_url').eq('id', userId).maybeSingle();
-    setPerfil(data);
+    // Só promove para 'loaded' quando há perfil confirmado; nunca zera o perfil
+    // existente durante o polling de pagamento (data null = mantém o atual).
+    if (data) { setPerfil(data); setPerfilStatus('loaded'); }
+  };
+
+  // Retry manual disparado pelo botão da tela de erro (fail-closed).
+  const retryPerfil = async () => {
+    const userId = session?.user?.id;
+    if (!userId) return;
+    setPerfilStatus('loading');
+    try {
+      const { data, error } = await supabase.from('perfis').select('nome, plano, trial_expira_em, assinatura_status, avatar_url').eq('id', userId).maybeSingle();
+      if (error) { setPerfilStatus('error'); return; }
+      if (data) { setPerfil(data); setPerfilStatus('loaded'); }
+      else setPerfilStatus('error');
+    } catch {
+      setPerfilStatus('error');
+    }
   };
 
   const signInWithGoogle = () => supabase.auth.signInWithOAuth({
@@ -125,12 +157,17 @@ export function AuthProvider({ children }) {
 
   const user = session?.user || null;
 
-  const acessoLiberado = !perfil || perfil.plano === 'liberado'
+  // FAIL-CLOSED: só libera acesso quando o perfil foi CONFIRMADO carregado do
+  // servidor E o plano é válido. Perfil ausente/carregando/erro => NEGADO.
+  // Falha de rede NUNCA é tratada como assinatura válida.
+  const acessoLiberado = perfilStatus === 'loaded' && perfil != null && (
+    perfil.plano === 'liberado'
     || (perfil.plano === 'pago' && perfil.assinatura_status === 'ativa')
-    || (perfil.trial_expira_em && new Date(perfil.trial_expira_em) > new Date());
+    || (!!perfil.trial_expira_em && new Date(perfil.trial_expira_em) > new Date())
+  );
 
   return (
-    <AuthContext.Provider value={{ user, session, perfil, acessoLiberado, isRecovery, refreshPerfil, loading: loading || (user && syncing), signInWithGoogle, signInWithPassword, signUp, resendConfirmation, resetPassword, updatePassword, loginWithToken, logout }}>
+    <AuthContext.Provider value={{ user, session, perfil, perfilStatus, acessoLiberado, isRecovery, refreshPerfil, retryPerfil, loading: loading || (user && syncing), signInWithGoogle, signInWithPassword, signUp, resendConfirmation, resetPassword, updatePassword, loginWithToken, logout }}>
       {children}
     </AuthContext.Provider>
   );
