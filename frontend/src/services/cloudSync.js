@@ -1,7 +1,11 @@
 import { supabase } from '../lib/supabaseClient';
 import { DATA_KEYS } from '../data/demoData';
 
-const _native = localStorage.setItem.bind(localStorage);
+const _native     = localStorage.setItem.bind(localStorage);
+const _native_get = localStorage.getItem.bind(localStorage);
+
+// Tombstones: registram IDs de itens deletados para propagar deleções entre dispositivos
+const TOMB = '__tomb';
 
 let pushTimer         = null;
 let currentUserId     = null;
@@ -10,79 +14,109 @@ let realtimeChannel   = null;
 let visibilityCleanup = null;
 let pollInterval      = null;
 
+function getTombstones(key) {
+  try { return new Set(JSON.parse(_native_get(key + TOMB) || '[]')); }
+  catch { return new Set(); }
+}
+
+function addTombstones(key, ids) {
+  if (!ids || !ids.length) return;
+  const set = getTombstones(key);
+  ids.forEach(id => set.add(id));
+  _native(key + TOMB, JSON.stringify([...set]));
+}
+
 function snapshotLocal() {
   const snap = {};
   DATA_KEYS.forEach(key => {
-    const val = localStorage.getItem(key);
+    const val = _native_get(key);
     if (val !== null) snap[key] = val;
+    const tomb = _native_get(key + TOMB);
+    if (tomb && tomb !== '[]') snap[key + TOMB] = tomb;
   });
   return snap;
 }
 
 async function archiveCurrentCloud(userId) {
   try {
-    const { data: row } = await supabase
-      .from('user_data')
-      .select('data')
-      .eq('user_id', userId)
-      .maybeSingle();
+    const { data: row } = await supabase.from('user_data').select('data').eq('user_id', userId).maybeSingle();
     if (row?.data && Object.keys(row.data).length > 0) {
       await supabase.from('user_data_history').insert({ user_id: userId, data: row.data });
     }
   } catch {}
 }
 
-// Push completo com arquivo histórico (usado no login e logout)
 async function pushToCloud(userId) {
   const snap = snapshotLocal();
-  if (Object.keys(snap).length === 0) return; // REGRA 1: nunca envia vazio
+  if (Object.keys(snap).length === 0) return;
   try { await archiveCurrentCloud(userId); } catch {}
   try {
-    await supabase
-      .from('user_data')
+    await supabase.from('user_data')
       .upsert({ user_id: userId, data: snap, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
   } catch {}
 }
 
-// Push leve sem arquivo (usado no polling e schedulePush — frequente)
 async function lightPushToCloud(userId) {
   const snap = snapshotLocal();
-  if (Object.keys(snap).length === 0) return; // REGRA 1
+  if (Object.keys(snap).length === 0) return;
   try {
-    await supabase
-      .from('user_data')
+    await supabase.from('user_data')
       .upsert({ user_id: userId, data: snap, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
   } catch {}
 }
 
-// Timer de push reduzido para 500ms — dados chegam à nuvem quase imediatamente
 function schedulePush(userId) {
   if (pushTimer) clearTimeout(pushTimer);
   pushTimer = setTimeout(() => lightPushToCloud(userId), 500);
 }
 
-function mergeKey(cloudVal, localVal) {
+function mergeKey(cloudVal, localVal, tombstones = new Set()) {
   try {
     const cArr = JSON.parse(cloudVal);
     const lArr = JSON.parse(localVal);
     if (Array.isArray(cArr) && Array.isArray(lArr)) {
-      const cloudIds = new Set(cArr.map(item => item.id));
-      const onlyLocal = lArr.filter(item => !cloudIds.has(item.id));
-      return JSON.stringify([...cArr, ...onlyLocal]);
+      // Filtra itens deletados (tombstones) de ambos os lados
+      const cFiltered = cArr.filter(item => item.id && !tombstones.has(item.id));
+      const lFiltered = lArr.filter(item => item.id && !tombstones.has(item.id));
+      // Cloud items + itens locais que a nuvem ainda não tem
+      const cloudIds = new Set(cFiltered.map(item => item.id));
+      const onlyLocal = lFiltered.filter(item => !cloudIds.has(item.id));
+      return JSON.stringify([...cFiltered, ...onlyLocal]);
     }
   } catch {}
   return (cloudVal && cloudVal !== '[]' && cloudVal !== 'null') ? cloudVal : localVal;
 }
 
-// REGRA 2+3: payload vazio ignorado; sempre mescla, nunca sobrescreve
 function applyCloudData(data) {
   if (!data || Object.keys(data).length === 0) return;
+
+  // 1. Mescla tombstones da nuvem para o local (propaga deleções de outros dispositivos)
+  DATA_KEYS.forEach(key => {
+    const cloudTomb = data[key + TOMB];
+    if (cloudTomb) {
+      try { addTombstones(key, JSON.parse(cloudTomb)); } catch {}
+    }
+  });
+
+  // 2. Aplica dados com filtragem de tombstones
   let changed = false;
   DATA_KEYS.forEach(key => {
     const cloudVal = data[key];
     if (cloudVal === undefined) return;
-    const localVal = localStorage.getItem(key);
-    const merged = localVal ? mergeKey(cloudVal, localVal) : cloudVal;
+    const localVal = _native_get(key);
+    const tombstones = getTombstones(key);
+    let merged;
+    if (localVal) {
+      merged = mergeKey(cloudVal, localVal, tombstones);
+    } else {
+      // Sem dado local: usa nuvem filtrando tombstones
+      try {
+        const arr = JSON.parse(cloudVal);
+        merged = Array.isArray(arr) && tombstones.size
+          ? JSON.stringify(arr.filter(item => !tombstones.has(item.id)))
+          : cloudVal;
+      } catch { merged = cloudVal; }
+    }
     if (merged !== localVal) {
       _native(key, merged);
       changed = true;
@@ -91,31 +125,19 @@ function applyCloudData(data) {
   if (changed) window.dispatchEvent(new CustomEvent('planeje-sync'));
 }
 
-// Ciclo de sync a cada 15s: pull da nuvem + push do local
-// Garante sync automático mesmo se Realtime falhar ou push anterior tiver falhado
 async function autoSyncCycle(userId) {
   try {
-    const { data: row } = await supabase
-      .from('user_data')
-      .select('data')
-      .eq('user_id', userId)
-      .maybeSingle();
+    const { data: row } = await supabase.from('user_data').select('data').eq('user_id', userId).maybeSingle();
     if (row?.data && Object.keys(row.data).length > 0) {
       applyCloudData(row.data);
     }
   } catch {}
-  // Depois do pull, empurra o snapshot local (que pode ter dados não enviados ainda)
   await lightPushToCloud(userId);
 }
 
-// Pull completo: aplica nuvem + empurra snapshot completo com arquivo
 export async function pullFromCloud(userId) {
   try {
-    const { data: row } = await supabase
-      .from('user_data')
-      .select('data')
-      .eq('user_id', userId)
-      .maybeSingle();
+    const { data: row } = await supabase.from('user_data').select('data').eq('user_id', userId).maybeSingle();
     if (row?.data && Object.keys(row.data).length > 0) {
       applyCloudData(row.data);
     }
@@ -124,8 +146,7 @@ export async function pullFromCloud(userId) {
     const snap = snapshotLocal();
     if (Object.keys(snap).length > 0) {
       await archiveCurrentCloud(userId);
-      await supabase
-        .from('user_data')
+      await supabase.from('user_data')
         .upsert({ user_id: userId, data: snap, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
     }
   } catch {}
@@ -133,36 +154,40 @@ export async function pullFromCloud(userId) {
 
 export function startCloudSync(userId) {
   currentUserId = userId;
-  if (unpatch) return; // já ativo
+  if (unpatch) return;
 
   localStorage.setItem = (key, value) => {
+    if (DATA_KEYS.includes(key)) {
+      // Detecta itens deletados e registra tombstones antes de escrever
+      try {
+        const prevVal = _native_get(key);
+        const prevArr = JSON.parse(prevVal || '[]');
+        const newArr  = JSON.parse(value);
+        if (Array.isArray(prevArr) && Array.isArray(newArr)) {
+          const newIds  = new Set(newArr.map(i => i.id));
+          const deleted = prevArr.filter(i => i.id && !newIds.has(i.id)).map(i => i.id);
+          if (deleted.length) addTombstones(key, deleted);
+        }
+      } catch {}
+    }
     _native(key, value);
     if (DATA_KEYS.includes(key) && currentUserId) schedulePush(currentUserId);
   };
   unpatch = () => { localStorage.setItem = _native; };
 
   if (!realtimeChannel) {
-    realtimeChannel = supabase
-      .channel(`user_data_${userId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'user_data', filter: `user_id=eq.${userId}` },
-        (payload) => { if (payload.new?.data) applyCloudData(payload.new.data); }
-      )
+    realtimeChannel = supabase.channel(`user_data_${userId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_data', filter: `user_id=eq.${userId}` },
+        (payload) => { if (payload.new?.data) applyCloudData(payload.new.data); })
       .subscribe();
   }
 
-  // Fallback visibilitychange: full sync quando app volta ao foco (troca de aba/app)
   const onVisibility = () => {
-    if (document.visibilityState === 'visible' && currentUserId) {
-      pullFromCloud(currentUserId).catch(() => {});
-    }
+    if (document.visibilityState === 'visible' && currentUserId) pullFromCloud(currentUserId).catch(() => {});
   };
   document.addEventListener('visibilitychange', onVisibility);
   visibilityCleanup = () => document.removeEventListener('visibilitychange', onVisibility);
 
-  // Polling bidirecional a cada 15s: pull + push leve
-  // Garante que dados de qualquer dispositivo cheguem ao outro em ≤15s
   if (!pollInterval) {
     pollInterval = setInterval(() => {
       if (currentUserId) autoSyncCycle(currentUserId);
@@ -181,5 +206,8 @@ export async function stopCloudSync(finalPush = false) {
 }
 
 export function clearLocalData() {
-  DATA_KEYS.forEach(key => localStorage.removeItem(key));
+  DATA_KEYS.forEach(key => {
+    localStorage.removeItem(key);
+    localStorage.removeItem(key + TOMB);
+  });
 }
