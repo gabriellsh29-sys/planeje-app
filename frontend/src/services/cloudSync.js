@@ -14,6 +14,9 @@ let realtimeChannel   = null;
 let visibilityCleanup = null;
 let pollInterval      = null;
 
+// Chaves modificadas localmente aguardando push — protege contra o pull sobrescrever edições no debounce de 500ms
+const dirtyKeys = new Set();
+
 function getTombstones(key) {
   try { return new Set(JSON.parse(_native_get(key + TOMB) || '[]')); }
   catch { return new Set(); }
@@ -62,6 +65,7 @@ async function lightPushToCloud(userId) {
   try {
     await supabase.from('user_data')
       .upsert({ user_id: userId, data: snap, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+    dirtyKeys.clear();
   } catch {}
 }
 
@@ -72,21 +76,26 @@ function schedulePush(userId) {
 
 function mergeKey(cloudVal, localVal, tombstones = new Set()) {
   try {
-    const cArr = JSON.parse(cloudVal);
-    const lArr = JSON.parse(localVal);
-    if (Array.isArray(cArr) && Array.isArray(lArr)) {
+    const cParsed = JSON.parse(cloudVal);
+    const lParsed = JSON.parse(localVal);
+    if (Array.isArray(cParsed) && Array.isArray(lParsed)) {
       // Detecta se é array de objetos com ID (transações) ou array de primitivos (categorias)
-      const firstItem = cArr[0] ?? lArr[0];
+      const firstItem = cParsed[0] ?? lParsed[0];
       if (firstItem == null || typeof firstItem !== 'object') {
         // Arrays de strings/primitivos (categorias): retorna a união preservando adições locais
-        return JSON.stringify([...new Set([...cArr, ...lArr])]);
+        return JSON.stringify([...new Set([...cParsed, ...lParsed])]);
       }
       // Arrays de objetos com ID: filtra tombstones e mescla
-      const cFiltered = cArr.filter(item => item.id && !tombstones.has(item.id));
-      const lFiltered = lArr.filter(item => item.id && !tombstones.has(item.id));
-      const cloudIds = new Set(cFiltered.map(item => item.id));
-      const onlyLocal = lFiltered.filter(item => !cloudIds.has(item.id));
+      const cFiltered = cParsed.filter(item => item.id && !tombstones.has(String(item.id)));
+      const lFiltered = lParsed.filter(item => item.id && !tombstones.has(String(item.id)));
+      const cloudIds = new Set(cFiltered.map(item => String(item.id)));
+      const onlyLocal = lFiltered.filter(item => !cloudIds.has(String(item.id)));
       return JSON.stringify([...cFiltered, ...onlyLocal]);
+    }
+    // Objetos simples (ex: financeiro_efetivacoes): união de chaves; local sobrescreve conflitos
+    if (cParsed && typeof cParsed === 'object' && !Array.isArray(cParsed) &&
+        lParsed && typeof lParsed === 'object' && !Array.isArray(lParsed)) {
+      return JSON.stringify({ ...cParsed, ...lParsed });
     }
   } catch {}
   return (cloudVal && cloudVal !== '[]' && cloudVal !== 'null') ? cloudVal : localVal;
@@ -108,6 +117,8 @@ function applyCloudData(data) {
   DATA_KEYS.forEach(key => {
     const cloudVal = data[key];
     if (cloudVal === undefined) return;
+    // Chave foi modificada localmente e o push ainda não rodou — não sobrescreve
+    if (dirtyKeys.has(key)) return;
     const localVal = _native_get(key);
     const tombstones = getTombstones(key);
     let merged;
@@ -177,7 +188,10 @@ export function startCloudSync(userId) {
       } catch {}
     }
     _native(key, value);
-    if (DATA_KEYS.includes(key) && currentUserId) schedulePush(currentUserId);
+    if (DATA_KEYS.includes(key) && currentUserId) {
+      dirtyKeys.add(key);
+      schedulePush(currentUserId);
+    }
   };
   unpatch = () => { localStorage.setItem = _native; };
 
@@ -208,6 +222,7 @@ export async function stopCloudSync(finalPush = false) {
   if (realtimeChannel) { supabase.removeChannel(realtimeChannel); realtimeChannel = null; }
   if (visibilityCleanup) { visibilityCleanup(); visibilityCleanup = null; }
   if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+  dirtyKeys.clear();
   currentUserId = null;
 }
 

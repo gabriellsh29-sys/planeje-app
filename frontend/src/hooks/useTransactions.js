@@ -14,7 +14,7 @@ export function useTransactions() {
       if (data.type === 'income') {
         const all = JSON.parse(localStorage.getItem(RECEITA_KEY) || '[]');
         all.push({
-          id: Date.now(),
+          id: Date.now().toString(),
           nome: data.description || '',
           valor,
           categoria: data.category || 'Outros',
@@ -32,7 +32,7 @@ export function useTransactions() {
 
       const all = JSON.parse(localStorage.getItem(DIVIDA_KEY) || '[]');
       all.push({
-        id: Date.now(),
+        id: Date.now().toString(),
         nome: data.description || '',
         valor,
         vencimento: dataLanc,

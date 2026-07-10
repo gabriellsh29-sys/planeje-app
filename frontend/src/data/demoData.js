@@ -7,6 +7,7 @@ export const DATA_KEYS = [
   'financeiro_categorias_receita',
   'financeiro_categorias_divida',
   'financeiro_saldo_inicial',
+  'financeiro_efetivacoes',
   'planeje_orcamentos',
   'planeje_metas',
   'planeje_cartoes',
@@ -14,6 +15,7 @@ export const DATA_KEYS = [
   'planeje_tarefas',
   'planeje_grupos',
   'planeje_etiquetas',
+  'planeje_categorias_orcamento',
 ];
 
 const pad = (n) => String(n).padStart(2, '0');
