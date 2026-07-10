@@ -72,7 +72,10 @@ function Orcamento({ month, year }) {
   const [categoriasExtra, setCategoriasExtra] = useState(() => load(CATEGORIAS_KEY, []));
 
   useEffect(() => {
-    const reload = () => { setOrcamentos(load(ORCAMENTO_KEY, [])); setCategoriasExtra(load(CATEGORIAS_KEY, [])); };
+    const reload = () => {
+      setOrcamentos(load(ORCAMENTO_KEY, []));
+      setCategoriasExtra(prev => [...new Set([...load(CATEGORIAS_KEY, []), ...prev])]);
+    };
     window.addEventListener('planeje-sync', reload);
     return () => window.removeEventListener('planeje-sync', reload);
   }, []);

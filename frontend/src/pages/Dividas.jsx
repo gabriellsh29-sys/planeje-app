@@ -333,7 +333,12 @@ export default function Dividas({ month, year }) {
   const [categorias, setCategorias] = useState(loadCategorias);
 
   useEffect(() => {
-    const reload = () => { setDividas(loadDividas()); setCategorias(loadCategorias()); };
+    const reload = () => {
+      setDividas(loadDividas());
+      // União em vez de substituição: preserva categorias criadas localmente mesmo
+      // que a sync ainda não as tenha propagado para o cloud neste ciclo.
+      setCategorias(prev => [...new Set([...loadCategorias(), ...prev])]);
+    };
     window.addEventListener('planeje-sync', reload);
     return () => window.removeEventListener('planeje-sync', reload);
   }, []);
