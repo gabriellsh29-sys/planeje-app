@@ -40,7 +40,7 @@ async function pushToCloud(userId) {
   try {
     await supabase
       .from('user_data')
-      .upsert({ user_id: userId, data: snap, updated_at: new Date().toISOString() });
+      .upsert({ user_id: userId, data: snap, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
   } catch {}
 }
 
@@ -51,7 +51,7 @@ async function lightPushToCloud(userId) {
   try {
     await supabase
       .from('user_data')
-      .upsert({ user_id: userId, data: snap, updated_at: new Date().toISOString() });
+      .upsert({ user_id: userId, data: snap, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
   } catch {}
 }
 
