@@ -199,7 +199,10 @@ export default function Receitas({ month, year }) {
   const [categorias,  setCategorias]  = useState(loadCats);
 
   useEffect(() => {
-    const reload = () => { setReceitas(loadReceitas()); setCategorias(loadCats()); };
+    const reload = () => {
+      setReceitas(loadReceitas());
+      setCategorias(prev => [...new Set([...loadCats(), ...prev])]);
+    };
     window.addEventListener('planeje-sync', reload);
     return () => window.removeEventListener('planeje-sync', reload);
   }, []);

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { pullFromCloud, startCloudSync, stopCloudSync, clearLocalData } from '../services/cloudSync';
 
@@ -89,17 +89,17 @@ export function AuthProvider({ children }) {
     }
   }, [session]);
 
-  const refreshPerfil = async () => {
+  const refreshPerfil = useCallback(async () => {
     const userId = session?.user?.id;
     if (!userId) return;
     const { data } = await supabase.from('perfis').select('nome, plano, trial_expira_em, assinatura_status, avatar_url').eq('id', userId).maybeSingle();
     // Só promove para 'loaded' quando há perfil confirmado; nunca zera o perfil
     // existente durante o polling de pagamento (data null = mantém o atual).
     if (data) { setPerfil(data); setPerfilStatus('loaded'); }
-  };
+  }, [session]);
 
   // Retry manual disparado pelo botão da tela de erro (fail-closed).
-  const retryPerfil = async () => {
+  const retryPerfil = useCallback(async () => {
     const userId = session?.user?.id;
     if (!userId) return;
     setPerfilStatus('loading');
@@ -111,17 +111,17 @@ export function AuthProvider({ children }) {
     } catch {
       setPerfilStatus('error');
     }
-  };
+  }, [session]);
 
-  const signInWithGoogle = () => supabase.auth.signInWithOAuth({
+  const signInWithGoogle = useCallback(() => supabase.auth.signInWithOAuth({
     provider: 'google',
     options: { redirectTo: 'https://www.planejeapp.com.br' },
-  });
+  }), []);
 
-  const signInWithPassword = (email, password) =>
-    supabase.auth.signInWithPassword({ email, password });
+  const signInWithPassword = useCallback((email, password) =>
+    supabase.auth.signInWithPassword({ email, password }), []);
 
-  const signUp = (email, password, nome) =>
+  const signUp = useCallback((email, password, nome) =>
     supabase.auth.signUp({
       email,
       password,
@@ -129,31 +129,31 @@ export function AuthProvider({ children }) {
         data: { full_name: nome },
         emailRedirectTo: 'https://www.planejeapp.com.br',
       },
-    });
+    }), []);
 
-  const resendConfirmation = (email) =>
-    supabase.auth.resend({ type: 'signup', email });
+  const resendConfirmation = useCallback((email) =>
+    supabase.auth.resend({ type: 'signup', email }), []);
 
-  const resetPassword = (email) =>
+  const resetPassword = useCallback((email) =>
     supabase.auth.resetPasswordForEmail(email, {
       redirectTo: 'https://www.planejeapp.com.br',
-    });
+    }), []);
 
-  const updatePassword = async (password) => {
+  const updatePassword = useCallback(async (password) => {
     const result = await supabase.auth.updateUser({ password });
     if (!result.error) {
       setIsRecovery(false);
       await supabase.auth.signOut();
     }
     return result;
-  };
+  }, []);
 
   // O token vindo de admin.generateLink é um "hashed_token" (token_hash), não o
   // código de 6 dígitos — por isso usa o parâmetro token_hash, não token+email.
-  const loginWithToken = (token) =>
-    supabase.auth.verifyOtp({ token_hash: token, type: 'magiclink' });
+  const loginWithToken = useCallback((token) =>
+    supabase.auth.verifyOtp({ token_hash: token, type: 'magiclink' }), []);
 
-  const logout = () => supabase.auth.signOut();
+  const logout = useCallback(() => supabase.auth.signOut(), []);
 
   const user = session?.user || null;
 
@@ -166,8 +166,26 @@ export function AuthProvider({ children }) {
     || (!!perfil.trial_expira_em && new Date(perfil.trial_expira_em) > new Date())
   );
 
+  const effectiveLoading = loading || (user && syncing);
+
+  // Memoiza o value do contexto: sem isto, um novo objeto a cada render força
+  // TODOS os consumidores (Sidebar, TrialBanner, páginas) a re-renderizar.
+  // As funções são estáveis (useCallback), então o value só muda quando o
+  // estado de auth realmente muda.
+  const contextValue = useMemo(() => ({
+    user, session, perfil, perfilStatus, acessoLiberado, isRecovery,
+    refreshPerfil, retryPerfil, loading: effectiveLoading,
+    signInWithGoogle, signInWithPassword, signUp, resendConfirmation,
+    resetPassword, updatePassword, loginWithToken, logout,
+  }), [
+    user, session, perfil, perfilStatus, acessoLiberado, isRecovery,
+    refreshPerfil, retryPerfil, effectiveLoading,
+    signInWithGoogle, signInWithPassword, signUp, resendConfirmation,
+    resetPassword, updatePassword, loginWithToken, logout,
+  ]);
+
   return (
-    <AuthContext.Provider value={{ user, session, perfil, perfilStatus, acessoLiberado, isRecovery, refreshPerfil, retryPerfil, loading: loading || (user && syncing), signInWithGoogle, signInWithPassword, signUp, resendConfirmation, resetPassword, updatePassword, loginWithToken, logout }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );
