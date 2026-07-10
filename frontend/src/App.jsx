@@ -1,20 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, lazy, Suspense } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import LoginPage from './components/LoginPage';
 import ResetPasswordPage from './components/ResetPasswordPage';
 import PaywallPage from './components/PaywallPage';
 import Sidebar from './components/Sidebar';
 import TransactionForm from './components/TransactionForm';
-import Resumo from './pages/Resumo';
-import Despesas from './pages/Dividas';
-import Receitas from './pages/Receitas';
-import Graficos from './pages/Graficos';
-import Anotacoes from './pages/Anotacoes';
-import Planejamento from './pages/Planejamento';
-import CartaoCredito from './pages/CartaoCredito';
-import Perfil from './pages/Perfil';
 import TrialBanner from './components/TrialBanner';
 import { useTransactions } from './hooks/useTransactions';
+
+// Code splitting: cada página vira um chunk carregado sob demanda, reduzindo
+// drasticamente o bundle inicial (recharts, etc. saem do carregamento inicial).
+const Resumo        = lazy(() => import('./pages/Resumo'));
+const Despesas      = lazy(() => import('./pages/Dividas'));
+const Receitas      = lazy(() => import('./pages/Receitas'));
+const Graficos      = lazy(() => import('./pages/Graficos'));
+const Anotacoes     = lazy(() => import('./pages/Anotacoes'));
+const Planejamento  = lazy(() => import('./pages/Planejamento'));
+const CartaoCredito = lazy(() => import('./pages/CartaoCredito'));
+const Perfil        = lazy(() => import('./pages/Perfil'));
+
+const PageFallback = () => (
+  <div className="flex-1 flex items-center justify-center py-20">
+    <div className="w-6 h-6 border-2 rounded-full animate-spin"
+      style={{ borderColor: 'rgba(34,197,94,0.2)', borderTopColor: '#22c55e' }} />
+  </div>
+);
 
 const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
@@ -66,20 +76,21 @@ function Dashboard() {
   const [refreshKey, setRefreshKey] = useState(0);
   const { addTransaction } = useTransactions(month, year);
 
-  const handleAddTransaction = async (data) => {
+  const handleAddTransaction = useCallback(async (data) => {
     await addTransaction(data);
     setRefreshKey(k => k + 1);
-  };
+  }, [addTransaction]);
 
-  const prevMonth = () => {
+  const prevMonth = useCallback(() => {
     if (month === 1) { setMonth(12); setYear(y => y - 1); }
     else setMonth(m => m - 1);
-  };
-  const nextMonth = () => {
+  }, [month]);
+  const nextMonth = useCallback(() => {
     if (month === 12) { setMonth(1); setYear(y => y + 1); }
     else setMonth(m => m + 1);
-  };
-  const goToToday = () => { const n = new Date(); setMonth(n.getMonth() + 1); setYear(n.getFullYear()); };
+  }, [month]);
+  const goToToday = useCallback(() => { const n = new Date(); setMonth(n.getMonth() + 1); setYear(n.getFullYear()); }, []);
+  const goToPerfil = useCallback(() => setPage('perfil'), []);
 
   const showFab = page === 'resumo';
 
@@ -88,7 +99,7 @@ function Dashboard() {
       <Sidebar page={page} setPage={setPage} month={month} year={year} onPrev={prevMonth} onNext={nextMonth} onToday={goToToday} />
 
       <main className="flex-1 flex flex-col overflow-hidden md:pl-0">
-        <TrialBanner onClickPlanos={() => setPage('perfil')} />
+        <TrialBanner onClickPlanos={goToPerfil} />
 
         {/* Mobile top bar */}
         <div className="md:hidden sticky top-0 z-20 flex flex-col flex-shrink-0"
@@ -115,12 +126,14 @@ function Dashboard() {
         </div>
 
         <div className="flex-1 overflow-y-auto pb-16 md:pb-0">
-          {page === 'resumo'       && <Resumo key={refreshKey} month={month} year={year} />}
-          {page === 'transacoes'   && <TransacoesWrapper key={refreshKey} month={month} year={year} />}
-          {page === 'planejamento' && <Planejamento key={refreshKey} month={month} year={year} />}
-          {page === 'graficos'     && <Graficos key={refreshKey} month={month} year={year} />}
-          {page === 'anotacoes'    && <Anotacoes />}
-          {page === 'perfil'       && <Perfil />}
+          <Suspense fallback={<PageFallback />}>
+            {page === 'resumo'       && <Resumo key={refreshKey} month={month} year={year} />}
+            {page === 'transacoes'   && <TransacoesWrapper key={refreshKey} month={month} year={year} />}
+            {page === 'planejamento' && <Planejamento key={refreshKey} month={month} year={year} />}
+            {page === 'graficos'     && <Graficos key={refreshKey} month={month} year={year} />}
+            {page === 'anotacoes'    && <Anotacoes />}
+            {page === 'perfil'       && <Perfil />}
+          </Suspense>
         </div>
       </main>
 

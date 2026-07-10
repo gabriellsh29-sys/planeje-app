@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
 
-export default function TrialBanner({ onClickPlanos }) {
+function TrialBanner({ onClickPlanos }) {
   const { perfil } = useAuth();
 
   if (!perfil) return null;
@@ -24,3 +24,5 @@ export default function TrialBanner({ onClickPlanos }) {
     </div>
   );
 }
+
+export default React.memo(TrialBanner);
