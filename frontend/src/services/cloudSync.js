@@ -28,13 +28,6 @@ let bc                = null;   // BroadcastChannel: sincroniza abas do mesmo na
 let onlineCleanup     = null;   // remove o listener de 'online'
 let archiveInterval   = null;   // snapshot automático a cada 30 min
 let lastAppliedCloudTs = null;  // dedup: último updated_at da nuvem já aplicado
-let realtimeSubscribed = false; // true quando o canal Realtime está SUBSCRIBED
-
-// Cadência do polling: quando o Realtime está ativo, o pull a cada 5s é redundante
-// e caro em escala (lê/escreve o blob inteiro do usuário). Reduz para 30s e só
-// mantém 5s como fallback quando o Realtime cai.
-const POLL_INTERVAL_REALTIME = 30000; // 30s com Realtime ativo
-const POLL_INTERVAL_FALLBACK = 5000;  // 5s quando Realtime indisponível
 
 // ---------------------------------------------------------------------------
 // Utilitários de resiliência
@@ -111,21 +104,6 @@ function haltSyncCycle() {
   if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
   if (pushTimer)    { clearTimeout(pushTimer);    pushTimer = null; }
   console.warn('[cloudSync] ciclo de sync interrompido (sessão inválida)');
-}
-
-// (Re)cria o loop de polling com a cadência adequada ao estado do Realtime.
-// O tick só dispara sync quando a aba está visível E há conexão — evita bateria
-// gasta e erros de rede desnecessários quando offline / em segundo plano.
-function resetPollInterval() {
-  if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
-  const interval = realtimeSubscribed ? POLL_INTERVAL_REALTIME : POLL_INTERVAL_FALLBACK;
-  pollInterval = setInterval(() => {
-    if (currentUserId
-        && (typeof document === 'undefined' || document.visibilityState === 'visible')
-        && (typeof navigator === 'undefined' || navigator.onLine !== false)) {
-      autoSyncCycle(currentUserId);
-    }
-  }, interval);
 }
 
 // Executa uma query do Supabase com timeout + retry + tratamento de status.
@@ -216,6 +194,8 @@ async function archiveCurrentCloud(userId) {
     const { data: row } = await supabase.from('user_data').select('data').eq('user_id', userId).maybeSingle();
     if (row?.data && Object.keys(row.data).length > 0) {
       await supabase.from('user_data_history').insert({ user_id: userId, data: row.data });
+      // Checagem de integridade (não-criptográfica) apenas para observabilidade.
+      console.log('[cloudSync] backup arquivado — checksum(len):', JSON.stringify(row.data).length);
       pruneHistory(userId).catch(() => {});
     }
   } catch (err) {
@@ -280,6 +260,7 @@ async function pushToCloud(userId) {
   try {
     await supabase.from('user_data')
       .upsert({ user_id: userId, data: snap, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+    console.log('[cloudSync] push concluído —', Object.keys(snap).length, 'chaves');
   } catch (err) {
     console.error('[cloudSync] pushToCloud/upsert falhou:', err?.message ?? err);
   }
@@ -295,6 +276,7 @@ async function lightPushToCloud(userId) {
     // Registra nosso próprio push para o eco do realtime/polling não re-aplicar à toa.
     lastAppliedCloudTs = ts;
     dirtyKeys.clear();
+    console.log('[cloudSync] push concluído —', Object.keys(snap).length, 'chaves');
   } catch (err) {
     if (handleSyncError(err) === 'stop') haltSyncCycle();
   }
@@ -437,6 +419,7 @@ async function autoSyncCycle(userId) {
     if (row?.data && Object.keys(row.data).length > 0 && isNewerCloud(lastAppliedCloudTs, row.updated_at)) {
       lastAppliedCloudTs = row.updated_at || lastAppliedCloudTs;
       applyCloudData(row.data);
+      console.log('[cloudSync] pull concluído');
     }
   } catch (err) {
     if (handleSyncError(err) === 'stop') { haltSyncCycle(); return; }
@@ -452,6 +435,7 @@ export async function pullFromCloud(userId) {
     if (row?.data && Object.keys(row.data).length > 0) {
       lastAppliedCloudTs = row.updated_at || lastAppliedCloudTs;
       applyCloudData(row.data);
+      console.log('[cloudSync] pull concluído');
     }
   } catch (err) {
     if (handleSyncError(err) === 'stop') { haltSyncCycle(); return; }
@@ -462,6 +446,7 @@ export async function pullFromCloud(userId) {
       await archiveCurrentCloud(userId);
       await runResilient(() => supabase.from('user_data')
         .upsert({ user_id: userId, data: snap, updated_at: new Date().toISOString() }, { onConflict: 'user_id' }));
+      console.log('[cloudSync] push concluído —', Object.keys(snap).length, 'chaves');
     }
   } catch (err) {
     if (handleSyncError(err) === 'stop') haltSyncCycle();
@@ -484,20 +469,12 @@ export function setupRealtime(userId) {
     .on('system', {}, (status) => {
       if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
         console.warn('[cloudSync] Realtime desconectado, reconectando...');
-        realtimeSubscribed = false;
-        // Realtime caiu: volta ao polling agressivo (5s) para não perder updates.
-        if (pollInterval) resetPollInterval();
         try { supabase.removeChannel(realtimeChannel); } catch {}
         realtimeChannel = null;
         setTimeout(() => { if (currentUserId) setupRealtime(currentUserId); }, 3000);
       }
     })
-    .subscribe((status) => {
-      // Realtime ativo: reduz a cadência do polling (30s). Qualquer outro estado
-      // mantém/volta ao fallback de 5s.
-      realtimeSubscribed = status === 'SUBSCRIBED';
-      if (pollInterval) resetPollInterval();
-    });
+    .subscribe();
 }
 
 export function startCloudSync(userId) {
@@ -561,7 +538,14 @@ export function startCloudSync(userId) {
     }, 30 * 60 * 1000);
   }
 
-  if (!pollInterval) resetPollInterval();
+  if (!pollInterval) {
+    pollInterval = setInterval(() => {
+      if (currentUserId) {
+        console.debug('[cloudSync] polling tick');
+        autoSyncCycle(currentUserId);
+      }
+    }, 5000);
+  }
 }
 
 export async function stopCloudSync(finalPush = false) {
@@ -580,7 +564,6 @@ export async function stopCloudSync(finalPush = false) {
   if (onlineCleanup) { onlineCleanup(); onlineCleanup = null; }
   if (archiveInterval) { clearInterval(archiveInterval); archiveInterval = null; }
   lastAppliedCloudTs = null;
-  realtimeSubscribed = false;
   dirtyKeys.clear();
   currentUserId = null;
 }

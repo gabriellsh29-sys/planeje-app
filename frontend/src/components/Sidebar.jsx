@@ -12,7 +12,7 @@ const NAV = [
   { id: 'perfil',       label: 'Perfil',      icon: UserIcon      },
 ];
 
-function Sidebar({ page, setPage, month, year, onPrev, onNext, onToday }) {
+export default function Sidebar({ page, setPage, month, year, onPrev, onNext, onToday }) {
   const { user, logout, perfil } = useAuth();
 
   return (
@@ -128,9 +128,6 @@ function Sidebar({ page, setPage, month, year, onPrev, onNext, onToday }) {
     </>
   );
 }
-
-// Componente puro: só re-renderiza quando page/month/year (ou handlers) mudam.
-export default React.memo(Sidebar);
 
 function HomeIcon() {
   return <svg viewBox="0 0 20 20" fill="currentColor" className="w-full h-full"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h4a1 1 0 001-1v-3h2v3a1 1 0 001 1h4a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" /></svg>;
