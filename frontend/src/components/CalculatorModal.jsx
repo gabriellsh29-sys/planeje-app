@@ -8,15 +8,54 @@ const KEYS = [
   ['00', '0', ',', '='],
 ];
 
+// Parser matemático sem eval/Function — compatível com CSP restrita.
+// Suporta +, -, *, / e % (% vira /100) com precedência correta (* / antes de + -).
 function evaluate(expr) {
   if (!expr) return 0;
-  const sanitized = expr.replace(/,/g, '.').replace(/×/g, '*').replace(/÷/g, '/').replace(/%/g, '/100');
-  if (!/^[0-9+\-*/.() ]+$/.test(sanitized)) return 0;
-  try {
-    // eslint-disable-next-line no-new-func
-    const result = Function(`"use strict"; return (${sanitized})`)();
-    return isFinite(result) ? result : 0;
-  } catch { return 0; }
+  const s = expr
+    .replace(/,/g, '.')
+    .replace(/×/g, '*')
+    .replace(/÷/g, '/')
+    .replace(/%/g, '/100');
+
+  const nums = [];
+  const ops  = [];
+  let i = 0;
+  while (i < s.length) {
+    if (s[i] === ' ') { i++; continue; }
+    if (/[0-9.]/.test(s[i])) {
+      let num = '';
+      while (i < s.length && /[0-9.]/.test(s[i])) num += s[i++];
+      const v = parseFloat(num);
+      if (!isFinite(v)) return 0;
+      nums.push(v);
+    } else if (['+', '-', '*', '/'].includes(s[i])) {
+      ops.push(s[i++]);
+    } else {
+      i++;
+    }
+  }
+  if (!nums.length) return 0;
+
+  // 1ª passagem: * e / (maior precedência)
+  const n = [...nums];
+  const o = [...ops];
+  let j = 0;
+  while (j < o.length) {
+    if (o[j] === '*' || o[j] === '/') {
+      const r = o[j] === '*' ? n[j] * n[j+1] : (n[j+1] !== 0 ? n[j] / n[j+1] : 0);
+      n.splice(j, 2, r);
+      o.splice(j, 1);
+    } else { j++; }
+  }
+
+  // 2ª passagem: + e -
+  let result = n[0] ?? 0;
+  for (let k = 0; k < o.length; k++) {
+    if (o[k] === '+') result += n[k+1];
+    else if (o[k] === '-') result -= n[k+1];
+  }
+  return isFinite(result) ? result : 0;
 }
 
 export default function CalculatorModal({ initialValue, onClose, onConfirm }) {
