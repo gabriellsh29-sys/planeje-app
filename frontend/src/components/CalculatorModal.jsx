@@ -101,7 +101,7 @@ export default function CalculatorModal({ initialValue, onClose, onConfirm }) {
   const exprFontSize = expr.length > 18 ? 16 : expr.length > 12 ? 22 : 28;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center">
+    <div style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div className="absolute inset-0 bg-black/75" style={{ backdropFilter: 'blur(8px)' }} />
       <div
         className="relative w-full max-w-xs rounded-[1.5rem] shadow-2xl animate-scale-in overflow-hidden p-4"

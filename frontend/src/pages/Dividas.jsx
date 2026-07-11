@@ -956,7 +956,7 @@ export default function Dividas({ month, year }) {
         const situacaoColor = st.pago ? 'text-income' : vencida ? 'text-yellow-500' : 'text-text-2';
 
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div className="absolute inset-0 bg-black/75" style={{ backdropFilter: 'blur(8px)' }} />
             <div className="relative w-full max-w-md rounded-[1.5rem] shadow-2xl overflow-hidden animate-scale-in"
               style={{ background: '#0d1117', border: '1px solid rgba(255,255,255,0.08)', maxHeight: '92vh', overflowY: 'auto' }}
@@ -1073,7 +1073,7 @@ export default function Dividas({ month, year }) {
 
       {/* Form modal */}
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div className="absolute inset-0 bg-black/75" style={{ backdropFilter: 'blur(8px)' }} />
           <div
             className="relative w-full max-w-md rounded-[1.5rem] shadow-2xl overflow-x-hidden overflow-y-auto"
