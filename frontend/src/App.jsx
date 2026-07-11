@@ -1,4 +1,4 @@
-import React, { useState, useCallback, lazy, Suspense } from 'react';
+import React, { useState, useCallback, lazy, Suspense, Component } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import LoginPage from './components/LoginPage';
 import ResetPasswordPage from './components/ResetPasswordPage';
@@ -25,6 +25,31 @@ const PageFallback = () => (
       style={{ borderColor: 'rgba(34,197,94,0.2)', borderTopColor: '#22c55e' }} />
   </div>
 );
+
+// Captura falhas de carregamento de chunk (ex: 404 após novo deploy ou erro de rede).
+// Sem este boundary, um chunk que falha ao baixar deixa a tela completamente branca.
+class ChunkErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { failed: false }; }
+  static getDerivedStateFromError() { return { failed: true }; }
+  render() {
+    if (this.state.failed) {
+      return (
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 py-20 px-6 text-center">
+          <p className="text-sm font-semibold" style={{ color: '#f87171' }}>
+            Erro ao carregar a página. Verifique sua conexão.
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-5 py-2 rounded-xl text-sm font-semibold transition-all active:scale-95"
+            style={{ background: 'linear-gradient(135deg,#22c55e,#16a34a)', color: '#07090f' }}>
+            Recarregar
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
@@ -126,14 +151,16 @@ function Dashboard() {
         </div>
 
         <div className="flex-1 overflow-y-auto pb-16 md:pb-0">
-          <Suspense fallback={<PageFallback />}>
-            {page === 'resumo'       && <Resumo key={refreshKey} month={month} year={year} />}
-            {page === 'transacoes'   && <TransacoesWrapper key={refreshKey} month={month} year={year} />}
-            {page === 'planejamento' && <Planejamento key={refreshKey} month={month} year={year} />}
-            {page === 'graficos'     && <Graficos key={refreshKey} month={month} year={year} />}
-            {page === 'anotacoes'    && <Anotacoes />}
-            {page === 'perfil'       && <Perfil />}
-          </Suspense>
+          <ChunkErrorBoundary>
+            <Suspense fallback={<PageFallback />}>
+              {page === 'resumo'       && <Resumo key={refreshKey} month={month} year={year} />}
+              {page === 'transacoes'   && <TransacoesWrapper key={refreshKey} month={month} year={year} />}
+              {page === 'planejamento' && <Planejamento key={refreshKey} month={month} year={year} />}
+              {page === 'graficos'     && <Graficos key={refreshKey} month={month} year={year} />}
+              {page === 'anotacoes'    && <Anotacoes />}
+              {page === 'perfil'       && <Perfil />}
+            </Suspense>
+          </ChunkErrorBoundary>
         </div>
       </main>
 
