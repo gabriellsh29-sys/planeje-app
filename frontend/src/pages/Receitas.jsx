@@ -486,14 +486,11 @@ export default function Receitas({ month, year }) {
 
       {/* Modal formulário */}
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/75" style={{ backdropFilter: 'blur(8px)' }} />
-          <div className="relative w-full max-w-md rounded-t-[1.75rem] md:rounded-[1.5rem] shadow-2xl overflow-x-hidden overflow-y-auto"
+          <div className="relative w-full max-w-md rounded-[1.5rem] shadow-2xl overflow-x-hidden overflow-y-auto"
             style={{ background: '#0d1117', border: '1px solid rgba(255,255,255,0.08)', maxHeight: '92vh' }}
             onClick={e => e.stopPropagation()}>
-            <div className="md:hidden flex justify-center pt-3 pb-1">
-              <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.12)' }} />
-            </div>
             <div className="sticky top-0 flex items-center justify-between px-5 py-4 z-10"
               style={{ background: '#0d1117', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
               <button onClick={() => setShowForm(false)} className="w-11 h-11 flex items-center justify-center rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition">

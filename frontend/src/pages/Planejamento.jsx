@@ -193,13 +193,12 @@ function Orcamento({ month, year }) {
 
       {/* Modal novo orçamento */}
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/75" style={{ backdropFilter: 'blur(8px)' }} />
-          <div className="relative w-full max-w-sm rounded-t-[1.75rem] md:rounded-[1.5rem] overflow-hidden animate-scale-in"
+          <div className="relative w-full max-w-sm rounded-[1.5rem] overflow-hidden animate-scale-in"
             style={{ background: '#0d1117', border: '1px solid rgba(255,255,255,0.08)' }}
             onClick={e => e.stopPropagation()}>
-            <div className="md:hidden flex justify-center pt-3 pb-1"><div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.12)' }} /></div>
-            <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
               <h3 className="text-white font-semibold">{editId ? 'Editar orçamento' : 'Novo orçamento'}</h3>
               <button onClick={() => setShowForm(false)} className="w-11 h-11 flex items-center justify-center rounded-lg text-white/40 hover:text-white transition text-xl">×</button>
             </div>
@@ -389,13 +388,12 @@ function Metas() {
 
       {/* Modal nova meta */}
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/75" style={{ backdropFilter: 'blur(8px)' }} />
-          <div className="relative w-full max-w-md rounded-t-[1.75rem] md:rounded-[1.5rem] overflow-hidden"
+          <div className="relative w-full max-w-md rounded-[1.5rem] overflow-hidden"
             style={{ background: '#0d1117', border: '1px solid rgba(255,255,255,0.08)', maxHeight: '90vh', overflowY: 'auto' }}
             onClick={e => e.stopPropagation()}>
-            <div className="md:hidden flex justify-center pt-3 pb-1"><div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.12)' }} /></div>
-            <div className="sticky top-0 flex items-center justify-between px-5 py-4 z-10"
+                        <div className="sticky top-0 flex items-center justify-between px-5 py-4 z-10"
               style={{ background: '#0d1117', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
               <button onClick={() => setShowForm(false)} className="w-11 h-11 flex items-center justify-center rounded-lg text-white/40 hover:text-white transition">
                 <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"/></svg>

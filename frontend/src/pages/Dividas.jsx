@@ -956,16 +956,12 @@ export default function Dividas({ month, year }) {
         const situacaoColor = st.pago ? 'text-income' : vencida ? 'text-yellow-500' : 'text-text-2';
 
         return (
-          <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
             <div className="absolute inset-0 bg-black/75" style={{ backdropFilter: 'blur(8px)' }} />
-            <div className="relative w-full max-w-md rounded-t-[1.75rem] md:rounded-[1.5rem] shadow-2xl overflow-hidden animate-scale-in"
+            <div className="relative w-full max-w-md rounded-[1.5rem] shadow-2xl overflow-hidden animate-scale-in"
               style={{ background: '#0d1117', border: '1px solid rgba(255,255,255,0.08)', maxHeight: '92vh', overflowY: 'auto' }}
               onClick={e => e.stopPropagation()}>
 
-              {/* Handle mobile */}
-              <div className="md:hidden flex justify-center pt-3 pb-0">
-                <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.12)' }} />
-              </div>
 
               {/* Header */}
               <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
@@ -1077,16 +1073,13 @@ export default function Dividas({ month, year }) {
 
       {/* Form modal */}
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/75" style={{ backdropFilter: 'blur(8px)' }} />
           <div
-            className="relative w-full max-w-md rounded-t-[1.75rem] md:rounded-[1.5rem] shadow-2xl overflow-x-hidden overflow-y-auto"
+            className="relative w-full max-w-md rounded-[1.5rem] shadow-2xl overflow-x-hidden overflow-y-auto"
             style={{ background: '#0d1117', border: '1px solid rgba(255,255,255,0.08)', maxHeight: '92vh' }}
             onClick={e => e.stopPropagation()}
           >
-            <div className="md:hidden flex justify-center pt-3 pb-1">
-              <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.12)' }} />
-            </div>
             <div className="sticky top-0 flex items-center justify-between px-5 py-4 z-10"
               style={{ background: '#0d1117', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
               <button onClick={() => setShowForm(false)} className="w-11 h-11 flex items-center justify-center rounded-lg text-text-3 hover:text-text-1 hover:bg-white/5 transition">

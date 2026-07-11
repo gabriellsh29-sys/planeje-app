@@ -101,17 +101,13 @@ export default function TransactionForm({ onSave, onClose, defaultType }) {
   const isExpense = type === 'expense';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/75" style={{ backdropFilter: 'blur(8px)' }} />
       <div
-        className="relative w-full max-w-md rounded-t-[1.75rem] md:rounded-[1.5rem] shadow-2xl animate-scale-in overflow-hidden"
+        className="relative w-full max-w-md rounded-[1.5rem] shadow-2xl animate-scale-in overflow-hidden"
         style={{ background: '#0d1117', border: '1px solid rgba(255,255,255,0.08)' }}
         onClick={e => e.stopPropagation()}
       >
-        {/* Drag handle (mobile) */}
-        <div className="md:hidden flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.12)' }} />
-        </div>
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>

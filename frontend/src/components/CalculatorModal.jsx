@@ -8,15 +8,54 @@ const KEYS = [
   ['00', '0', ',', '='],
 ];
 
+// Parser matemático sem eval/Function — compatível com CSP restrita.
+// Suporta +, -, *, / e % (% vira /100) com precedência correta (* / antes de + -).
 function evaluate(expr) {
   if (!expr) return 0;
-  const sanitized = expr.replace(/,/g, '.').replace(/×/g, '*').replace(/÷/g, '/').replace(/%/g, '/100');
-  if (!/^[0-9+\-*/.() ]+$/.test(sanitized)) return 0;
-  try {
-    // eslint-disable-next-line no-new-func
-    const result = Function(`"use strict"; return (${sanitized})`)();
-    return isFinite(result) ? result : 0;
-  } catch { return 0; }
+  const s = expr
+    .replace(/,/g, '.')
+    .replace(/×/g, '*')
+    .replace(/÷/g, '/')
+    .replace(/%/g, '/100');
+
+  const nums = [];
+  const ops  = [];
+  let i = 0;
+  while (i < s.length) {
+    if (s[i] === ' ') { i++; continue; }
+    if (/[0-9.]/.test(s[i])) {
+      let num = '';
+      while (i < s.length && /[0-9.]/.test(s[i])) num += s[i++];
+      const v = parseFloat(num);
+      if (!isFinite(v)) return 0;
+      nums.push(v);
+    } else if (['+', '-', '*', '/'].includes(s[i])) {
+      ops.push(s[i++]);
+    } else {
+      i++;
+    }
+  }
+  if (!nums.length) return 0;
+
+  // 1ª passagem: * e / (maior precedência)
+  const n = [...nums];
+  const o = [...ops];
+  let j = 0;
+  while (j < o.length) {
+    if (o[j] === '*' || o[j] === '/') {
+      const r = o[j] === '*' ? n[j] * n[j+1] : (n[j+1] !== 0 ? n[j] / n[j+1] : 0);
+      n.splice(j, 2, r);
+      o.splice(j, 1);
+    } else { j++; }
+  }
+
+  // 2ª passagem: + e -
+  let result = n[0] ?? 0;
+  for (let k = 0; k < o.length; k++) {
+    if (o[k] === '+') result += n[k+1];
+    else if (o[k] === '-') result -= n[k+1];
+  }
+  return isFinite(result) ? result : 0;
 }
 
 export default function CalculatorModal({ initialValue, onClose, onConfirm }) {
@@ -62,17 +101,13 @@ export default function CalculatorModal({ initialValue, onClose, onConfirm }) {
   const exprFontSize = expr.length > 18 ? 16 : expr.length > 12 ? 22 : 28;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/75" style={{ backdropFilter: 'blur(8px)' }} />
       <div
-        className="relative w-full max-w-xs rounded-t-[1.75rem] md:rounded-[1.5rem] shadow-2xl animate-scale-in overflow-hidden p-4"
+        className="relative w-full max-w-xs rounded-[1.5rem] shadow-2xl animate-scale-in overflow-hidden p-4"
         style={{ background: '#0d1117', border: '1px solid rgba(255,255,255,0.08)' }}
         onClick={e => e.stopPropagation()}
       >
-        <div className="md:hidden flex justify-center pb-2">
-          <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.12)' }} />
-        </div>
-
         <div className="flex items-center justify-between mb-2">
           <p className="text-white font-semibold text-sm">Calculadora</p>
           <button onClick={onClose} className="w-10 h-10 flex items-center justify-center rounded-lg text-text-3 hover:text-text-1 hover:bg-white/5 transition">
