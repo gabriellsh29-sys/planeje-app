@@ -101,17 +101,13 @@ export default function CalculatorModal({ initialValue, onClose, onConfirm }) {
   const exprFontSize = expr.length > 18 ? 16 : expr.length > 12 ? 22 : 28;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/75" style={{ backdropFilter: 'blur(8px)' }} />
       <div
-        className="relative w-full max-w-xs rounded-t-[1.75rem] md:rounded-[1.5rem] shadow-2xl animate-scale-in overflow-hidden p-4"
+        className="relative w-full max-w-xs rounded-[1.5rem] shadow-2xl animate-scale-in overflow-hidden p-4"
         style={{ background: '#0d1117', border: '1px solid rgba(255,255,255,0.08)' }}
         onClick={e => e.stopPropagation()}
       >
-        <div className="md:hidden flex justify-center pb-2">
-          <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.12)' }} />
-        </div>
-
         <div className="flex items-center justify-between mb-2">
           <p className="text-white font-semibold text-sm">Calculadora</p>
           <button onClick={onClose} className="w-10 h-10 flex items-center justify-center rounded-lg text-text-3 hover:text-text-1 hover:bg-white/5 transition">
