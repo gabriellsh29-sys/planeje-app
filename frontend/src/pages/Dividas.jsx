@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import CalculatorModal from '../components/CalculatorModal';
 import { newId } from '../lib/ids';
 
@@ -955,7 +956,7 @@ export default function Dividas({ month, year }) {
         const situacao = st.pago ? 'Paga' : vencida ? 'Vencida' : 'Em aberto';
         const situacaoColor = st.pago ? 'text-income' : vencida ? 'text-yellow-500' : 'text-text-2';
 
-        return (
+        return createPortal(
           <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div className="absolute inset-0 bg-black/75" style={{ backdropFilter: 'blur(8px)' }} />
             <div className="relative w-full max-w-md rounded-[1.5rem] shadow-2xl overflow-hidden animate-scale-in"
@@ -1068,11 +1069,11 @@ export default function Dividas({ month, year }) {
               </div>
             </div>
           </div>
-        );
+        , document.body);
       })()}
 
       {/* Form modal */}
-      {showForm && (
+      {showForm && createPortal(
         <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div className="absolute inset-0 bg-black/75" style={{ backdropFilter: 'blur(8px)' }} />
           <div
@@ -1228,7 +1229,7 @@ export default function Dividas({ month, year }) {
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
 
       {/* Pop-up: aplicar alteração só neste mês ou deste mês em diante */}
       {pendingEdit && (() => {

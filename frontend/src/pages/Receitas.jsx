@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import CalculatorModal from '../components/CalculatorModal';
 import { newId } from '../lib/ids';
 
@@ -485,7 +486,7 @@ export default function Receitas({ month, year }) {
       )}
 
       {/* Modal formulário */}
-      {showForm && (
+      {showForm && createPortal(
         <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div className="absolute inset-0 bg-black/75" style={{ backdropFilter: 'blur(8px)' }} />
           <div className="relative w-full max-w-md rounded-[1.5rem] shadow-2xl overflow-x-hidden overflow-y-auto"
@@ -618,7 +619,7 @@ export default function Receitas({ month, year }) {
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
 
       {/* Parcelas modal */}
       {showParcelas && (

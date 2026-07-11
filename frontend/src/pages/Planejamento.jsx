@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { AppIcon, GOAL_ICONS } from '../lib/icons';
 import { newId } from '../lib/ids';
 
@@ -192,7 +193,7 @@ function Orcamento({ month, year }) {
       )}
 
       {/* Modal novo orçamento */}
-      {showForm && (
+      {showForm && createPortal(
         <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div className="absolute inset-0 bg-black/75" style={{ backdropFilter: 'blur(8px)' }} />
           <div className="relative w-full max-w-sm rounded-[1.5rem] overflow-hidden animate-scale-in"
@@ -234,7 +235,7 @@ function Orcamento({ month, year }) {
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
     </div>
   );
 }
@@ -387,7 +388,7 @@ function Metas() {
       )}
 
       {/* Modal nova meta */}
-      {showForm && (
+      {showForm && createPortal(
         <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div className="absolute inset-0 bg-black/75" style={{ backdropFilter: 'blur(8px)' }} />
           <div className="relative w-full max-w-md rounded-[1.5rem] overflow-hidden"
@@ -450,7 +451,7 @@ function Metas() {
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
     </div>
   );
 }

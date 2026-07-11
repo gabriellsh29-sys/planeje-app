@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import CalculatorModal from '../components/CalculatorModal';
 import { newId } from '../lib/ids';
 
@@ -302,7 +303,7 @@ export default function CartaoCredito({ month, year }) {
       </div>
 
       {/* ── Modal: Novo/Editar Cartão ── */}
-      {showFormCartao && (
+      {showFormCartao && createPortal(
         <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div className="absolute inset-0 bg-black/75" style={{ backdropFilter: 'blur(8px)' }} />
           <div className="relative w-full max-w-sm rounded-[1.5rem] overflow-hidden"
@@ -363,10 +364,10 @@ export default function CartaoCredito({ month, year }) {
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
 
       {/* ── Modal: Novo Lançamento ── */}
-      {showFormLanc && (
+      {showFormLanc && createPortal(
         <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div className="absolute inset-0 bg-black/75" style={{ backdropFilter: 'blur(8px)' }} />
           <div className="relative w-full max-w-sm rounded-[1.5rem] overflow-hidden"
@@ -415,7 +416,7 @@ export default function CartaoCredito({ month, year }) {
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
 
       {/* ── Modal: Confirmar pagamento fatura ── */}
       {showPagar && (
