@@ -189,3 +189,11 @@
     bottom: 2rem;
   }
 }
+
+.hide-vals .hv {
+  filter: blur(8px);
+  user-select: none;
+  pointer-events: none;
+  transition: filter 0.2s;
+}
+.hv { transition: filter 0.2s; }

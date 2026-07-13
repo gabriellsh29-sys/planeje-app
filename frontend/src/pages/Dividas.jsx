@@ -833,7 +833,7 @@ export default function Dividas({ month, year }) {
 
                     {/* Valor */}
                     <div className="flex-shrink-0 text-right">
-                      <p className="text-sm font-bold" style={{ color: valorColor }}>{fmt(parcelaValorMes(d, m, y))}</p>
+                      <p className="hv text-sm font-bold" style={{ color: valorColor }}>{fmt(parcelaValorMes(d, m, y))}</p>
                       {isParcelada && (
                         <p className="text-[10px] text-white/60">por parcela</p>
                       )}

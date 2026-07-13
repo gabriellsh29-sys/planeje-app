@@ -482,7 +482,7 @@ export default function Receitas({ month, year }) {
                       </div>
                     </div>
                     <div className="flex-shrink-0 text-right">
-                      <p className="text-sm font-bold text-income">{fmt(parcelaValor(r))}</p>
+                      <p className="hv text-sm font-bold text-income">{fmt(parcelaValor(r))}</p>
                       {st.recebida && st.valorRecebido && st.valorRecebido !== parcelaValor(r) && (
                         <p className="text-[10px] text-white/50">recebido {fmt(st.valorRecebido)}</p>
                       )}

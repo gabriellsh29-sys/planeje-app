@@ -188,7 +188,7 @@ export default function Graficos({ month, year }) {
             <div className="w-2 h-2 rounded-full bg-expense" />
             <p className="text-white text-xs font-medium">Total Despesas</p>
           </div>
-          <p className="text-expense font-bold text-xl">{fmt(totalExpense)}</p>
+          <p className="hv text-expense font-bold text-xl">{fmt(totalExpense)}</p>
           <p className="text-white/70 text-[10px] mt-1">{expenseByCategory.length} categorias</p>
         </div>
         <div className="card-premium p-4">
@@ -196,7 +196,7 @@ export default function Graficos({ month, year }) {
             <div className="w-2 h-2 rounded-full bg-income" />
             <p className="text-white text-xs font-medium">Total Receitas</p>
           </div>
-          <p className="text-income font-bold text-xl">{fmt(totalIncome)}</p>
+          <p className="hv text-income font-bold text-xl">{fmt(totalIncome)}</p>
           <p className="text-text-3 text-[10px] mt-1">{incomeByCategory.length} categorias</p>
         </div>
       </div>

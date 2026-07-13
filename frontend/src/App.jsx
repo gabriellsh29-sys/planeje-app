@@ -1,5 +1,6 @@
-import React, { useState, useCallback, lazy, Suspense, Component } from 'react';
+import React, { useState, useCallback, lazy, Suspense, Component, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { toggleHide, useHideVals } from './lib/hideVals';
 import LoginPage from './components/LoginPage';
 import ResetPasswordPage from './components/ResetPasswordPage';
 import PaywallPage from './components/PaywallPage';
@@ -97,7 +98,21 @@ function TransacoesWrapper({ month, year }) {
   );
 }
 
+function EyeToggle({ className = '' }) {
+  const h = useHideVals();
+  return (
+    <button onClick={toggleHide} title={h ? 'Mostrar valores' : 'Ocultar valores'}
+      className={`w-7 h-7 rounded-lg flex items-center justify-center text-text-3 hover:text-accent hover:bg-white/5 transition ${className}`}>
+      {h
+        ? <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clipRule="evenodd"/><path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z"/></svg>
+        : <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd"/></svg>
+      }
+    </button>
+  );
+}
+
 function Dashboard() {
+  const { logout } = useAuth();
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year,  setYear]  = useState(now.getFullYear());
@@ -123,6 +138,16 @@ function Dashboard() {
   const goToToday = useCallback(() => { const n = new Date(); setMonth(n.getMonth() + 1); setYear(n.getFullYear()); }, []);
   const goToPerfil = useCallback(() => setPage('perfil'), []);
 
+  // Auto-logout após 10 min de inatividade
+  useEffect(() => {
+    const TIMEOUT = 10 * 60 * 1000;
+    let timer = setTimeout(logout, TIMEOUT);
+    const reset = () => { clearTimeout(timer); timer = setTimeout(logout, TIMEOUT); };
+    const events = ['mousemove', 'keydown', 'click', 'touchstart', 'scroll'];
+    events.forEach(e => document.addEventListener(e, reset, { passive: true }));
+    return () => { clearTimeout(timer); events.forEach(e => document.removeEventListener(e, reset)); };
+  }, [logout]);
+
   const showFab = page === 'resumo';
 
   return (
@@ -138,6 +163,7 @@ function Dashboard() {
           <div className="flex items-center justify-between px-4 py-2.5">
             <span className="text-text-1 font-bold text-base">{PAGE_TITLES[page]}</span>
             <div className="flex items-center gap-1.5">
+              <EyeToggle />
               <button onClick={goToToday}
                 className="text-[9px] font-semibold px-2 py-0.5 rounded-full transition-all"
                 style={{ background: 'rgba(34,197,94,0.12)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.25)' }}>
