@@ -670,12 +670,13 @@ export default function Receitas({ month, year }) {
       , document.body)}
 
       {/* Parcelas modal */}
-      {showParcelas && (
+      {showParcelas && createPortal(
         <ConfigurarParcelas
           parcelaInicial={form.parcelaInicial} totalParcelas={form.totalParcelas} periodicidade={form.periodicidade}
           onChange={({ parcelaInicial, totalParcelas, periodicidade }) => upd({ parcelaInicial, totalParcelas, periodicidade })}
           onClose={() => setShowParcelas(false)}
-        />
+        />,
+        document.body
       )}
 
       {/* Modal confirmar recebimento */}
