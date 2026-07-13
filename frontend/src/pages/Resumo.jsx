@@ -118,6 +118,17 @@ function loadFaturas(month, year) {
   } catch { return []; }
 }
 
+// Receitas fixas guardam status por mês em r.recebimentos['YYYY-MM'].
+function statusMesReceita(r, month, year) {
+  if (r.recorrencia === 'fixa') {
+    const key = `${year}-${String(month).padStart(2, '0')}`;
+    const p = r.recebimentos && r.recebimentos[key];
+    if (p) return { recebida: !!p.recebida, data: p.data || null, valorRecebido: p.valorRecebido || null };
+    return { recebida: false, data: null, valorRecebido: null };
+  }
+  return { recebida: !!r.recebida, data: r.recebimentoData || null, valorRecebido: r.valorRecebido || null };
+}
+
 function loadReceitas(month, year) {
   try {
     const all = JSON.parse(localStorage.getItem(RECEITA_KEY) || '[]');
@@ -132,13 +143,15 @@ function loadReceitas(month, year) {
       const [y, m] = dateStr.split('-').map(Number);
       return y === year && m === month;
     }).map(r => {
+      const st = statusMesReceita(r, month, year);
       const mm = String(month).padStart(2, '0');
       const day = (r.data || '').split('-')[2] || '01';
       const date = r.recorrencia === 'fixa'
         ? `${year}-${mm}-${day}`
         : (r.recebimentoData || r.data || `${year}-${mm}-01`);
+      const amount = parseFloat(st.valorRecebido || r.valor || 0);
       return { id: 'rec_' + r.id, type: 'income', description: r.nome, category: r.categoria || 'Outros',
-        amount: parseFloat(r.valorRecebido || r.valor || 0), date, pago: r.recebida, pagamentoData: r.recebimentoData };
+        amount, date, pago: st.recebida, pagamentoData: st.data };
     });
   } catch { return []; }
 }
