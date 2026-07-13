@@ -205,6 +205,7 @@ export default function Graficos({ month, year }) {
       {expenseByCategory.length > 0 && (
         <div className="card-premium p-4">
           <h3 className="text-text-1 text-sm font-semibold mb-4">Ranking de Despesas</h3>
+          <div className="hv">
           <ResponsiveContainer width="100%" height={Math.max(160, expenseByCategory.length * 34)}>
             <BarChart data={expenseByCategory} layout="vertical" margin={{ left: 0, right: 115, top: 0, bottom: 0 }}>
               <XAxis type="number" hide />
@@ -238,6 +239,7 @@ export default function Graficos({ month, year }) {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
+          </div>
         </div>
       )}
 
@@ -253,7 +255,7 @@ function DonutCard({ title, data, total, colors }) {
   return (
     <div className="card-premium p-4">
       <h3 className="text-text-1 text-sm font-semibold mb-3">{title} por Categoria</h3>
-      <div className="flex items-center gap-4">
+      <div className="hv flex items-center gap-4">
         <div className="flex-shrink-0">
           <PieChart width={128} height={128}>
             <Pie data={data} cx={64} cy={64} innerRadius={34} outerRadius={56} dataKey="value" paddingAngle={2}>
