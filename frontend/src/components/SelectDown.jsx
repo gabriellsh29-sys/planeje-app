@@ -4,7 +4,8 @@ import { createPortal } from 'react-dom';
 export default function SelectDown({ value, onChange, options, className, style }) {
   const [open, setOpen] = useState(false);
   const [pos, setPos]   = useState({ top: 0, left: 0, width: 0 });
-  const triggerRef = useRef(null);
+  const triggerRef  = useRef(null);
+  const dropdownRef = useRef(null);
 
   const toggle = () => {
     if (!open && triggerRef.current) {
@@ -17,7 +18,9 @@ export default function SelectDown({ value, onChange, options, className, style 
   useEffect(() => {
     if (!open) return;
     const close = (e) => {
-      if (triggerRef.current && !triggerRef.current.contains(e.target)) setOpen(false);
+      const inTrigger  = triggerRef.current  && triggerRef.current.contains(e.target);
+      const inDropdown = dropdownRef.current && dropdownRef.current.contains(e.target);
+      if (!inTrigger && !inDropdown) setOpen(false);
     };
     document.addEventListener('mousedown', close);
     return () => document.removeEventListener('mousedown', close);
@@ -38,19 +41,21 @@ export default function SelectDown({ value, onChange, options, className, style 
         </svg>
       </button>
       {open && createPortal(
-        <div style={{
-          position: 'fixed',
-          top: pos.top,
-          left: pos.left,
-          width: pos.width,
-          zIndex: 9999,
-          background: '#1e293b',
-          border: '1px solid rgba(255,255,255,0.1)',
-          borderRadius: '0.75rem',
-          maxHeight: 220,
-          overflowY: 'auto',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
-        }}>
+        <div
+          ref={dropdownRef}
+          style={{
+            position: 'fixed',
+            top: pos.top,
+            left: pos.left,
+            width: pos.width,
+            zIndex: 9999,
+            background: '#1e293b',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: '0.75rem',
+            maxHeight: 220,
+            overflowY: 'auto',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+          }}>
           {options.map(opt => (
             <button
               key={opt}
