@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LabelList, Text } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LabelList } from 'recharts';
 
 const fmt = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
 
@@ -10,11 +10,24 @@ const BAR_COLORS = ['#b8860b','#16a34a','#2563eb','#7c3aed','#0891b2','#ea580c',
 // Cores das receitas: tons positivos (verde/dourado) da paleta do app.
 const INCOME_COLORS = ['#22c55e','#c9a84c','#34d399','#16a34a','#a3e635','#fbbf24','#10b981','#84cc16'];
 
-function CenteredYAxisTick({ x, y, payload, width = 90 }) {
+function CenteredYAxisTick({ x, y, payload }) {
+  const words = payload.value.split(' ');
+  const lines = [];
+  let cur = '';
+  for (const w of words) {
+    const next = cur ? `${cur} ${w}` : w;
+    if (next.length <= 9) { cur = next; }
+    else { if (cur) lines.push(cur); cur = w; }
+  }
+  if (cur) lines.push(cur);
+  const lh = 11;
+  const startDy = -((lines.length - 1) * lh) / 2;
   return (
-    <Text x={x - width / 2} y={y} width={width} fill="#ffffff" fontSize={10} textAnchor="middle" verticalAnchor="middle">
-      {payload.value}
-    </Text>
+    <text x={x - 45} y={y} textAnchor="middle" fill="rgba(255,255,255,0.8)" fontSize={10}>
+      {lines.map((line, i) => (
+        <tspan key={i} x={x - 45} dy={i === 0 ? startDy : lh}>{line}</tspan>
+      ))}
+    </text>
   );
 }
 

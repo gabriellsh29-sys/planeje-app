@@ -424,7 +424,7 @@ export default function Anotacoes() {
 
       {/* ── Undo toast ─────────────────────────────────────────── */}
       {undo && (
-        <div className="fixed bottom-24 md:bottom-8 left-1/2 -translate-x-1/2 z-50"
+        <div className="fixed fab-safe-lg left-1/2 -translate-x-1/2 z-50"
           style={{ background: '#1e293b', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.5)', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, minWidth: 260 }}>
           <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-income flex-shrink-0">
             <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>

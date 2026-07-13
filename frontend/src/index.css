@@ -171,3 +171,21 @@
     padding-bottom: 2rem;
   }
 }
+
+/* Botão flutuante (+) acima da nav com safe area */
+.fab-safe {
+  bottom: calc(5rem + env(safe-area-inset-bottom));
+}
+@media (min-width: 768px) {
+  .fab-safe {
+    bottom: 2rem;
+  }
+}
+.fab-safe-lg {
+  bottom: calc(6rem + env(safe-area-inset-bottom));
+}
+@media (min-width: 768px) {
+  .fab-safe-lg {
+    bottom: 2rem;
+  }
+}

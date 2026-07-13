@@ -168,7 +168,7 @@ function Dashboard() {
       {showFab && (
         <button
           onClick={() => { setFormType('expense'); setShowForm(true); }}
-          className="fixed bottom-20 right-5 md:bottom-8 md:right-8 w-14 h-14 rounded-full text-[#07090f] text-2xl font-bold shadow-xl flex items-center justify-center active:scale-90 transition-all duration-150 z-30"
+          className="fixed fab-safe right-5 md:right-8 w-14 h-14 rounded-full text-[#07090f] text-2xl font-bold shadow-xl flex items-center justify-center active:scale-90 transition-all duration-150 z-30"
           style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', boxShadow: '0 8px 32px rgba(34,197,94,0.4)' }}
           aria-label="Nova transação">
           +
