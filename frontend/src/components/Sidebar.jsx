@@ -113,7 +113,7 @@ export default function Sidebar({ page, setPage, month, year, onPrev, onNext, on
 
       {/* ─── Mobile bottom bar ─── */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 flex"
-        style={{ background: 'rgba(15,23,42,0.96)', backdropFilter: 'blur(20px)', borderTop: '1px solid rgba(34,197,94,0.12)' }}>
+        style={{ background: 'rgba(15,23,42,0.96)', backdropFilter: 'blur(20px)', borderTop: '1px solid rgba(34,197,94,0.12)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
         {NAV.map(({ id, label, icon: Icon }) => {
           const active = page === id;
           return (

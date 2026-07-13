@@ -166,7 +166,7 @@ export default function Graficos({ month, year }) {
   }
 
   return (
-    <div className="p-4 md:p-6 pb-24 md:pb-8 space-y-4 animate-fade-in">
+    <div className="p-4 md:p-6 pb-safe-nav space-y-4 animate-fade-in">
       {/* Summary */}
       <div className="grid grid-cols-2 gap-3">
         <div className="card-premium p-4">

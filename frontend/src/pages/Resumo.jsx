@@ -195,7 +195,7 @@ export default function Resumo({ loading, month, year }) {
   const totalCat = categoryData.reduce((s, d) => s + d.value, 0);
 
   return (
-    <div className="p-4 md:p-5 pb-24 md:pb-8 space-y-3 animate-fade-in">
+    <div className="p-4 md:p-5 pb-safe-nav space-y-3 animate-fade-in">
 
       {/* ── EXPORTAR ── */}
       <div className="flex justify-end">

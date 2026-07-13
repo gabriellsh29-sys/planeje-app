@@ -349,7 +349,7 @@ export default function Receitas({ month, year }) {
   }, 0);
 
   return (
-    <div className="p-4 md:p-6 pb-24 md:pb-8 animate-fade-in">
+    <div className="p-4 md:p-6 pb-safe-nav animate-fade-in">
 
       {/* Header */}
       <div className="flex items-center justify-between mb-4">

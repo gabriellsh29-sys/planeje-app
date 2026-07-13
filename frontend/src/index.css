@@ -161,3 +161,13 @@
   pointer-events: none;
   z-index: 0;
 }
+
+/* iOS PWA safe area: espaço extra abaixo do conteúdo para não ficar atrás da nav */
+.pb-safe-nav {
+  padding-bottom: calc(6rem + env(safe-area-inset-bottom));
+}
+@media (min-width: 768px) {
+  .pb-safe-nav {
+    padding-bottom: 2rem;
+  }
+}

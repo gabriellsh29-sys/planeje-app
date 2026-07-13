@@ -155,7 +155,7 @@ export default function Transacoes({ transactions, onDelete, loading, onAdd }) {
   ];
 
   return (
-    <div className="p-4 md:p-6 pb-24 md:pb-8 animate-fade-in">
+    <div className="p-4 md:p-6 pb-safe-nav animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-text-1 font-bold text-lg">Transações</h2>
