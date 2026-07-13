@@ -169,14 +169,18 @@ function Dashboard() {
                 style={{ background: 'rgba(34,197,94,0.12)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.25)' }}>
                 Mês Atual
               </button>
-              <button onClick={prevMonth} className="w-7 h-7 rounded-lg flex items-center justify-center text-text-3 hover:text-accent hover:bg-white/5 transition">
-                <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
+              <button onClick={prevMonth}
+                className="w-9 h-9 rounded-xl flex items-center justify-center transition active:scale-90"
+                style={{ background: 'rgba(255,255,255,0.07)', color: '#ffffff' }}>
+                <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5"><path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
               </button>
               <span className="text-text-2 text-sm font-medium min-w-[5rem] text-center">
                 {MONTHS[month - 1].slice(0, 3)} {year}
               </span>
-              <button onClick={nextMonth} className="w-7 h-7 rounded-lg flex items-center justify-center text-text-3 hover:text-accent hover:bg-white/5 transition">
-                <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4-4a1 1 0 01-1.414 0z" clipRule="evenodd"/></svg>
+              <button onClick={nextMonth}
+                className="w-9 h-9 rounded-xl flex items-center justify-center transition active:scale-90"
+                style={{ background: 'rgba(255,255,255,0.07)', color: '#ffffff' }}>
+                <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5"><path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4-4a1 1 0 01-1.414 0z" clipRule="evenodd"/></svg>
               </button>
             </div>
           </div>
