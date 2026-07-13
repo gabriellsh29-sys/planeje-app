@@ -1260,12 +1260,13 @@ export default function Dividas({ month, year }) {
       })()}
 
       {/* Parcelas modal */}
-      {showParcelas && (
+      {showParcelas && createPortal(
         <ConfigurarParcelas
           parcelaInicial={form.parcelaInicial} totalParcelas={form.totalParcelas} periodicidade={form.periodicidade}
           onChange={({ parcelaInicial, totalParcelas, periodicidade }) => updateForm({ parcelaInicial, totalParcelas, periodicidade })}
           onClose={() => setShowParcelas(false)}
-        />
+        />,
+        document.body
       )}
 
       {/* Efetivar modal */}
