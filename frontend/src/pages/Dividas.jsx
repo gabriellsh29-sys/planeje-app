@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import CalculatorModal from '../components/CalculatorModal';
+import SelectDown from '../components/SelectDown';
 import { newId } from '../lib/ids';
 
 const fmt = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
@@ -11,7 +12,7 @@ const fmtDate = (d) => {
 
 const DIVIDA_KEY = 'financeiro_dividas';
 const CAT_KEY = 'financeiro_categorias_divida';
-const CATEGORIAS_PADRAO = ['Cartão de Crédito','Empréstimo','Financiamento','Cheque Especial','Conta/Serviço','Outros'];
+const CATEGORIAS_PADRAO = ['Alimentação','Moradia','Transporte','Saúde','Educação','Lazer','Vestuário','Cartão de Crédito','Empréstimo','Financiamento','Conta/Serviço','Impostos','Família','Outros'];
 const PERIODICIDADES = ['Mensal','Quinzenal','Semanal','Bimestral','Trimestral','Semestral','Anual'];
 
 function loadCategorias() { try { const s = JSON.parse(localStorage.getItem(CAT_KEY) || 'null'); return (s && s.length) ? s : CATEGORIAS_PADRAO; } catch { return CATEGORIAS_PADRAO; } }
@@ -1137,10 +1138,12 @@ export default function Dividas({ month, year }) {
                     <button type="button" onClick={adicionarCategoria} className="btn-gold py-2 px-3 text-sm">OK</button>
                   </div>
                 )}
-                <select value={form.categoria} onChange={e => updateForm({ categoria: e.target.value })}
-                  className="input-premium [color-scheme:dark]">
-                  {categorias.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
+                <SelectDown
+                  value={form.categoria}
+                  onChange={v => updateForm({ categoria: v })}
+                  options={categorias}
+                  className="input-premium w-full"
+                />
                 {categorias.filter(c => !CATEGORIAS_PADRAO.includes(c)).length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mt-2">
                     {categorias.filter(c => !CATEGORIAS_PADRAO.includes(c)).map(c => (

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import CalculatorModal from './CalculatorModal';
+import SelectDown from './SelectDown';
 
 const today = () => new Date().toISOString().split('T')[0];
 
@@ -203,13 +204,12 @@ export default function TransactionForm({ onSave, onClose, defaultType }) {
                   <button type="button" onClick={addCateg} className="btn-gold py-2 px-3 text-sm">OK</button>
                 </div>
               )}
-              <select
+              <SelectDown
                 value={category}
-                onChange={e => setCategory(e.target.value)}
-                className="input-premium [color-scheme:dark]"
-              >
-                {categories.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+                onChange={setCategory}
+                options={categories}
+                className="input-premium w-full"
+              />
             </div>
 
             {error && (
