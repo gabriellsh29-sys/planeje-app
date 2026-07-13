@@ -284,8 +284,8 @@ export default function Resumo({ loading, month, year }) {
 
       {/* ── 3 CARDS ── */}
       <div className="grid grid-cols-3 gap-2 md:gap-3">
-        <SummaryCard label="RECEITAS" value={totalIncome} color="#22c55e" sub="Este mês" />
-        <SummaryCard label="DESPESAS" value={totalExpense} color="#f43f5e" sub="Este mês" />
+        <SummaryCard label="RECEITAS" value={pagoIncome} color="#22c55e" sub="Este mês" />
+        <SummaryCard label="DESPESAS" value={pagoExpense} color="#f43f5e" sub="Este mês" />
         <SummaryCard label="A PAGAR" value={pendingExpense} color="#f59e0b"
           sub={`${pendingCount} pendente${pendingCount !== 1 ? 's' : ''}`} />
       </div>
