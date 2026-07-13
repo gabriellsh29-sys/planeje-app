@@ -276,7 +276,8 @@ export default function Receitas({ month, year }) {
     const r = receitas.find(x => x.id === id);
     const st = statusMesReceita(r, lm, ly);
     setEfDate(st.data || new Date().toISOString().slice(0,10));
-    setEfValor(st.valorRecebido ? st.valorRecebido.toFixed(2) : (r?.valor ? r.valor.toFixed(2) : ''));
+    const fmtBRL = v => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    setEfValor(st.valorRecebido ? fmtBRL(st.valorRecebido) : (r ? fmtBRL(parcelaValor(r)) : ''));
     setEfetivId(id);
   };
 
@@ -289,12 +290,12 @@ export default function Receitas({ month, year }) {
           ...r,
           recebimentos: {
             ...(r.recebimentos || {}),
-            [key]: { recebida: true, data: efDate, valorRecebido: parseFloat(efValor) || r.valor },
+            [key]: { recebida: true, data: efDate, valorRecebido: parseFloat(String(efValor).replace(/\./g,'').replace(',','.')) || parcelaValor(r) },
           },
           updatedAt: new Date().toISOString(),
         };
       }
-      return { ...r, recebida: true, recebimentoData: efDate, valorRecebido: parseFloat(efValor) || r.valor, updatedAt: new Date().toISOString() };
+      return { ...r, recebida: true, recebimentoData: efDate, valorRecebido: parseFloat(String(efValor).replace(/\./g,'').replace(',','.')) || parcelaValor(r), updatedAt: new Date().toISOString() };
     });
     setReceitas(updated); saveReceitas(updated); setEfetivId(null);
   };
@@ -709,7 +710,7 @@ export default function Receitas({ month, year }) {
             </div>
             <div className="mb-4">
               <label className="text-white/50 text-xs block mb-1.5">Valor recebido (R$)</label>
-              <input type="number" step="0.01" value={efValor} onChange={e => setEfValor(e.target.value)}
+              <input type="text" inputMode="decimal" value={efValor} onChange={e => setEfValor(e.target.value)}
                 className="input-premium" />
             </div>
             <div className="flex gap-3">

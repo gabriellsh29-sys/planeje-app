@@ -494,13 +494,14 @@ export default function Dividas({ month, year }) {
     const jaPago = st?.valorPago || 0;
     const restante = Math.max(pv - jaPago, 0);
     setEfetivDate(st?.pagamentoData || new Date().toISOString().split('T')[0]);
-    setEfetivValor(modo === 'parcial' ? '' : (restante ? restante.toFixed(2) : ''));
+    const fmtBRL = v => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    setEfetivValor(modo === 'parcial' ? '' : (restante ? fmtBRL(restante) : ''));
     setEfetivandoId(id);
   };
 
   const confirmEfetivar = () => {
     if (!efetivandoId) return;
-    const valorDigitado = parseFloat(efetivValor) || 0;
+    const valorDigitado = parseFloat(String(efetivValor).replace(/\./g,'').replace(',','.')) || 0;
     const updated = dividas.map(d => {
       if (d.id !== efetivandoId) return d;
       const total = parcelaValorMes(d, m, y);
@@ -1314,9 +1315,8 @@ export default function Dividas({ month, year }) {
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-3 text-sm">R$</span>
                 <input
-                  type="number"
-                  step="0.01"
-                  min="0"
+                  type="text"
+                  inputMode="decimal"
                   value={efetivValor}
                   onChange={e => setEfetivValor(e.target.value)}
                   className="input-premium pl-9"
