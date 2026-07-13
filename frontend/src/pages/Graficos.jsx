@@ -192,7 +192,7 @@ export default function Graficos({ month, year }) {
         <div className="card-premium p-4">
           <h3 className="text-text-1 text-sm font-semibold mb-4">Ranking de Despesas</h3>
           <ResponsiveContainer width="100%" height={Math.max(160, expenseByCategory.length * 34)}>
-            <BarChart data={expenseByCategory} layout="vertical" margin={{ left: 0, right: 90, top: 0, bottom: 0 }}>
+            <BarChart data={expenseByCategory} layout="vertical" margin={{ left: 0, right: 8, top: 0, bottom: 0 }}>
               <XAxis type="number" hide />
               <YAxis type="category" dataKey="name" tick={<CenteredYAxisTick width={90} />} axisLine={false} tickLine={false} width={90} />
               <Tooltip {...tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.04)' }} formatter={(v) => [fmt(v), 'Total']} />
@@ -200,15 +200,15 @@ export default function Graficos({ month, year }) {
                 <LabelList
                   dataKey="value"
                   content={({ x, y, width, height, index }) => {
+                    if (width < 28) return null;
                     const d = expenseByCategory[index];
                     const pct = totalExpense > 0 ? Math.round(d.value / totalExpense * 100) : 0;
-                    const text = `${fmt(d.value)} · ${pct}%`;
-                    const minWidth = text.length * 6.2 + 12;
-                    const fitsInside = width >= minWidth;
-                    const textX = fitsInside ? x + width / 2 : x + width + 6;
-                    const anchor = fitsInside ? 'middle' : 'start';
+                    const fullText = `${fmt(d.value)} · ${pct}%`;
+                    const shortText = `${pct}%`;
+                    const fitsFullText = width >= fullText.length * 6.2 + 12;
+                    const text = fitsFullText ? fullText : shortText;
                     return (
-                      <text x={textX} y={y + height / 2} fill="#ffffff" textAnchor={anchor} dominantBaseline="central" fontSize={11} fontWeight={600}>
+                      <text x={x + width / 2} y={y + height / 2} fill="#ffffff" textAnchor="middle" dominantBaseline="central" fontSize={11} fontWeight={600}>
                         {text}
                       </text>
                     );
