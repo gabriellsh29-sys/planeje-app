@@ -254,8 +254,18 @@ export default function Resumo({ loading, month, year }) {
           style={{ background: 'radial-gradient(ellipse at 100% 0%, rgba(34,197,94,0.1) 0%, transparent 65%)' }} />
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-[11px] font-semibold tracking-widest uppercase mb-1 text-white">Saldo em Conta</p>
-            <p className="hv font-bold leading-none tracking-tight mt-1"
+            <div className="flex items-center gap-2 mb-1">
+              <p className="text-[11px] font-semibold tracking-widest uppercase text-white">Saldo em Conta</p>
+              <button onClick={toggleHide} title={oculto ? 'Mostrar valores' : 'Ocultar valores'}
+                className="flex items-center justify-center transition hover:opacity-70"
+                style={{ color: '#22c55e' }}>
+                {oculto
+                  ? <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clipRule="evenodd"/><path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z"/></svg>
+                  : <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd"/></svg>
+                }
+              </button>
+            </div>
+            <p className="hv font-bold leading-none tracking-tight"
               style={{ fontSize: 34, color: saldoConta >= 0 ? '#22c55e' : '#f43f5e' }}>
               {fmt(saldoConta)}
             </p>
@@ -263,23 +273,12 @@ export default function Resumo({ loading, month, year }) {
               {pagoExpense === 0 && pagoIncome === 0 ? 'Atualizado agora' : `Pago: ${fmt(pagoExpense)} · Recebido: ${fmt(pagoIncome)}`}
             </p>
           </div>
-          <div className="flex flex-col items-end gap-2">
-            <button onClick={openEditSaldo}
-              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl transition hover:opacity-80"
-              style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', color: '#ffffff' }}>
-              <svg viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3"><path d="M12.854.146a.5.5 0 00-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 000-.708l-3-3zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 01.5.5v.5h.5a.5.5 0 01.5.5v.5h.5a.5.5 0 01.5.5v.5h.5a.5.5 0 01.5.5v.207l6.5-6.5zm-7.468 7.468A.5.5 0 016 13.5V13h-.5a.5.5 0 01-.5-.5V12h-.5a.5.5 0 01-.5-.5V11h-.5a.5.5 0 01-.5-.5V10h-.5a.499.499 0 01-.175-.032l-.179.178a.5.5 0 00-.11.168l-2 5a.5.5 0 00.65.65l5-2a.5.5 0 00.168-.11l.178-.178z"/></svg>
-              Ajustar
-            </button>
-            <button onClick={toggleHide} title={oculto ? 'Mostrar valores' : 'Ocultar valores'}
-              className="flex items-center gap-1 text-xs px-2 py-1 rounded-xl transition hover:opacity-80"
-              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)' }}>
-              {oculto
-                ? <svg viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5"><path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clipRule="evenodd"/><path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z"/></svg>
-                : <svg viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd"/></svg>
-              }
-              {oculto ? 'Mostrar' : 'Ocultar'}
-            </button>
-          </div>
+          <button onClick={openEditSaldo}
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl transition hover:opacity-80 self-start"
+            style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', color: '#ffffff' }}>
+            <svg viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3"><path d="M12.854.146a.5.5 0 00-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 000-.708l-3-3zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 01.5.5v.5h.5a.5.5 0 01.5.5v.5h.5a.5.5 0 01.5.5v.5h.5a.5.5 0 01.5.5v.207l6.5-6.5zm-7.468 7.468A.5.5 0 016 13.5V13h-.5a.5.5 0 01-.5-.5V12h-.5a.5.5 0 01-.5-.5V11h-.5a.5.5 0 01-.5-.5V10h-.5a.499.499 0 01-.175-.032l-.179.178a.5.5 0 00-.11.168l-2 5a.5.5 0 00.65.65l5-2a.5.5 0 00.168-.11l.178-.178z"/></svg>
+            Ajustar
+          </button>
         </div>
       </div>
 

@@ -639,7 +639,7 @@ export default function Dividas({ month, year }) {
             <div className="w-2 h-2 rounded-full bg-expense" />
             <p className="text-text-3 text-xs">Em aberto</p>
           </div>
-          <p className="text-expense font-bold text-lg">{fmt(totalPendente)}</p>
+          <p className="hv text-expense font-bold text-lg">{fmt(totalPendente)}</p>
           <p className="text-text-3 text-[10px] mt-0.5">{dividasPeriodo.filter(d => !statusMes(d, m, y).pago).length} registros</p>
         </div>
         <div className="card-premium p-4">
@@ -647,7 +647,7 @@ export default function Dividas({ month, year }) {
             <div className="w-2 h-2 rounded-full bg-income" />
             <p className="text-text-3 text-xs">Quitadas</p>
           </div>
-          <p className="text-income font-bold text-lg">{fmt(totalPago)}</p>
+          <p className="hv text-income font-bold text-lg">{fmt(totalPago)}</p>
           <p className="text-text-3 text-[10px] mt-0.5">{dividasPeriodo.filter(d => statusMes(d, m, y).pago).length} registros</p>
         </div>
       </div>

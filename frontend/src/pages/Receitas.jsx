@@ -380,7 +380,7 @@ export default function Receitas({ month, year }) {
             <div className="w-2 h-2 rounded-full bg-income" />
             <p className="text-white/70 text-xs">A receber</p>
           </div>
-          <p className="text-income font-bold text-lg">{fmt(totalPendente)}</p>
+          <p className="hv text-income font-bold text-lg">{fmt(totalPendente)}</p>
           <p className="text-white/50 text-[10px] mt-0.5">{periodo.filter(r => !statusMesReceita(r, lm, ly).recebida).length} pendentes</p>
         </div>
         <div className="card-premium p-4">
@@ -388,7 +388,7 @@ export default function Receitas({ month, year }) {
             <div className="w-2 h-2 rounded-full bg-income" />
             <p className="text-white/70 text-xs">Recebidas</p>
           </div>
-          <p className="text-income font-bold text-lg">{fmt(totalRecebido)}</p>
+          <p className="hv text-income font-bold text-lg">{fmt(totalRecebido)}</p>
           <p className="text-white/50 text-[10px] mt-0.5">{periodo.filter(r => statusMesReceita(r, lm, ly).recebida).length} confirmadas</p>
         </div>
       </div>
