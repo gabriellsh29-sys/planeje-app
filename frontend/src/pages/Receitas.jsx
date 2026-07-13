@@ -30,6 +30,21 @@ function parcelaValor(r) {
   return r.valor;
 }
 
+function mesKey(month, year) {
+  return `${year}-${String(month).padStart(2, '0')}`;
+}
+
+// Para receitas fixas, status é por mês (recebimentos[YYYY-MM]).
+// Para não-fixas, usa os campos legados recebida/recebimentoData.
+function statusMesReceita(r, month, year) {
+  if (r.recorrencia === 'fixa') {
+    const p = r.recebimentos && r.recebimentos[mesKey(month, year)];
+    if (p) return { recebida: !!p.recebida, data: p.data || null, valorRecebido: p.valorRecebido || null };
+    return { recebida: false, data: null, valorRecebido: null };
+  }
+  return { recebida: !!r.recebida, data: r.recebimentoData || null, valorRecebido: r.valorRecebido || null };
+}
+
 function filtrar(receitas, month, year) {
   return receitas.filter(r => {
     if (r.recorrencia === 'fixa') {
@@ -229,14 +244,16 @@ export default function Receitas({ month, year }) {
     const valorBase = parseFloat(form.valor) / 100;
     const isParcelarMode = form.recorrencia === 'parcelar' && form.valorMode === 'parcela';
     const valor = isParcelarMode ? valorBase * form.totalParcelas : valorBase;
+    const existing = editId ? receitas.find(r => r.id === editId) : null;
     const item = {
       id: editId || newId(),
       nome: form.nome.trim(), categoria: form.categoria, valor, data: form.data,
       recorrencia: form.recorrencia,
       parcelaInicial: form.parcelaInicial, totalParcelas: form.totalParcelas,
       periodicidade: form.periodicidade, observacao: form.observacao,
-      recebida: editId ? (receitas.find(r => r.id === editId)?.recebida || false) : false,
-      recebimentoData: editId ? (receitas.find(r => r.id === editId)?.recebimentoData || null) : null,
+      recebida: existing?.recebida || false,
+      recebimentoData: existing?.recebimentoData || null,
+      recebimentos: existing?.recebimentos || {},
       updatedAt: new Date().toISOString(),
     };
     const updated = editId ? receitas.map(r => r.id === editId ? item : r) : [item, ...receitas];
@@ -246,18 +263,42 @@ export default function Receitas({ month, year }) {
 
   const openEfetivar = (id) => {
     const r = receitas.find(x => x.id === id);
-    setEfDate(r?.recebimentoData || new Date().toISOString().slice(0,10));
-    setEfValor(r?.valor ? r.valor.toFixed(2) : '');
+    const st = statusMesReceita(r, lm, ly);
+    setEfDate(st.data || new Date().toISOString().slice(0,10));
+    setEfValor(st.valorRecebido ? st.valorRecebido.toFixed(2) : (r?.valor ? r.valor.toFixed(2) : ''));
     setEfetivId(id);
   };
 
   const confirmarEfetivar = () => {
-    const updated = receitas.map(r => r.id === efetivId ? { ...r, recebida: true, recebimentoData: efDate, valorRecebido: parseFloat(efValor) || r.valor, updatedAt: new Date().toISOString() } : r);
+    const updated = receitas.map(r => {
+      if (r.id !== efetivId) return r;
+      if (r.recorrencia === 'fixa') {
+        const key = mesKey(lm, ly);
+        return {
+          ...r,
+          recebimentos: {
+            ...(r.recebimentos || {}),
+            [key]: { recebida: true, data: efDate, valorRecebido: parseFloat(efValor) || r.valor },
+          },
+          updatedAt: new Date().toISOString(),
+        };
+      }
+      return { ...r, recebida: true, recebimentoData: efDate, valorRecebido: parseFloat(efValor) || r.valor, updatedAt: new Date().toISOString() };
+    });
     setReceitas(updated); saveReceitas(updated); setEfetivId(null);
   };
 
   const desfazer = (id) => {
-    const updated = receitas.map(r => r.id === id ? { ...r, recebida: false, recebimentoData: null, updatedAt: new Date().toISOString() } : r);
+    const updated = receitas.map(r => {
+      if (r.id !== id) return r;
+      if (r.recorrencia === 'fixa') {
+        const key = mesKey(lm, ly);
+        const recebimentos = { ...(r.recebimentos || {}) };
+        delete recebimentos[key];
+        return { ...r, recebimentos, updatedAt: new Date().toISOString() };
+      }
+      return { ...r, recebida: false, recebimentoData: null, updatedAt: new Date().toISOString() };
+    });
     setReceitas(updated); saveReceitas(updated);
   };
 
@@ -268,7 +309,7 @@ export default function Receitas({ month, year }) {
       id: newId(),
       nome: r.nome, categoria: r.categoria, valor: r.valor, data: dataStr,
       recorrencia: 'nao', periodicidade: 'Mensal', observacao: r.observacao || '',
-      recebida: false, recebimentoData: null,
+      recebida: false, recebimentoData: null, recebimentos: {},
       updatedAt: new Date().toISOString(),
     };
     const updated = [novo, ...receitas];
@@ -294,14 +335,18 @@ export default function Receitas({ month, year }) {
 
   const periodo = filtrar(receitas, lm, ly);
   const filtered = periodo.filter(r => {
-    if (filter === 'pendentes') return !r.recebida;
-    if (filter === 'recebidas') return r.recebida;
+    const st = statusMesReceita(r, lm, ly);
+    if (filter === 'pendentes') return !st.recebida;
+    if (filter === 'recebidas') return st.recebida;
     if (search.trim() && !r.nome.toLowerCase().includes(search.trim().toLowerCase())) return false;
     return true;
   });
 
-  const totalPendente  = periodo.filter(r => !r.recebida).reduce((s, r) => s + parcelaValor(r), 0);
-  const totalRecebido  = periodo.filter(r => r.recebida).reduce((s, r) => s + (r.valorRecebido || parcelaValor(r)), 0);
+  const totalPendente = periodo.filter(r => !statusMesReceita(r, lm, ly).recebida).reduce((s, r) => s + parcelaValor(r), 0);
+  const totalRecebido = periodo.filter(r => statusMesReceita(r, lm, ly).recebida).reduce((s, r) => {
+    const st = statusMesReceita(r, lm, ly);
+    return s + (st.valorRecebido || parcelaValor(r));
+  }, 0);
 
   return (
     <div className="p-4 md:p-6 pb-24 md:pb-8 animate-fade-in">
@@ -324,7 +369,7 @@ export default function Receitas({ month, year }) {
             <p className="text-white/70 text-xs">A receber</p>
           </div>
           <p className="text-income font-bold text-lg">{fmt(totalPendente)}</p>
-          <p className="text-white/50 text-[10px] mt-0.5">{periodo.filter(r => !r.recebida).length} pendentes</p>
+          <p className="text-white/50 text-[10px] mt-0.5">{periodo.filter(r => !statusMesReceita(r, lm, ly).recebida).length} pendentes</p>
         </div>
         <div className="card-premium p-4">
           <div className="flex items-center gap-2 mb-1">
@@ -332,7 +377,7 @@ export default function Receitas({ month, year }) {
             <p className="text-white/70 text-xs">Recebidas</p>
           </div>
           <p className="text-income font-bold text-lg">{fmt(totalRecebido)}</p>
-          <p className="text-white/50 text-[10px] mt-0.5">{periodo.filter(r => r.recebida).length} confirmadas</p>
+          <p className="text-white/50 text-[10px] mt-0.5">{periodo.filter(r => statusMesReceita(r, lm, ly).recebida).length} confirmadas</p>
         </div>
       </div>
 
@@ -389,99 +434,102 @@ export default function Receitas({ month, year }) {
         </div>
       ) : (
         <div className="space-y-2">
-          {filtered.map((r, idx) => (
-            <div key={r.id} className="card-premium transition-all active:scale-[0.99]">
-              <div className="px-4 pt-3.5 pb-3">
-                {/* Linha 1: ícone + nome + valor */}
-                <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                    style={{ background: r.recebida ? 'rgba(34,197,94,0.15)' : 'rgba(34,197,94,0.08)' }}>
-                    <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5"
-                      style={{ color: '#22c55e', transform: 'rotate(-45deg)' }}>
-                      <path fillRule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clipRule="evenodd"/>
-                    </svg>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-semibold truncate ${r.recebida ? 'text-white/60 line-through' : 'text-white'}`}>
-                      {r.nome}
-                    </p>
-                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                      <span className="text-[10px] text-white/70">{r.categoria}</span>
-                      {r.recorrencia === 'fixa' && (
-                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
-                          style={{ background: 'rgba(34,197,94,0.12)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.2)' }}>
-                          Fixa · {r.periodicidade || 'Mensal'}
-                        </span>
-                      )}
-                      {r.recorrencia === 'parcelar' && (
-                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
-                          style={{ background: 'rgba(34,197,94,0.12)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.2)' }}>
-                          {r.parcelaInicial}/{r.totalParcelas}x · {r.periodicidade || 'Mensal'}
-                        </span>
+          {filtered.map((r, idx) => {
+            const st = statusMesReceita(r, lm, ly);
+            return (
+              <div key={r.id} className="card-premium transition-all active:scale-[0.99]">
+                <div className="px-4 pt-3.5 pb-3">
+                  {/* Linha 1: ícone + nome + valor */}
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                      style={{ background: st.recebida ? 'rgba(34,197,94,0.15)' : 'rgba(34,197,94,0.08)' }}>
+                      <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5"
+                        style={{ color: '#22c55e', transform: 'rotate(-45deg)' }}>
+                        <path fillRule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clipRule="evenodd"/>
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-semibold truncate ${st.recebida ? 'text-white/60 line-through' : 'text-white'}`}>
+                        {r.nome}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                        <span className="text-[10px] text-white/70">{r.categoria}</span>
+                        {r.recorrencia === 'fixa' && (
+                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                            style={{ background: 'rgba(34,197,94,0.12)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.2)' }}>
+                            Fixa · {r.periodicidade || 'Mensal'}
+                          </span>
+                        )}
+                        {r.recorrencia === 'parcelar' && (
+                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                            style={{ background: 'rgba(34,197,94,0.12)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.2)' }}>
+                            {r.parcelaInicial}/{r.totalParcelas}x · {r.periodicidade || 'Mensal'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex-shrink-0 text-right">
+                      <p className="text-sm font-bold text-income">{fmt(parcelaValor(r))}</p>
+                      {st.recebida && st.valorRecebido && st.valorRecebido !== parcelaValor(r) && (
+                        <p className="text-[10px] text-white/50">recebido {fmt(st.valorRecebido)}</p>
                       )}
                     </div>
                   </div>
-                  <div className="flex-shrink-0 text-right">
-                    <p className="text-sm font-bold text-income">{fmt(parcelaValor(r))}</p>
-                    {r.recebida && r.valorRecebido && r.valorRecebido !== parcelaValor(r) && (
-                      <p className="text-[10px] text-white/50">recebido {fmt(r.valorRecebido)}</p>
-                    )}
-                  </div>
-                </div>
 
-                {/* Data */}
-                {r.data && (
-                  <div className="flex items-center gap-1.5 mt-2 ml-12">
-                    <svg viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3 text-white/35">
-                      <path d="M3.5 0a.5.5 0 01.5.5V1h8V.5a.5.5 0 011 0V1h1a2 2 0 012 2v11a2 2 0 01-2 2H2a2 2 0 01-2-2V3a2 2 0 012-2h1V.5a.5.5 0 01.5-.5zM1 4v10a1 1 0 001 1h12a1 1 0 001-1V4H1z"/>
-                    </svg>
-                    <span className="text-[11px] text-white/70">
-                      {r.recorrencia === 'fixa' ? `Desde ${fmtDate(r.data)}` : fmtDate(r.data)}
-                    </span>
-                    {r.recebida && r.recebimentoData && (
-                      <span className="text-[11px] text-income ml-1">· Recebido {fmtDate(r.recebimentoData)}</span>
-                    )}
-                  </div>
-                )}
+                  {/* Data */}
+                  {r.data && (
+                    <div className="flex items-center gap-1.5 mt-2 ml-12">
+                      <svg viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3 text-white/35">
+                        <path d="M3.5 0a.5.5 0 01.5.5V1h8V.5a.5.5 0 011 0V1h1a2 2 0 012 2v11a2 2 0 01-2 2H2a2 2 0 01-2-2V3a2 2 0 012-2h1V.5a.5.5 0 01.5-.5zM1 4v10a1 1 0 001 1h12a1 1 0 001-1V4H1z"/>
+                      </svg>
+                      <span className="text-[11px] text-white/70">
+                        {r.recorrencia === 'fixa' ? `Desde ${fmtDate(r.data)}` : fmtDate(r.data)}
+                      </span>
+                      {st.recebida && st.data && (
+                        <span className="text-[11px] text-income ml-1">· Recebido {fmtDate(st.data)}</span>
+                      )}
+                    </div>
+                  )}
 
-                {/* Ações */}
-                <div className="flex items-center justify-between mt-3 ml-12" onClick={e => e.stopPropagation()}>
-                  <div>
-                    {!r.recebida ? (
-                      <button onClick={() => openEfetivar(r.id)}
-                        className="text-xs font-semibold px-3 py-1 rounded-lg transition-all"
-                        style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.2)' }}>
-                        Confirmar recebimento
-                      </button>
-                    ) : (
-                      <button onClick={() => desfazer(r.id)}
-                        className="text-xs text-white/40 hover:text-white/70 transition">
-                        ↩ Desfazer
-                      </button>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    {confirmId === r.id ? (
-                      <div className="flex items-center gap-1">
-                        <span className="text-text-3 text-[11px]">Excluir?</span>
-                        <button onClick={() => remover(r.id)} className="text-expense text-xs font-bold px-2 py-1 rounded-lg" style={{ background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.2)' }}>✓</button>
-                        <button onClick={() => setConfirmId(null)} className="text-white/40 text-xs px-2 py-1 rounded-lg" style={{ background: 'rgba(255,255,255,0.05)' }}>✕</button>
-                      </div>
-                    ) : (
-                      <AcoesMenu
-                        onEdit={() => openEdit(r)}
-                        onPagamentoParcial={() => openEfetivar(r.id)}
-                        onDuplicar={(dataStr) => duplicar(r, dataStr)}
-                        onExcluir={() => setConfirmId(r.id)}
-                        vencimentoAtual={r.data}
-                        openUp={idx >= filtered.length - 2}
-                      />
-                    )}
+                  {/* Ações */}
+                  <div className="flex items-center justify-between mt-3 ml-12" onClick={e => e.stopPropagation()}>
+                    <div>
+                      {!st.recebida ? (
+                        <button onClick={() => openEfetivar(r.id)}
+                          className="text-xs font-semibold px-3 py-1 rounded-lg transition-all"
+                          style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.2)' }}>
+                          Confirmar recebimento
+                        </button>
+                      ) : (
+                        <button onClick={() => desfazer(r.id)}
+                          className="text-xs text-white/40 hover:text-white/70 transition">
+                          ↩ Desfazer
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {confirmId === r.id ? (
+                        <div className="flex items-center gap-1">
+                          <span className="text-text-3 text-[11px]">Excluir?</span>
+                          <button onClick={() => remover(r.id)} className="text-expense text-xs font-bold px-2 py-1 rounded-lg" style={{ background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.2)' }}>✓</button>
+                          <button onClick={() => setConfirmId(null)} className="text-white/40 text-xs px-2 py-1 rounded-lg" style={{ background: 'rgba(255,255,255,0.05)' }}>✕</button>
+                        </div>
+                      ) : (
+                        <AcoesMenu
+                          onEdit={() => openEdit(r)}
+                          onPagamentoParcial={() => openEfetivar(r.id)}
+                          onDuplicar={(dataStr) => duplicar(r, dataStr)}
+                          onExcluir={() => setConfirmId(r.id)}
+                          vencimentoAtual={r.data}
+                          openUp={idx >= filtered.length - 2}
+                        />
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
