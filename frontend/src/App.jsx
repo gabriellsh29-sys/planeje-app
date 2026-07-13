@@ -31,6 +31,12 @@ const PageFallback = () => (
 class ChunkErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { failed: false }; }
   static getDerivedStateFromError() { return { failed: true }; }
+  componentDidUpdate(prevProps) {
+    // Reseta o erro quando o filho muda (troca de página ou de mês)
+    if (this.state.failed && prevProps.children !== this.props.children) {
+      this.setState({ failed: false });
+    }
+  }
   render() {
     if (this.state.failed) {
       return (

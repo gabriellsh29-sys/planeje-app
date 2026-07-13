@@ -11,7 +11,8 @@ const BAR_COLORS = ['#b8860b','#16a34a','#2563eb','#7c3aed','#0891b2','#ea580c',
 const INCOME_COLORS = ['#22c55e','#c9a84c','#34d399','#16a34a','#a3e635','#fbbf24','#10b981','#84cc16'];
 
 function CenteredYAxisTick({ x, y, payload }) {
-  const words = payload.value.split(' ');
+  if (!payload || payload.value == null) return null;
+  const words = String(payload.value).split(' ');
   const lines = [];
   let cur = '';
   for (const w of words) {
@@ -215,6 +216,7 @@ export default function Graficos({ month, year }) {
                   content={({ x, y, width, height, index }) => {
                     if (width < 4) return null;
                     const d = expenseByCategory[index];
+                    if (!d) return null;
                     const pct = totalExpense > 0 ? Math.round(d.value / totalExpense * 100) : 0;
                     const fullText = `${fmt(d.value)} · ${pct}%`;
                     const fitsInside = width >= fullText.length * 6.2 + 12;
