@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { AppIcon, LIST_ICONS } from '../lib/icons';
 import { newId } from '../lib/ids';
 
-const TAREFAS_KEY   = 'planeje_tarefas';
-const GRUPOS_KEY    = 'planeje_grupos';
+const TAREFAS_KEY = 'planeje_tarefas';
+const GRUPOS_KEY  = 'planeje_grupos';
 const ETIQUETAS_KEY = 'planeje_etiquetas';
 
 function load(key, fb) { try { return JSON.parse(localStorage.getItem(key) || 'null') ?? fb; } catch { return fb; } }
@@ -11,10 +12,9 @@ function sv(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
 
 function loadTarefas() {
   const salvas = load(TAREFAS_KEY, null);
-  if (salvas !== null) return salvas.map(t => ({ secao: null, etiquetas: [], concluido: false, ...t }));
-  // Migra notas antigas se existirem
+  if (salvas !== null) return salvas.map(t => ({ secao: null, etiquetas: [], concluido: false, descricao: '', vencimento: null, subtarefas: [], ...t }));
   const antigas = load('financeiro_notas', []);
-  return antigas.map(n => ({ id: n.id || newId(), texto: n.texto || '', concluido: false, grupo: null, secao: null, etiquetas: [], criadoEm: n.criadoEm || new Date().toISOString() }));
+  return antigas.map(n => ({ id: n.id || newId(), texto: n.texto || '', concluido: false, grupo: null, secao: null, etiquetas: [], criadoEm: n.criadoEm || new Date().toISOString(), descricao: '', vencimento: null, subtarefas: [] }));
 }
 
 function loadGrupos() {
@@ -23,73 +23,82 @@ function loadGrupos() {
   return [];
 }
 
-const ETIQUETAS_PADRAO = [];
-
 const CORES_LISTA = ['#6366f1','#a855f7','#22c55e','#f59e0b','#ef4444','#06b6d4','#f43f5e','#3b82f6','#84cc16','#f97316'];
 const COR_OPTIONS = ['#6366f1','#a855f7','#22c55e','#f59e0b','#ef4444','#06b6d4','#f43f5e','#3b82f6'];
 
 export default function Anotacoes() {
   const [tarefas,       setTarefas]       = useState(loadTarefas);
   const [grupos,        setGrupos]        = useState(loadGrupos);
-  const [etiquetas,     setEtiquetas]     = useState(() => load(ETIQUETAS_KEY, ETIQUETAS_PADRAO));
+  const [etiquetas,     setEtiquetas]     = useState(() => load(ETIQUETAS_KEY, []));
   const [grupoAtivo,    setGrupoAtivo]    = useState(() => { const gs = loadGrupos(); return gs[0]?.id || null; });
-
-  useEffect(() => {
-    const reload = () => {
-      setTarefas(loadTarefas());
-      const gs = loadGrupos(); setGrupos(gs);
-      setEtiquetas(load(ETIQUETAS_KEY, ETIQUETAS_PADRAO));
-      setGrupoAtivo(a => a ?? (gs[0]?.id || null));
-    };
-    window.addEventListener('planeje-sync', reload);
-    return () => window.removeEventListener('planeje-sync', reload);
-  }, []);
-  const [filtroEtiq,    setFiltroEtiq]    = useState(null);
+  const [tarefaDetalhe, setTarefaDetalhe] = useState(null);
+  const [secoesColl,    setSecoesColl]    = useState({});
+  const [conclColl,     setConclColl]     = useState({});
+  const [secaoMenu,     setSecaoMenu]     = useState(null);
+  const [addingIn,      setAddingIn]      = useState(null);
   const [novaTexto,     setNovaTexto]     = useState('');
-  const [novaTags,      setNovaTags]      = useState([]);
-  const [adicionando,   setAdicionando]   = useState(null);
-  const [editId,        setEditId]        = useState(null);
-  const [editTexto,     setEditTexto]     = useState('');
-  const [editTags,      setEditTags]      = useState([]);
-  const [showConcluidos,setShowConcluidos]= useState(false);
-  const [undo,          setUndo]          = useState(null);
-  const [tagPickerId,   setTagPickerId]   = useState(null);
-  const [novaSecaoNome, setNovaSecaoNome] = useState('');
-  const [addingSecao,   setAddingSecao]   = useState(false);
   const [editSecaoId,   setEditSecaoId]   = useState(null);
   const [editSecaoNome, setEditSecaoNome] = useState('');
+  const [addingSecBottom, setAddingSecBottom] = useState(false);
+  const [novaSecNome,   setNovaSecNome]   = useState('');
+  const [undo,          setUndo]          = useState(null);
   const [listModal,     setListModal]     = useState(null);
   const [showEtiqMgr,   setShowEtiqMgr]  = useState(false);
   const [novaEtiqNome,  setNovaEtiqNome]  = useState('');
   const [novaEtiqCor,   setNovaEtiqCor]   = useState(COR_OPTIONS[0]);
 
-  const inputRef = useRef(null);
+  useEffect(() => {
+    const reload = () => {
+      setTarefas(loadTarefas());
+      const gs = loadGrupos(); setGrupos(gs);
+      setEtiquetas(load(ETIQUETAS_KEY, []));
+      setGrupoAtivo(a => a ?? (gs[0]?.id || null));
+    };
+    window.addEventListener('planeje-sync', reload);
+    return () => window.removeEventListener('planeje-sync', reload);
+  }, []);
 
   useEffect(() => { sv(TAREFAS_KEY, tarefas); }, [tarefas]);
-  useEffect(() => { sv(GRUPOS_KEY, grupos); }, [grupos]);
+  useEffect(() => { sv(GRUPOS_KEY,  grupos);  }, [grupos]);
   useEffect(() => { sv(ETIQUETAS_KEY, etiquetas); }, [etiquetas]);
+
+  useEffect(() => {
+    if (!secaoMenu) return;
+    const close = () => setSecaoMenu(null);
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [secaoMenu]);
 
   const grupoObj = grupos.find(g => g.id === grupoAtivo) || grupos[0] || null;
   const secoes   = grupoObj?.secoes || [];
 
-  // ── Tarefas ────────────────────────────────────────────────────
+  // ── Task helpers ────────────────────────────────────────────────
+  const updateTarefa = (id, fields) =>
+    setTarefas(prev => prev.map(t => t.id === id ? { ...t, ...fields, updatedAt: new Date().toISOString() } : t));
+
   const addTarefa = (secaoId) => {
-    const t = novaTexto.trim();
-    if (!t) { setAdicionando(null); return; }
-    setTarefas(prev => [{ id: newId(), texto: t, concluido: false, grupo: grupoAtivo, secao: secaoId || null, etiquetas: novaTags, criadoEm: new Date().toISOString(), updatedAt: new Date().toISOString() }, ...prev]);
-    setNovaTexto(''); setNovaTags([]);
+    const texto = novaTexto.trim() || 'Sem título';
+    const nova = { id: newId(), texto, concluido: false, grupo: grupoAtivo, secao: secaoId || null, etiquetas: [], criadoEm: new Date().toISOString(), updatedAt: new Date().toISOString(), descricao: '', vencimento: null, subtarefas: [] };
+    setTarefas(prev => [...prev, nova]);
+    setTarefaDetalhe(nova.id);
+    setNovaTexto(''); setAddingIn(null);
   };
 
   const toggleConcluido = (id) => {
-    const tarefa = tarefas.find(t => t.id === id);
-    if (!tarefa) return;
-    if (!tarefa.concluido) {
-      setTarefas(prev => prev.map(t => t.id === id ? { ...t, concluido: true, concluidoEm: new Date().toISOString(), updatedAt: new Date().toISOString() } : t));
+    const t = tarefas.find(x => x.id === id);
+    if (!t) return;
+    if (!t.concluido) {
+      setTarefas(prev => prev.map(x => x.id === id ? { ...x, concluido: true, concluidoEm: new Date().toISOString(), updatedAt: new Date().toISOString() } : x));
       const timer = setTimeout(() => setUndo(null), 4000);
-      setUndo({ id, texto: tarefa.texto, timer });
+      setUndo({ id, texto: t.texto, timer });
     } else {
-      setTarefas(prev => prev.map(t => t.id === id ? { ...t, concluido: false, concluidoEm: null, updatedAt: new Date().toISOString() } : t));
+      setTarefas(prev => prev.map(x => x.id === id ? { ...x, concluido: false, concluidoEm: null, updatedAt: new Date().toISOString() } : x));
     }
+  };
+
+  const removeTarefa = (id) => {
+    setTarefas(prev => prev.filter(t => t.id !== id));
+    if (tarefaDetalhe === id) setTarefaDetalhe(null);
   };
 
   const desfazerConcluido = () => {
@@ -99,22 +108,7 @@ export default function Anotacoes() {
     setUndo(null);
   };
 
-  const removeTarefa = (id) => setTarefas(prev => prev.filter(t => t.id !== id));
-
-  const saveEdit = (id) => {
-    const t = editTexto.trim();
-    if (t) setTarefas(prev => prev.map(x => x.id === id ? { ...x, texto: t, etiquetas: editTags, updatedAt: new Date().toISOString() } : x));
-    setEditId(null); setEditTexto(''); setEditTags([]);
-  };
-
-  const toggleTagTarefa = (tarefaId, etiqId) =>
-    setTarefas(prev => prev.map(t => {
-      if (t.id !== tarefaId) return t;
-      const arr = t.etiquetas || [];
-      return { ...t, etiquetas: arr.includes(etiqId) ? arr.filter(e => e !== etiqId) : [...arr, etiqId] };
-    }));
-
-  // ── Grupos ─────────────────────────────────────────────────────
+  // ── Group helpers ───────────────────────────────────────────────
   const saveGrupo = ({ nome, emoji, cor }, editGrupoId) => {
     if (editGrupoId) {
       setGrupos(prev => prev.map(g => g.id === editGrupoId ? { ...g, nome, emoji, cor, updatedAt: new Date().toISOString() } : g));
@@ -131,33 +125,37 @@ export default function Anotacoes() {
     setGrupos(restantes);
     setTarefas(prev => prev.filter(t => t.grupo !== id));
     if (grupoAtivo === id) setGrupoAtivo(restantes[0]?.id || null);
+    if (tarefaDetalhe && tarefas.find(t => t.id === tarefaDetalhe)?.grupo === id) setTarefaDetalhe(null);
   };
 
-  // ── Seções ─────────────────────────────────────────────────────
-  const addSecao = () => {
-    const nome = novaSecaoNome.trim();
-    if (!nome) { setAddingSecao(false); return; }
+  // ── Section helpers ─────────────────────────────────────────────
+  const insertSecaoAt = (index, nome) => {
+    if (!nome) return;
     const id = 's_' + newId();
-    setGrupos(prev => prev.map(g => g.id === grupoAtivo ? { ...g, secoes: [...(g.secoes || []), { id, nome }], updatedAt: new Date().toISOString() } : g));
-    setNovaSecaoNome(''); setAddingSecao(false);
+    setGrupos(prev => prev.map(g => {
+      if (g.id !== grupoAtivo) return g;
+      const arr = [...(g.secoes || [])];
+      arr.splice(index, 0, { id, nome });
+      return { ...g, secoes: arr, updatedAt: new Date().toISOString() };
+    }));
+    setSecaoMenu(null);
   };
 
   const saveSecao = (secaoId) => {
     const nome = editSecaoNome.trim();
     if (nome) setGrupos(prev => prev.map(g => g.id === grupoAtivo
-      ? { ...g, secoes: (g.secoes || []).map(s => s.id === secaoId ? { ...s, nome } : s) }
-      : g));
+      ? { ...g, secoes: (g.secoes || []).map(s => s.id === secaoId ? { ...s, nome } : s) } : g));
     setEditSecaoId(null); setEditSecaoNome('');
   };
 
   const removeSecao = (secaoId) => {
     setGrupos(prev => prev.map(g => g.id === grupoAtivo
-      ? { ...g, secoes: (g.secoes || []).filter(s => s.id !== secaoId) }
-      : g));
+      ? { ...g, secoes: (g.secoes || []).filter(s => s.id !== secaoId) } : g));
     setTarefas(prev => prev.map(t => t.secao === secaoId ? { ...t, secao: null } : t));
+    setSecaoMenu(null);
   };
 
-  // ── Etiquetas ──────────────────────────────────────────────────
+  // ── Etiqueta helpers ────────────────────────────────────────────
   const addEtiqueta = () => {
     const nome = novaEtiqNome.trim();
     if (!nome) return;
@@ -168,31 +166,106 @@ export default function Anotacoes() {
   const removeEtiqueta = (id) => {
     setEtiquetas(prev => prev.filter(e => e.id !== id));
     setTarefas(prev => prev.map(t => ({ ...t, etiquetas: (t.etiquetas || []).filter(e => e !== id) })));
-    if (filtroEtiq === id) setFiltroEtiq(null);
   };
 
-  // ── Dados filtrados ────────────────────────────────────────────
+  // ── Computed ────────────────────────────────────────────────────
   const tarefasGrupo = tarefas.filter(t => t.grupo === grupoAtivo);
-  const matchEtiq    = (t) => !filtroEtiq || (t.etiquetas || []).includes(filtroEtiq);
-  const pendentes    = tarefasGrupo.filter(t => !t.concluido && matchEtiq(t));
-  const concluidos   = tarefasGrupo.filter(t => t.concluido && matchEtiq(t));
+  const pendentes    = tarefasGrupo.filter(t => !t.concluido);
   const daSecao      = (sid) => pendentes.filter(t => (t.secao || null) === (sid || null));
+  const conclSecao   = (sid) => tarefasGrupo.filter(t => t.concluido && (t.secao || null) === (sid || null));
+  const tarefaObj    = tarefas.find(t => t.id === tarefaDetalhe) || null;
 
-  const rowProps = (t) => ({
-    tarefa: t, etiquetas,
-    editId, editTexto, editTags,
-    setEditId, setEditTexto, setEditTags,
-    onToggle: toggleConcluido, onRemove: removeTarefa, onSaveEdit: saveEdit,
-    onToggleTag: (etiqId) => toggleTagTarefa(t.id, etiqId),
-    tagPickerOpen: tagPickerId === t.id,
-    onTagPickerToggle: () => setTagPickerId(v => v === t.id ? null : t.id),
-  });
+  const openSecaoMenu = (e, secao, index) => {
+    e.stopPropagation();
+    const r = e.currentTarget.getBoundingClientRect();
+    setSecaoMenu({ id: secao.id, nome: secao.nome, index, top: r.bottom + 4, left: r.left });
+  };
 
-  const addProps = (secaoId) => ({
-    secaoId, adicionando, setAdicionando,
-    novaTexto, setNovaTexto, novaTags, setNovaTags,
-    etiquetas, addTarefa, inputRef,
-  });
+  const InlineAdd = ({ secaoId }) => (
+    <div className="flex items-center gap-2 py-2 px-1 mb-1 rounded-lg" style={{ background: 'rgba(255,255,255,0.04)' }}>
+      <div className="w-4 h-4 rounded border border-white/20 flex-shrink-0" />
+      <input autoFocus value={novaTexto} onChange={e => setNovaTexto(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Enter') addTarefa(secaoId); if (e.key === 'Escape') setAddingIn(null); }}
+        onBlur={() => { if (novaTexto.trim()) addTarefa(secaoId); else setAddingIn(null); }}
+        placeholder="Nome da tarefa..."
+        className="flex-1 bg-transparent text-white/90 text-sm outline-none placeholder:text-white/25" />
+    </div>
+  );
+
+  const renderSecao = (secao, index) => {
+    const collapsed  = !!secoesColl[secao.id];
+    const concl      = conclSecao(secao.id);
+    const conclHide  = !!conclColl[secao.id];
+    const tasks      = daSecao(secao.id);
+
+    return (
+      <div key={secao.id} className="mt-3">
+        <div className="flex items-center gap-1 group/sec py-1">
+          <button onClick={() => setSecoesColl(p => ({ ...p, [secao.id]: !p[secao.id] }))}
+            className="flex items-center gap-1.5 flex-1 min-w-0 text-left">
+            <svg viewBox="0 0 20 20" fill="currentColor"
+              className={`w-3 h-3 text-white/35 flex-shrink-0 transition-transform ${collapsed ? '-rotate-90' : ''}`}>
+              <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd"/>
+            </svg>
+            {editSecaoId === secao.id ? (
+              <input autoFocus value={editSecaoNome}
+                onChange={e => setEditSecaoNome(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') saveSecao(secao.id); if (e.key === 'Escape') setEditSecaoId(null); }}
+                onBlur={() => saveSecao(secao.id)}
+                onClick={e => e.stopPropagation()}
+                className="bg-transparent text-white text-xs font-bold uppercase tracking-wider outline-none border-b border-white/30 flex-1 pb-px" />
+            ) : (
+              <span className="text-white/70 text-xs font-bold uppercase tracking-wider truncate">{secao.nome}</span>
+            )}
+            {tasks.length > 0 && !editSecaoId && (
+              <span className="text-white/25 text-xs flex-shrink-0">{tasks.length}</span>
+            )}
+          </button>
+          <div className="flex items-center gap-0.5 opacity-0 group-hover/sec:opacity-100 transition">
+            <button onClick={() => { setAddingIn(secao.id); setNovaTexto(''); }}
+              className="w-6 h-6 rounded flex items-center justify-center text-white/35 hover:text-white/70 hover:bg-white/5 transition text-base leading-none">
+              +
+            </button>
+            <button onClick={e => openSecaoMenu(e, secao, index)}
+              className="w-6 h-6 rounded flex items-center justify-center text-white/35 hover:text-white/70 hover:bg-white/5 transition">
+              <svg viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+                <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {!collapsed && (
+          <>
+            {addingIn === secao.id && <InlineAdd secaoId={secao.id} />}
+            {tasks.map(t => (
+              <TarefaRow key={t.id} tarefa={t} isSelected={tarefaDetalhe === t.id}
+                onToggle={toggleConcluido} onClick={() => setTarefaDetalhe(t.id === tarefaDetalhe ? null : t.id)} />
+            ))}
+            {concl.length > 0 && (
+              <div className="mt-0.5">
+                <button onClick={() => setConclColl(p => ({ ...p, [secao.id]: !p[secao.id] }))}
+                  className="flex items-center gap-1.5 text-white/25 hover:text-white/45 transition text-xs py-1 font-medium">
+                  <svg viewBox="0 0 20 20" fill="currentColor" className={`w-3 h-3 transition-transform ${conclHide ? '-rotate-90' : ''}`}>
+                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd"/>
+                  </svg>
+                  Concluído {concl.length}
+                </button>
+                {!conclHide && concl.map(t => (
+                  <TarefaRow key={t.id} tarefa={t} isSelected={tarefaDetalhe === t.id}
+                    onToggle={toggleConcluido} onClick={() => setTarefaDetalhe(t.id === tarefaDetalhe ? null : t.id)} />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    );
+  };
+
+  const rootTasks  = daSecao(null);
+  const rootConcl  = conclSecao(null);
+  const rootConclH = !!conclColl['root'];
 
   return (
     <div className="flex flex-col md:flex-row h-[calc(100vh-112px)] md:h-[calc(100vh-0px)] overflow-hidden animate-fade-in">
@@ -200,9 +273,7 @@ export default function Anotacoes() {
       {/* ── Sidebar desktop ─────────────────────────────────────── */}
       <div className="hidden md:flex w-48 flex-shrink-0 flex-col border-r py-4 overflow-y-auto"
         style={{ background: 'rgba(34,197,94,0.04)', borderColor: 'rgba(34,197,94,0.12)' }}>
-
         <p className="text-text-3 text-[9px] font-bold uppercase tracking-widest px-4 mb-1">Listas</p>
-
         {grupos.map(g => {
           const count  = tarefas.filter(t => t.grupo === g.id && !t.concluido).length;
           const active = grupoAtivo === g.id;
@@ -225,162 +296,166 @@ export default function Anotacoes() {
             </div>
           );
         })}
-
         <button onClick={() => setListModal({ modo: 'add' })}
           className="mx-3 mt-1 py-1.5 text-xs text-text-3 hover:text-accent hover:bg-white/5 transition text-left px-2 rounded-lg">
           + Nova lista
         </button>
-
-        {/* Etiquetas */}
-        <div className="mt-4 mb-1 flex items-center justify-between px-4">
-          <p className="text-text-3 text-[9px] font-bold uppercase tracking-widest">Etiquetas</p>
-          <button onClick={() => setShowEtiqMgr(true)} className="text-text-3 hover:text-accent text-xs transition">⚙</button>
-        </div>
-
-        <button onClick={() => setFiltroEtiq(null)}
-          className="w-full flex items-center gap-2 px-4 py-1.5 text-left transition"
-          style={!filtroEtiq ? { borderLeft: '2px solid #22c55e', background: 'rgba(34,197,94,0.06)' } : { borderLeft: '2px solid transparent' }}>
-          <span className="w-2 h-2 rounded-full bg-text-3 flex-shrink-0" />
-          <span className={`text-xs ${!filtroEtiq ? 'text-text-1 font-semibold' : 'text-text-3'}`}>Todas</span>
-        </button>
-
-        {etiquetas.map(e => (
-          <button key={e.id} onClick={() => setFiltroEtiq(filtroEtiq === e.id ? null : e.id)}
-            className="w-full flex items-center gap-2 px-4 py-1.5 text-left transition"
-            style={filtroEtiq === e.id ? { borderLeft: `2px solid ${e.cor}`, background: 'rgba(34,197,94,0.06)' } : { borderLeft: '2px solid transparent' }}>
-            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: e.cor }} />
-            <span className={`text-xs truncate ${filtroEtiq === e.id ? 'text-text-1 font-semibold' : 'text-text-3'}`}>{e.nome}</span>
-          </button>
-        ))}
-
         <div className="mt-auto px-4 pb-2 pt-4 border-t text-text-3 text-[10px]"
           style={{ borderColor: 'rgba(34,197,94,0.1)' }}>
           {tarefas.filter(t => t.concluido).length} concluídos
         </div>
       </div>
 
-      {/* ── Seletor mobile de lista (horizontal scroll) ──────────── */}
+      {/* ── Mobile list tabs ─────────────────────────────────────── */}
       {grupos.length > 0 && (
         <div className="md:hidden flex-shrink-0 px-3 pt-2 pb-1 overflow-x-auto flex gap-2"
           style={{ borderBottom: '1px solid rgba(34,197,94,0.1)' }}>
           {grupos.map(g => {
-            const count = tarefas.filter(t => t.grupo === g.id && !t.concluido).length;
+            const count  = tarefas.filter(t => t.grupo === g.id && !t.concluido).length;
             const active = grupoAtivo === g.id;
             return (
               <button key={g.id} onClick={() => setGrupoAtivo(g.id)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-all"
-                style={active
-                  ? { background: g.cor + '22', color: g.cor, border: `1px solid ${g.cor}44` }
-                  : { background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                style={active ? { background: g.cor + '22', color: g.cor, border: `1px solid ${g.cor}44` } : { background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.08)' }}>
                 <AppIcon id={g.emoji} className="w-4 h-4" />
                 <span>{g.nome}</span>
-                {count > 0 && <span className="font-bold" style={{ color: active ? g.cor : 'rgba(255,255,255,0.4)' }}>{count}</span>}
+                {count > 0 && <span className="font-bold">{count}</span>}
               </button>
             );
           })}
           <button onClick={() => setListModal({ modo: 'add' })}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-all"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap flex-shrink-0"
             style={{ background: 'rgba(34,197,94,0.08)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.2)' }}>
             + Lista
           </button>
         </div>
       )}
 
-      {/* ── Conteúdo ────────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-
+      {/* ── Main ────────────────────────────────────────────────── */}
+      <div className="flex-1 flex overflow-hidden">
         {grupos.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-text-3 gap-4 p-6">
             <AppIcon id="clipboard-list" className="w-12 h-12 opacity-30" />
             <p className="text-sm font-medium text-text-2">Nenhuma lista criada ainda</p>
-            <button onClick={() => setListModal({ modo: 'add' })}
-              className="btn-gold px-5 py-2.5 rounded-xl text-sm font-semibold">
+            <button onClick={() => setListModal({ modo: 'add' })} className="btn-gold px-5 py-2.5 rounded-xl text-sm font-semibold">
               + Criar primeira lista
             </button>
           </div>
         ) : (
           <>
-            {/* Header */}
-            <div className="px-4 md:px-6 py-3 flex items-center gap-3 flex-shrink-0"
-              style={{ borderBottom: '1px solid rgba(34,197,94,0.12)' }}>
-              <AppIcon id={grupoObj?.emoji} className="w-5 h-5" style={{ color: grupoObj?.cor }} />
-              <h2 className="text-text-1 font-bold text-base md:text-lg">{grupoObj?.nome}</h2>
-              <span className="text-text-3 text-sm">{pendentes.length}</span>
-              <div className="flex-1" />
-              <button onClick={() => setShowEtiqMgr(true)} className="md:hidden text-text-3 hover:text-accent text-sm transition p-1">⚙</button>
-              {filtroEtiq && (() => {
-                const e = etiquetas.find(x => x.id === filtroEtiq);
-                return e ? (
-                  <span className="text-xs px-2 py-0.5 rounded-full cursor-pointer"
-                    onClick={() => setFiltroEtiq(null)}
-                    style={{ background: e.cor + '33', color: e.cor }}>
-                    {e.nome} ×
-                  </span>
-                ) : null;
-              })()}
-            </div>
+            {/* Task list column */}
+            <div className={`flex-1 flex flex-col overflow-hidden ${tarefaObj ? 'hidden md:flex' : 'flex'}`}>
+              <div className="px-4 md:px-5 py-3 flex items-center gap-2 flex-shrink-0"
+                style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <AppIcon id={grupoObj?.emoji} className="w-5 h-5" style={{ color: grupoObj?.cor }} />
+                <h2 className="text-white font-bold text-base">{grupoObj?.nome}</h2>
+                <span className="text-white/30 text-sm">{pendentes.length}</span>
+                <div className="flex-1" />
+                <button onClick={() => setListModal({ modo: 'edit', grupo: grupoObj })}
+                  className="md:hidden text-text-3 hover:text-accent p-1 text-sm transition">⚙</button>
+              </div>
 
-            {/* Lista */}
-            <div className="flex-1 overflow-y-auto px-4 md:px-6 py-3">
-
-              <AdicionarTarefa {...addProps(null)} />
-              {daSecao(null).map(t => <TarefaRow key={t.id} {...rowProps(t)} />)}
-
-              {secoes.map(secao => (
-                <div key={secao.id} className="mt-4">
-                  <div className="flex items-center gap-2 mb-1 group/sec">
-                    <div className="flex-1 h-px" style={{ background: 'rgba(34,197,94,0.15)' }} />
-                    {editSecaoId === secao.id ? (
-                      <input autoFocus value={editSecaoNome} onChange={e => setEditSecaoNome(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter') saveSecao(secao.id); if (e.key === 'Escape') setEditSecaoId(null); }}
-                        onBlur={() => saveSecao(secao.id)}
-                        className="bg-transparent text-text-2 text-xs font-semibold uppercase tracking-wider outline-none border-b px-1"
-                        style={{ borderColor: 'rgba(34,197,94,0.4)' }} />
-                    ) : (
-                      <span className="text-text-3 text-xs font-semibold uppercase tracking-wider cursor-pointer hover:text-text-2 transition"
-                        onDoubleClick={() => { setEditSecaoId(secao.id); setEditSecaoNome(secao.nome); }}>
-                        {secao.nome}
-                      </span>
-                    )}
-                    <div className="flex items-center gap-1 opacity-0 group-hover/sec:opacity-100 transition">
-                      <button onClick={() => setAdicionando('s_' + secao.id)}
-                        className="text-text-3 hover:text-accent text-xs w-4 h-4 flex items-center justify-center">+</button>
-                      <button onClick={() => removeSecao(secao.id)}
-                        className="text-text-3 hover:text-expense text-xs w-4 h-4 flex items-center justify-center">×</button>
-                    </div>
-                    <div className="flex-1 h-px" style={{ background: 'rgba(34,197,94,0.15)' }} />
-                  </div>
-                  <AdicionarTarefa {...addProps(secao.id)} />
-                  {daSecao(secao.id).map(t => <TarefaRow key={t.id} {...rowProps(t)} />)}
-                </div>
-              ))}
-
-
-              {/* Concluídos */}
-              {concluidos.length > 0 && (
-                <div className="mt-5">
-                  <button onClick={() => setShowConcluidos(v => !v)}
-                    className="flex items-center gap-2 text-text-3 hover:text-text-2 transition text-sm font-medium mb-2">
-                    <svg viewBox="0 0 20 20" fill="currentColor" className={`w-3.5 h-3.5 transition-transform ${showConcluidos ? '' : '-rotate-90'}`}>
-                      <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd"/>
-                    </svg>
-                    Concluído <span className="text-xs">{concluidos.length}</span>
+              <div className="flex-1 overflow-y-auto px-4 md:px-5 py-3">
+                {/* Add task root */}
+                {addingIn === 'root' ? (
+                  <InlineAdd secaoId={null} />
+                ) : (
+                  <button onClick={() => { setAddingIn('root'); setNovaTexto(''); }}
+                    className="flex items-center gap-2 py-1.5 text-white/25 hover:text-white/55 transition w-full text-left text-sm mb-1">
+                    + Adicionar tarefa
                   </button>
-                  {showConcluidos && concluidos.map(t => <TarefaRow key={t.id} {...rowProps(t)} />)}
+                )}
+
+                {rootTasks.map(t => (
+                  <TarefaRow key={t.id} tarefa={t} isSelected={tarefaDetalhe === t.id}
+                    onToggle={toggleConcluido} onClick={() => setTarefaDetalhe(t.id === tarefaDetalhe ? null : t.id)} />
+                ))}
+
+                {rootConcl.length > 0 && (
+                  <div className="mt-1">
+                    <button onClick={() => setConclColl(p => ({ ...p, root: !p.root }))}
+                      className="flex items-center gap-1.5 text-white/25 hover:text-white/45 transition text-xs py-1 font-medium">
+                      <svg viewBox="0 0 20 20" fill="currentColor" className={`w-3 h-3 transition-transform ${rootConclH ? '-rotate-90' : ''}`}>
+                        <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd"/>
+                      </svg>
+                      Concluído {rootConcl.length}
+                    </button>
+                    {!rootConclH && rootConcl.map(t => (
+                      <TarefaRow key={t.id} tarefa={t} isSelected={tarefaDetalhe === t.id}
+                        onToggle={toggleConcluido} onClick={() => setTarefaDetalhe(t.id === tarefaDetalhe ? null : t.id)} />
+                    ))}
+                  </div>
+                )}
+
+                {secoes.map((s, i) => renderSecao(s, i))}
+
+                {/* Add section */}
+                <div className="mt-5">
+                  {addingSecBottom ? (
+                    <div className="flex items-center gap-2">
+                      <input autoFocus value={novaSecNome} onChange={e => setNovaSecNome(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') { insertSecaoAt(secoes.length, novaSecNome.trim()); setNovaSecNome(''); setAddingSecBottom(false); }
+                          if (e.key === 'Escape') { setAddingSecBottom(false); setNovaSecNome(''); }
+                        }}
+                        onBlur={() => { if (novaSecNome.trim()) { insertSecaoAt(secoes.length, novaSecNome.trim()); } setNovaSecNome(''); setAddingSecBottom(false); }}
+                        placeholder="Nome da seção..."
+                        className="flex-1 bg-transparent text-white/70 text-xs font-bold uppercase tracking-wider outline-none border-b border-white/25 pb-px" />
+                    </div>
+                  ) : (
+                    <button onClick={() => setAddingSecBottom(true)}
+                      className="flex items-center gap-2 text-white/20 hover:text-white/40 transition text-xs py-1">
+                      + Adicionar seção
+                    </button>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
+
+            {/* Detail panel */}
+            {tarefaObj && (
+              <TaskDetailPanel
+                tarefa={tarefaObj}
+                onClose={() => setTarefaDetalhe(null)}
+                onUpdate={updateTarefa}
+                onRemove={removeTarefa}
+                onToggle={toggleConcluido}
+                grupos={grupos}
+                grupoAtivo={grupoAtivo}
+                onMoveToGrupo={(tId, gId) => { updateTarefa(tId, { grupo: gId, secao: null }); setTarefaDetalhe(null); }}
+              />
+            )}
           </>
         )}
       </div>
 
-      {/* ── Modal Nova/Editar Lista ────────────────────────────── */}
+      {/* ── Section 3-dot menu (portal) ─────────────────────────── */}
+      {secaoMenu && createPortal(
+        <div onMouseDown={e => e.stopPropagation()}
+          style={{ position: 'fixed', top: secaoMenu.top, left: secaoMenu.left, zIndex: 9999, background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.6)', minWidth: 180, overflow: 'hidden' }}>
+          {[
+            { label: 'Renomear', action: () => { setEditSecaoId(secaoMenu.id); setEditSecaoNome(secaoMenu.nome); setSecaoMenu(null); } },
+            { label: 'Inserir seção acima', action: () => { setSecaoMenu(null); setTimeout(() => { const n = window.prompt('Nome da seção:'); if (n?.trim()) insertSecaoAt(secaoMenu.index, n.trim()); }, 50); } },
+            { label: 'Inserir seção abaixo', action: () => { setSecaoMenu(null); setTimeout(() => { const n = window.prompt('Nome da seção:'); if (n?.trim()) insertSecaoAt(secaoMenu.index + 1, n.trim()); }, 50); } },
+            { label: 'Deletar', action: () => removeSecao(secaoMenu.id), danger: true },
+          ].map(item => (
+            <button key={item.label} onClick={item.action}
+              className="w-full text-left px-4 py-2.5 text-sm transition hover:bg-white/5"
+              style={{ color: item.danger ? '#f43f5e' : 'rgba(255,255,255,0.85)', display: 'block' }}>
+              {item.label}
+            </button>
+          ))}
+        </div>,
+        document.body
+      )}
+
+      {/* ── Modal Nova/Editar Lista ──────────────────────────────── */}
       {listModal && (
         <ListModal modo={listModal.modo} grupoInicial={listModal.grupo}
           onSave={saveGrupo} onClose={() => setListModal(null)} />
       )}
 
-      {/* ── Modal Gerenciar Etiquetas ──────────────────────────── */}
+      {/* ── Modal Gerenciar Etiquetas ────────────────────────────── */}
       {showEtiqMgr && (
         <div className="fixed inset-0 z-50 flex items-center justify-center"
           style={{ background: 'rgba(0,0,0,0.7)' }}
@@ -422,7 +497,7 @@ export default function Anotacoes() {
         </div>
       )}
 
-      {/* ── Undo toast ─────────────────────────────────────────── */}
+      {/* ── Undo toast ───────────────────────────────────────────── */}
       {undo && (
         <div className="fixed fab-safe-lg left-1/2 -translate-x-1/2 z-50"
           style={{ background: '#1e293b', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.5)', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, minWidth: 260 }}>
@@ -437,7 +512,224 @@ export default function Anotacoes() {
   );
 }
 
-// ── Modal Nova/Editar Lista ──────────────────────────────────────
+// ── TarefaRow ────────────────────────────────────────────────────
+function TarefaRow({ tarefa, isSelected, onToggle, onClick }) {
+  const fmtD = (d) => { if (!d) return null; const [y,m,day] = d.split('-'); return `${day}/${m}/${String(y).slice(2)}`; };
+  const subs = tarefa.subtarefas || [];
+  const subsDone = subs.filter(s => s.concluido).length;
+  return (
+    <div className={`group flex items-center gap-2 py-2 px-1.5 rounded-lg cursor-pointer transition-all ${isSelected ? 'bg-white/[0.07]' : 'hover:bg-white/[0.04]'}`}
+      style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+      <button onClick={e => { e.stopPropagation(); onToggle(tarefa.id); }}
+        className="flex-shrink-0 w-4 h-4 rounded border transition-all flex items-center justify-center"
+        style={tarefa.concluido
+          ? { background: 'linear-gradient(135deg,#22c55e,#16a34a)', borderColor: 'transparent' }
+          : { borderColor: 'rgba(255,255,255,0.25)', background: 'transparent' }}>
+        {tarefa.concluido && (
+          <svg viewBox="0 0 12 12" fill="none" className="w-2.5 h-2.5">
+            <path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        )}
+      </button>
+      <div className="flex-1 min-w-0" onClick={onClick}>
+        <p className={`text-sm leading-snug select-none ${tarefa.concluido ? 'text-white/25 line-through' : 'text-white/85'}`}>
+          {tarefa.texto}
+        </p>
+        {(tarefa.vencimento || (tarefa.descricao && tarefa.descricao.trim())) && !tarefa.concluido && (
+          <p className="text-[11px] text-white/30 mt-0.5">
+            {tarefa.vencimento && fmtD(tarefa.vencimento)}
+            {tarefa.vencimento && tarefa.descricao?.trim() && ' · '}
+            {tarefa.descricao?.trim() && <span className="italic">nota</span>}
+          </p>
+        )}
+      </div>
+      {subs.length > 0 && (
+        <span className="text-[10px] text-white/25 flex-shrink-0 font-medium">{subsDone}/{subs.length}</span>
+      )}
+    </div>
+  );
+}
+
+// ── TaskDetailPanel ──────────────────────────────────────────────
+function TaskDetailPanel({ tarefa, onClose, onUpdate, onRemove, onToggle, grupos, grupoAtivo, onMoveToGrupo }) {
+  const [titulo,       setTitulo]       = useState(tarefa.texto);
+  const [showMenu,     setShowMenu]     = useState(false);
+  const [showMover,    setShowMover]    = useState(false);
+  const [subtexto,     setSubtexto]     = useState('');
+  const [editSubId,    setEditSubId]    = useState(null);
+  const [editSubTexto, setEditSubTexto] = useState('');
+  const menuRef = useRef(null);
+
+  useEffect(() => { setTitulo(tarefa.texto); setShowMenu(false); setShowMover(false); }, [tarefa.id]);
+
+  useEffect(() => {
+    if (!showMenu) return;
+    const close = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setShowMenu(false); };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [showMenu]);
+
+  const subs     = tarefa.subtarefas || [];
+  const subsDone = subs.filter(s => s.concluido).length;
+
+  const addSub = () => {
+    if (!subtexto.trim()) return;
+    onUpdate(tarefa.id, { subtarefas: [...subs, { id: newId(), texto: subtexto.trim(), concluido: false }] });
+    setSubtexto('');
+  };
+  const toggleSub  = (sid) => onUpdate(tarefa.id, { subtarefas: subs.map(s => s.id === sid ? { ...s, concluido: !s.concluido } : s) });
+  const removeSub  = (sid) => onUpdate(tarefa.id, { subtarefas: subs.filter(s => s.id !== sid) });
+  const updateSub  = (sid, texto) => onUpdate(tarefa.id, { subtarefas: subs.map(s => s.id === sid ? { ...s, texto } : s) });
+
+  return (
+    <div className="w-full md:w-80 lg:w-96 border-l flex flex-col overflow-hidden flex-shrink-0"
+      style={{ borderColor: 'rgba(255,255,255,0.08)', background: '#080f1d' }}>
+
+      {/* Header */}
+      <div className="flex items-center gap-2 px-4 py-3 border-b flex-shrink-0"
+        style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+        <button onClick={() => onToggle(tarefa.id)}
+          className="flex-shrink-0 w-5 h-5 rounded-full border-2 transition-all flex items-center justify-center"
+          style={tarefa.concluido ? { background: 'linear-gradient(135deg,#22c55e,#16a34a)', borderColor: 'transparent' } : { borderColor: 'rgba(255,255,255,0.3)', background: 'transparent' }}>
+          {tarefa.concluido && <svg viewBox="0 0 12 12" fill="none" className="w-3 h-3"><path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+        </button>
+        <span className="text-white/30 text-xs flex-1">{tarefa.concluido ? 'Concluída' : 'Pendente'}</span>
+        <div className="relative" ref={menuRef}>
+          <button onClick={() => setShowMenu(v => !v)}
+            className="w-7 h-7 rounded flex items-center justify-center text-white/30 hover:text-white/70 hover:bg-white/5 transition">
+            <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+              <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"/>
+            </svg>
+          </button>
+          {showMenu && (
+            <div className="absolute right-0 top-9 z-50 rounded-xl overflow-hidden"
+              style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 8px 32px rgba(0,0,0,0.6)', minWidth: 150 }}
+              onMouseDown={e => e.stopPropagation()}>
+              <button onClick={() => { setShowMover(true); setShowMenu(false); }}
+                className="w-full text-left px-4 py-2.5 text-sm text-white/80 hover:bg-white/5 transition block">
+                Mover para
+              </button>
+              <button onClick={() => onRemove(tarefa.id)}
+                className="w-full text-left px-4 py-2.5 text-sm hover:bg-white/5 transition block"
+                style={{ color: '#f43f5e' }}>
+                Deletar
+              </button>
+            </div>
+          )}
+        </div>
+        <button onClick={onClose}
+          className="w-7 h-7 rounded flex items-center justify-center text-white/30 hover:text-white/70 hover:bg-white/5 transition text-lg leading-none">
+          ×
+        </button>
+      </div>
+
+      {/* Body */}
+      <div className="flex-1 overflow-y-auto">
+        {/* Title */}
+        <div className="px-4 pt-4 pb-2">
+          <textarea value={titulo}
+            onChange={e => setTitulo(e.target.value)}
+            onBlur={() => onUpdate(tarefa.id, { texto: titulo.trim() || tarefa.texto })}
+            rows={2}
+            className="w-full bg-transparent text-white font-semibold text-lg outline-none resize-none placeholder:text-white/20"
+            style={{ lineHeight: 1.35 }}
+            placeholder="Título da tarefa" />
+        </div>
+
+        {/* Due date */}
+        <div className="px-4 py-2.5 flex items-center gap-3 border-b" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+          <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-white/30 flex-shrink-0">
+            <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd"/>
+          </svg>
+          <input type="date" value={tarefa.vencimento || ''}
+            onChange={e => onUpdate(tarefa.id, { vencimento: e.target.value || null })}
+            className="bg-transparent text-white/55 text-sm outline-none [color-scheme:dark] flex-1"
+            placeholder="Dia do vencimento" />
+          {tarefa.vencimento && (
+            <button onClick={() => onUpdate(tarefa.id, { vencimento: null })} className="text-white/20 hover:text-white/50 transition text-sm">×</button>
+          )}
+        </div>
+
+        {/* Description */}
+        <div className="px-4 py-3 border-b" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+          <textarea value={tarefa.descricao || ''}
+            onChange={e => onUpdate(tarefa.id, { descricao: e.target.value })}
+            rows={4}
+            placeholder="Adicionar descrição..."
+            className="w-full bg-transparent text-white/55 text-sm outline-none resize-none placeholder:text-white/20" />
+        </div>
+
+        {/* Subtasks */}
+        <div className="px-4 py-3">
+          {subs.length > 0 && (
+            <>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-white/35 text-xs font-semibold uppercase tracking-wider">Lista de verificação</p>
+                <span className="text-white/25 text-xs">{subsDone}/{subs.length}</span>
+              </div>
+              <div className="w-full h-1 rounded-full mb-3 overflow-hidden" style={{ background: 'rgba(255,255,255,0.07)' }}>
+                <div className="h-full rounded-full transition-all" style={{ width: `${Math.round(subsDone / subs.length * 100)}%`, background: '#22c55e' }} />
+              </div>
+            </>
+          )}
+          {subs.map(s => (
+            <div key={s.id} className="flex items-center gap-2 py-1.5 group/sub">
+              <button onClick={() => toggleSub(s.id)}
+                className="flex-shrink-0 w-4 h-4 rounded border transition-all flex items-center justify-center"
+                style={s.concluido ? { background: 'linear-gradient(135deg,#22c55e,#16a34a)', borderColor: 'transparent' } : { borderColor: 'rgba(255,255,255,0.2)', background: 'transparent' }}>
+                {s.concluido && <svg viewBox="0 0 12 12" fill="none" className="w-2.5 h-2.5"><path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+              </button>
+              {editSubId === s.id ? (
+                <input autoFocus value={editSubTexto}
+                  onChange={e => setEditSubTexto(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter' || e.key === 'Escape') { updateSub(s.id, editSubTexto.trim() || s.texto); setEditSubId(null); } }}
+                  onBlur={() => { updateSub(s.id, editSubTexto.trim() || s.texto); setEditSubId(null); }}
+                  className="flex-1 bg-transparent text-white/80 text-sm outline-none border-b border-white/20 pb-px" />
+              ) : (
+                <span onClick={() => { setEditSubId(s.id); setEditSubTexto(s.texto); }}
+                  className={`flex-1 text-sm cursor-text select-none ${s.concluido ? 'text-white/25 line-through' : 'text-white/75'}`}>
+                  {s.texto || 'Item sem título'}
+                </span>
+              )}
+              <button onClick={() => removeSub(s.id)}
+                className="opacity-0 group-hover/sub:opacity-100 text-white/25 hover:text-white/60 transition w-4 h-4 flex items-center justify-center text-sm">
+                ×
+              </button>
+            </div>
+          ))}
+          {/* Add subtask input */}
+          <div className="flex items-center gap-2 mt-2 py-1">
+            <div className="w-4 h-4 rounded border border-dashed border-white/15 flex-shrink-0" />
+            <input value={subtexto} onChange={e => setSubtexto(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') addSub(); }}
+              placeholder="Pressione 'Enter' para adicionar item na lista"
+              className="flex-1 bg-transparent text-white/30 text-xs outline-none placeholder:text-white/18" />
+          </div>
+        </div>
+      </div>
+
+      {/* Move to overlay */}
+      {showMover && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.65)' }}>
+          <div className="rounded-xl p-4 w-56" style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 8px 32px rgba(0,0,0,0.6)' }}>
+            <p className="text-white/50 text-xs font-semibold uppercase tracking-wider mb-3">Mover para</p>
+            {grupos.map(g => (
+              <button key={g.id} onClick={() => { onMoveToGrupo(tarefa.id, g.id); setShowMover(false); }}
+                className="w-full text-left px-3 py-2 rounded-lg text-sm text-white/80 hover:bg-white/5 transition flex items-center gap-2">
+                <AppIcon id={g.emoji} className="w-4 h-4" style={{ color: g.cor }} />
+                {g.nome}
+                {g.id === grupoAtivo && <span className="ml-auto text-white/25 text-xs">✓</span>}
+              </button>
+            ))}
+            <button onClick={() => setShowMover(false)} className="mt-2 w-full text-center text-white/25 text-xs py-1 hover:text-white/45 transition">Cancelar</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── ListModal ────────────────────────────────────────────────────
 function ListModal({ modo, grupoInicial, onSave, onClose }) {
   const [nome,      setNome]      = useState(grupoInicial?.nome || '');
   const [emoji,     setEmoji]     = useState(grupoInicial?.emoji || 'clipboard-list');
@@ -445,25 +737,17 @@ function ListModal({ modo, grupoInicial, onSave, onClose }) {
   const [emojiTab,  setEmojiTab]  = useState(Object.keys(LIST_ICONS)[0]);
   const [showEmoji, setShowEmoji] = useState(false);
 
-  const submit = () => {
-    if (!nome.trim()) return;
-    onSave({ nome: nome.trim(), emoji, cor }, modo === 'edit' ? grupoInicial.id : null);
-  };
+  const submit = () => { if (!nome.trim()) return; onSave({ nome: nome.trim(), emoji, cor }, modo === 'edit' ? grupoInicial.id : null); };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ background: 'rgba(0,0,0,0.75)' }}
-      onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.75)' }} onClick={onClose}>
       <div className="rounded-2xl w-[360px] flex flex-col overflow-hidden"
         style={{ background: '#0f172a', border: '1px solid rgba(34,197,94,0.25)', boxShadow: '0 32px 80px rgba(0,0,0,0.7)' }}
         onClick={e => e.stopPropagation()}>
-
-        <div className="flex items-center justify-between px-5 py-4 border-b"
-          style={{ borderColor: 'rgba(34,197,94,0.12)' }}>
+        <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'rgba(34,197,94,0.12)' }}>
           <h3 className="text-text-1 font-bold">{modo === 'edit' ? 'Editar lista' : 'Adicionar lista'}</h3>
           <button onClick={onClose} className="text-text-3 hover:text-text-1 transition text-xl w-6 h-6 flex items-center justify-center">×</button>
         </div>
-
         <div className="px-5 py-4 space-y-4">
           <div className="flex items-center gap-2">
             <div className="relative">
@@ -498,7 +782,6 @@ function ListModal({ modo, grupoInicial, onSave, onClose }) {
               onKeyDown={e => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') onClose(); }}
               placeholder="Nome da lista..." className="flex-1 input-premium text-sm" />
           </div>
-
           <div>
             <p className="text-text-3 text-xs font-semibold uppercase tracking-wider mb-2">Cor da Lista</p>
             <div className="flex flex-wrap gap-2">
@@ -511,14 +794,11 @@ function ListModal({ modo, grupoInicial, onSave, onClose }) {
               ))}
             </div>
           </div>
-
-          <div className="rounded-xl p-3 flex items-center gap-2"
-            style={{ background: cor + '11', border: `1px solid ${cor}33` }}>
+          <div className="rounded-xl p-3 flex items-center gap-2" style={{ background: cor + '11', border: `1px solid ${cor}33` }}>
             <AppIcon id={emoji} className="w-5 h-5" style={{ color: cor }} />
             <span className="text-sm font-semibold" style={{ color: cor }}>{nome || 'Nome da lista'}</span>
           </div>
         </div>
-
         <div className="flex gap-3 px-5 pb-5">
           <button onClick={onClose}
             className="flex-1 py-2.5 rounded-xl text-sm text-text-2 hover:bg-white/5 transition border"
@@ -532,159 +812,6 @@ function ListModal({ modo, grupoInicial, onSave, onClose }) {
           </button>
         </div>
       </div>
-    </div>
-  );
-}
-
-// ── Adicionar Tarefa ─────────────────────────────────────────────
-function AdicionarTarefa({ secaoId, adicionando, setAdicionando, novaTexto, setNovaTexto, novaTags, setNovaTags, etiquetas, addTarefa, inputRef }) {
-  const key    = secaoId ? 's_' + secaoId : 'root';
-  const isOpen = adicionando === key;
-  const close  = () => { setAdicionando(null); setNovaTexto(''); setNovaTags([]); };
-
-  if (!isOpen) {
-    return (
-      <button onClick={() => setAdicionando(key)}
-        className="flex items-center gap-2 py-2 text-text-3 hover:text-accent transition w-full text-left group mb-1"
-        style={{ borderBottom: secaoId ? 'none' : '1px solid rgba(34,197,94,0.08)' }}>
-        <span className="text-base leading-none group-hover:scale-110 transition-transform">+</span>
-        <span className="text-xs">Adicionar tarefa</span>
-      </button>
-    );
-  }
-
-  return (
-    <div className="mb-2 rounded-xl p-3"
-      style={{ background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.2)' }}>
-      <div className="flex items-center gap-3 mb-2">
-        <div className="w-4 h-4 rounded border flex-shrink-0" style={{ borderColor: 'rgba(34,197,94,0.3)' }} />
-        <input
-          ref={secaoId === null ? inputRef : undefined}
-          autoFocus={secaoId !== null}
-          value={novaTexto}
-          onChange={e => setNovaTexto(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') addTarefa(secaoId); if (e.key === 'Escape') close(); }}
-          placeholder="Nome da tarefa..."
-          className="flex-1 bg-transparent text-text-1 text-sm outline-none placeholder:text-text-3" />
-      </div>
-      <div className="flex flex-wrap gap-1 pl-7">
-        {etiquetas.map(e => (
-          <button key={e.id}
-            onMouseDown={ev => { ev.preventDefault(); setNovaTags(prev => prev.includes(e.id) ? prev.filter(x => x !== e.id) : [...prev, e.id]); }}
-            className="text-[10px] px-2 py-0.5 rounded-full transition font-medium"
-            style={novaTags.includes(e.id) ? { background: e.cor, color: '#fff' } : { background: e.cor + '22', color: e.cor }}>
-            {e.nome}
-          </button>
-        ))}
-        <button onMouseDown={ev => { ev.preventDefault(); addTarefa(secaoId); }}
-          className="text-[10px] px-2 py-0.5 rounded-full font-semibold ml-auto"
-          style={{ background: '#22c55e', color: '#0f172a' }}>↵ Salvar</button>
-        <button onMouseDown={ev => { ev.preventDefault(); close(); }}
-          className="text-[10px] px-2 py-0.5 text-text-3 hover:text-text-2 transition">Esc</button>
-      </div>
-    </div>
-  );
-}
-
-// ── Linha de tarefa ──────────────────────────────────────────────
-function TarefaRow({ tarefa, etiquetas, editId, editTexto, editTags, setEditId, setEditTexto, setEditTags, onToggle, onRemove, onSaveEdit, onToggleTag, tagPickerOpen, onTagPickerToggle }) {
-  const isEdit   = editId === tarefa.id;
-  const startEdit = () => { setEditId(tarefa.id); setEditTexto(tarefa.texto); setEditTags(tarefa.etiquetas || []); };
-
-  return (
-    <div className="group" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-      <div className="flex items-start gap-3 py-2.5">
-        <button onClick={() => onToggle(tarefa.id)}
-          className="flex-shrink-0 w-4 h-4 rounded border transition-all flex items-center justify-center mt-0.5"
-          style={tarefa.concluido
-            ? { background: 'linear-gradient(135deg,#22c55e,#16a34a)', borderColor: 'transparent' }
-            : { borderColor: 'rgba(34,197,94,0.4)', background: 'transparent' }}>
-          {tarefa.concluido && (
-            <svg viewBox="0 0 12 12" fill="none" className="w-2.5 h-2.5">
-              <path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          )}
-        </button>
-
-        <div className="flex-1 min-w-0">
-          {isEdit ? (
-            <div>
-              <input autoFocus value={editTexto} onChange={e => setEditTexto(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') onSaveEdit(tarefa.id); if (e.key === 'Escape') setEditId(null); }}
-                onBlur={() => onSaveEdit(tarefa.id)}
-                className="bg-transparent text-text-1 text-sm outline-none w-full border-b mb-2 pb-1"
-                style={{ borderColor: 'rgba(34,197,94,0.4)' }} />
-              <div className="flex flex-wrap gap-1">
-                {etiquetas.map(e => (
-                  <button key={e.id}
-                    onMouseDown={ev => { ev.preventDefault(); setEditTags(prev => prev.includes(e.id) ? prev.filter(x => x !== e.id) : [...prev, e.id]); }}
-                    className="text-[10px] px-2 py-0.5 rounded-full transition font-medium"
-                    style={editTags.includes(e.id) ? { background: e.cor, color: '#fff' } : { background: e.cor + '22', color: e.cor }}>
-                    {e.nome}
-                  </button>
-                ))}
-                <button onMouseDown={e => { e.preventDefault(); onSaveEdit(tarefa.id); }}
-                  className="text-[10px] px-2 py-0.5 rounded-full font-semibold ml-auto"
-                  style={{ background: '#22c55e', color: '#0f172a' }}>✓ Ok</button>
-              </div>
-            </div>
-          ) : (
-            <>
-              <p onDoubleClick={startEdit} style={{ cursor: 'text' }}
-                className={`text-sm leading-snug select-none ${tarefa.concluido ? 'text-text-3 line-through' : 'text-text-1'}`}>
-                {tarefa.texto}
-              </p>
-              {(tarefa.etiquetas || []).length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {(tarefa.etiquetas || []).map(etiqId => {
-                    const e = etiquetas.find(x => x.id === etiqId);
-                    return e ? (
-                      <span key={e.id} className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
-                        style={{ background: e.cor + '22', color: e.cor }}>{e.nome}</span>
-                    ) : null;
-                  })}
-                </div>
-              )}
-            </>
-          )}
-        </div>
-
-        {!isEdit && (
-          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition flex-shrink-0 pt-0.5">
-            <button onClick={onTagPickerToggle} title="Etiquetas"
-              className={`w-6 h-6 rounded flex items-center justify-center transition text-xs ${tagPickerOpen ? 'text-accent' : 'text-text-3 hover:text-accent hover:bg-white/5'}`}>
-              🏷
-            </button>
-            <button onClick={startEdit} title="Editar"
-              className="w-6 h-6 rounded flex items-center justify-center text-text-3 hover:text-accent hover:bg-white/5 transition">
-              <svg viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
-                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
-              </svg>
-            </button>
-            <button onClick={() => onRemove(tarefa.id)} title="Excluir"
-              className="w-6 h-6 rounded flex items-center justify-center text-text-3 hover:text-expense hover:bg-white/5 transition">
-              <svg viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
-                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"/>
-              </svg>
-            </button>
-          </div>
-        )}
-      </div>
-
-      {tagPickerOpen && !isEdit && (
-        <div className="flex flex-wrap items-center gap-1 pb-2.5 pl-7">
-          {etiquetas.map(e => (
-            <button key={e.id} onClick={() => onToggleTag(e.id)}
-              className="text-[10px] px-2 py-0.5 rounded-full transition font-medium"
-              style={(tarefa.etiquetas || []).includes(e.id)
-                ? { background: e.cor, color: '#fff' }
-                : { background: e.cor + '22', color: e.cor }}>
-              {e.nome}
-            </button>
-          ))}
-          <button onClick={onTagPickerToggle} className="text-[10px] text-text-3 hover:text-text-2 px-1 ml-1">✕</button>
-        </div>
-      )}
     </div>
   );
 }
