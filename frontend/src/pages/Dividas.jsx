@@ -759,8 +759,14 @@ export default function Dividas({ month, year }) {
                 ? vencAjustado < today
                 : isCurrentPeriod && vencAjustado < today
             );
+            const parcelaAtual = (() => {
+              if (!isParcelada || !d.vencimento) return d.parcelaInicial || 1;
+              const [vy, vm] = d.vencimento.split('-').map(Number);
+              const offset = (y * 12 + (m - 1)) - (vy * 12 + (vm - 1));
+              return (d.parcelaInicial || 1) + offset;
+            })();
             const pct = isParcelada && d.totalParcelas > 0
-              ? Math.round((d.parcelaInicial - 1 + (st.pago ? 1 : 0)) / d.totalParcelas * 100)
+              ? Math.round((parcelaAtual - 1 + (st.pago ? 1 : 0)) / d.totalParcelas * 100)
               : 0;
             const valorColor = st.pago ? '#22c55e' : vencida ? '#f59e0b' : '#f43f5e';
 
@@ -812,7 +818,7 @@ export default function Dividas({ month, year }) {
                         {isParcelada && (
                           <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
                             style={{ background: 'rgba(201,168,76,0.12)', color: '#c9a84c', border: '1px solid rgba(201,168,76,0.2)' }}>
-                            {d.parcelaInicial}/{d.totalParcelas}x · {d.periodicidade || 'Mensal'}
+                            {parcelaAtual}/{d.totalParcelas}x · {d.periodicidade || 'Mensal'}
                           </span>
                         )}
                         {vencida && (
@@ -868,7 +874,7 @@ export default function Dividas({ month, year }) {
                   {isParcelada && (
                     <div className="mt-2 ml-12">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-[10px] text-white/70">{d.parcelaInicial - 1 + (st.pago ? 1 : 0)} de {d.totalParcelas} pagas</span>
+                        <span className="text-[10px] text-white/70">{parcelaAtual - 1 + (st.pago ? 1 : 0)} de {d.totalParcelas} pagas</span>
                         <span className="text-[10px] font-semibold" style={{ color: pct === 100 ? '#22c55e' : '#c9a84c' }}>{pct}%</span>
                       </div>
                       <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>

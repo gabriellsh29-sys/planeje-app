@@ -34,6 +34,17 @@ function mesKey(month, year) {
   return `${year}-${String(month).padStart(2, '0')}`;
 }
 
+// Calcula qual parcela é no mês visualizado e a data desse mês.
+function parcelaInfo(r, month, year) {
+  if (!r.data || r.recorrencia !== 'parcelar') return null;
+  const [ry, rm] = r.data.split('-').map(Number);
+  const offset = (year * 12 + (month - 1)) - (ry * 12 + (rm - 1));
+  const parcelaAtual = (r.parcelaInicial || 1) + offset;
+  const day = r.data.split('-')[2] || '01';
+  const dataAtual = `${year}-${String(month).padStart(2, '0')}-${day}`;
+  return { parcelaAtual, dataAtual };
+}
+
 // Para receitas fixas, status é por mês (recebimentos[YYYY-MM]).
 // Para não-fixas, usa os campos legados recebida/recebimentoData.
 function statusMesReceita(r, month, year) {
@@ -436,6 +447,7 @@ export default function Receitas({ month, year }) {
         <div className="space-y-2">
           {filtered.map((r, idx) => {
             const st = statusMesReceita(r, lm, ly);
+            const pi = parcelaInfo(r, lm, ly);
             return (
               <div key={r.id} className="card-premium transition-all active:scale-[0.99]">
                 <div className="px-4 pt-3.5 pb-3">
@@ -463,7 +475,7 @@ export default function Receitas({ month, year }) {
                         {r.recorrencia === 'parcelar' && (
                           <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
                             style={{ background: 'rgba(34,197,94,0.12)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.2)' }}>
-                            {r.parcelaInicial}/{r.totalParcelas}x · {r.periodicidade || 'Mensal'}
+                            {pi ? pi.parcelaAtual : r.parcelaInicial}/{r.totalParcelas}x · {r.periodicidade || 'Mensal'}
                           </span>
                         )}
                       </div>
@@ -483,7 +495,11 @@ export default function Receitas({ month, year }) {
                         <path d="M3.5 0a.5.5 0 01.5.5V1h8V.5a.5.5 0 011 0V1h1a2 2 0 012 2v11a2 2 0 01-2 2H2a2 2 0 01-2-2V3a2 2 0 012-2h1V.5a.5.5 0 01.5-.5zM1 4v10a1 1 0 001 1h12a1 1 0 001-1V4H1z"/>
                       </svg>
                       <span className="text-[11px] text-white/70">
-                        {r.recorrencia === 'fixa' ? `Desde ${fmtDate(r.data)}` : fmtDate(r.data)}
+                        {r.recorrencia === 'fixa'
+                          ? `Desde ${fmtDate(r.data)}`
+                          : r.recorrencia === 'parcelar' && pi
+                            ? fmtDate(pi.dataAtual)
+                            : fmtDate(r.data)}
                       </span>
                       {st.recebida && st.data && (
                         <span className="text-[11px] text-income ml-1">· Recebido {fmtDate(st.data)}</span>
