@@ -50,7 +50,7 @@ export function AuthProvider({ children }) {
       // Limpa dados locais ao trocar de usuário — tanto na mesma sessão
       // quanto entre sessões diferentes no mesmo dispositivo.
       const storedUid = localStorage.getItem('planeje_auth_uid');
-      if (storedUid && storedUid !== userId) {
+      if (storedUid !== userId) {
         clearLocalData();
       }
       localStorage.setItem('planeje_auth_uid', userId);
