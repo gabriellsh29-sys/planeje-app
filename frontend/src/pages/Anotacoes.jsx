@@ -646,16 +646,22 @@ function TaskDetailPanel({ tarefa, onClose, onUpdate, onRemove, onToggle, grupos
     if (tarefa.vencimento) { const [y,m] = tarefa.vencimento.split('-').map(Number); return { year: y, month: m }; }
     const n = new Date(); return { year: n.getFullYear(), month: n.getMonth() + 1 };
   });
+  const [calExpand,    setCalExpand]    = useState(null); // 'hora' | 'lembrete' | 'repetir' | null
   const [subtexto,     setSubtexto]     = useState('');
   const [editSubId,    setEditSubId]    = useState(null);
   const [editSubTexto, setEditSubTexto] = useState('');
   const menuRef        = useRef(null);
   const calRef         = useRef(null);
   const addSubInputRef = useRef(null);
+  const descRef        = useRef(null);
 
   useEffect(() => {
-    setTitulo(tarefa.texto); setShowMenu(false); setShowMover(false); setShowCal(false);
+    setTitulo(tarefa.texto); setShowMenu(false); setShowMover(false); setShowCal(false); setCalExpand(null);
     if (tarefa.vencimento) { const [y,m] = tarefa.vencimento.split('-').map(Number); setCalMonth({ year: y, month: m }); }
+    // Reset description height
+    setTimeout(() => {
+      if (descRef.current) { descRef.current.style.height = 'auto'; descRef.current.style.height = descRef.current.scrollHeight + 'px'; }
+    }, 0);
   }, [tarefa.id]);
 
   useEffect(() => {
@@ -688,32 +694,58 @@ function TaskDetailPanel({ tarefa, onClose, onUpdate, onRemove, onToggle, grupos
   const updateSub = (sid, texto) => onUpdate(tarefa.id, { subtarefas: subs.map(s => s.id === sid ? { ...s, texto } : s) });
   const pickDate  = (d) => { onUpdate(tarefa.id, { vencimento: d }); setShowCal(false); };
 
-  // Calendar grid
+  // Calendar
   const renderCal = () => {
     const { year, month } = calMonth;
-    const firstDay     = new Date(year, month - 1, 1).getDay();
-    const daysInMonth  = new Date(year, month, 0).getDate();
-    const prevMonth    = () => setCalMonth(p => p.month === 1 ? { year: p.year - 1, month: 12 } : { ...p, month: p.month - 1 });
-    const nextMonth    = () => setCalMonth(p => p.month === 12 ? { year: p.year + 1, month: 1 } : { ...p, month: p.month + 1 });
+    const firstDay    = new Date(year, month - 1, 1).getDay();
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const prevM = () => setCalMonth(p => p.month === 1 ? { year: p.year - 1, month: 12 } : { ...p, month: p.month - 1 });
+    const nextM = () => setCalMonth(p => p.month === 12 ? { year: p.year + 1, month: 1 } : { ...p, month: p.month + 1 });
     const days = [];
     for (let i = 0; i < firstDay; i++) days.push(null);
     for (let d = 1; d <= daysInMonth; d++) days.push(d);
+
+    // Hora list (30-min intervals)
+    const horaOptions = Array.from({ length: 48 }, (_, i) => {
+      const h = Math.floor(i / 2), m = i % 2 === 0 ? '00' : '30';
+      return `${String(h).padStart(2,'0')}:${m}`;
+    });
+
+    // Repetir options (dynamic based on selected date)
+    const refDate = tarefa.vencimento ? new Date(tarefa.vencimento + 'T12:00:00') : new Date();
+    const weekDays = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+    const repetirOpts = [
+      { val: 'diario',   label: 'Diariamente' },
+      { val: 'semanal',  label: `Semanal (${weekDays[refDate.getDay()]})` },
+      { val: 'mensal',   label: `Mensal (${refDate.getDate()}°)` },
+      { val: 'anual',    label: `Anualmente (${refDate.getDate()}° ${MESES_CAL[refDate.getMonth()].slice(0,3).toLowerCase()})` },
+      { val: 'uteis',    label: 'Todos os dias úteis (Seg - Sex)' },
+      { val: 'custom',   label: 'Personalizado' },
+    ];
+
+    const SectionHeader = ({ label, expand }) => (
+      <button onClick={() => setCalExpand(p => p === expand ? null : expand)}
+        className="w-full flex items-center justify-between px-4 py-3 border-b text-sm transition hover:bg-white/5"
+        style={{ borderColor: 'rgba(255,255,255,0.05)', color: tarefa[expand] ? '#4a9cf5' : 'rgba(255,255,255,0.6)' }}>
+        <span>{label}{tarefa[expand] ? ` · ${tarefa[expand]}` : ''}</span>
+        <svg viewBox="0 0 20 20" fill="currentColor" className={`w-3.5 h-3.5 transition-transform ${calExpand === expand ? 'rotate-180' : ''}`}>
+          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd"/>
+        </svg>
+      </button>
+    );
+
     return (
       <div ref={calRef} onMouseDown={e => e.stopPropagation()}
-        className="absolute left-0 top-7 z-50 rounded-2xl overflow-hidden shadow-2xl"
-        style={{ background: '#1a2235', border: '1px solid rgba(255,255,255,0.12)', width: 264, boxShadow: '0 16px 48px rgba(0,0,0,0.7)' }}>
-        {/* Tabs */}
-        <div className="flex border-b" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
-          <button className="flex-1 py-2.5 text-sm font-semibold text-white border-b-2" style={{ borderColor: '#4a9cf5' }}>Data</button>
-          <button className="flex-1 py-2.5 text-sm text-white/35">Duração</button>
-        </div>
+        className="absolute left-0 top-7 z-50 rounded-2xl overflow-hidden"
+        style={{ background: '#1a2235', border: '1px solid rgba(255,255,255,0.12)', width: 270, boxShadow: '0 16px 48px rgba(0,0,0,0.7)', maxHeight: '80vh', overflowY: 'auto' }}>
+
         {/* Quick picks */}
         <div className="grid grid-cols-4 gap-1 px-3 py-3 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
           {[
-            { label: 'Hoje',    emoji: '☀️', val: todayD },
-            { label: 'Amanhã',  emoji: '⏰', val: tomorrowD },
-            { label: '7 dias',  emoji: '+7', val: in7D },
-            { label: 'Noite',   emoji: '🌙', val: todayD },
+            { label: 'Hoje',   emoji: '☀️', val: todayD },
+            { label: 'Amanhã', emoji: '⏰', val: tomorrowD },
+            { label: '7 dias', emoji: '+7', val: in7D },
+            { label: 'Noite',  emoji: '🌙', val: todayD },
           ].map(q => (
             <button key={q.label} onClick={() => pickDate(q.val)}
               className="flex flex-col items-center gap-1 py-1.5 rounded-xl hover:bg-white/5 transition">
@@ -722,52 +754,101 @@ function TaskDetailPanel({ tarefa, onClose, onUpdate, onRemove, onToggle, grupos
             </button>
           ))}
         </div>
+
         {/* Month nav */}
-        <div className="flex items-center justify-between px-3 pt-3 pb-1">
-          <button onClick={prevMonth} className="w-6 h-6 flex items-center justify-center text-white/40 hover:text-white transition text-lg">‹</button>
+        <div className="flex items-center justify-between px-3 pt-2 pb-1">
+          <button onClick={prevM} className="w-6 h-6 flex items-center justify-center text-white/40 hover:text-white transition text-lg">‹</button>
           <span className="text-white text-xs font-semibold">{MESES_CAL[month - 1]} {year}</span>
-          <button onClick={nextMonth} className="w-6 h-6 flex items-center justify-center text-white/40 hover:text-white transition text-lg">›</button>
+          <button onClick={nextM} className="w-6 h-6 flex items-center justify-center text-white/40 hover:text-white transition text-lg">›</button>
         </div>
-        {/* Day headers */}
         <div className="grid grid-cols-7 px-2 pb-0.5">
           {['D','S','T','Q','Q','S','S'].map((d,i) => (
             <div key={i} className="text-center text-[9px] text-white/25 font-medium py-1">{d}</div>
           ))}
         </div>
-        {/* Days */}
-        <div className="grid grid-cols-7 px-2 pb-2 gap-y-0.5">
+        <div className="grid grid-cols-7 px-2 pb-3 gap-y-0.5">
           {days.map((d, i) => {
             if (!d) return <div key={i} />;
             const ds = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-            const sel   = tarefa.vencimento === ds;
-            const today = todayD === ds;
+            const sel = tarefa.vencimento === ds, tod = todayD === ds;
             return (
               <button key={i} onClick={() => pickDate(ds)}
                 className="h-7 w-7 mx-auto rounded-full text-xs font-medium transition-all flex items-center justify-center"
-                style={sel ? { background: '#4a9cf5', color: '#fff' } : today ? { color: '#4a9cf5', fontWeight: 700 } : { color: 'rgba(255,255,255,0.7)' }}>
+                style={sel ? { background: '#4a9cf5', color: '#fff' } : tod ? { color: '#4a9cf5', fontWeight: 700 } : { color: 'rgba(255,255,255,0.7)' }}>
                 {d}
               </button>
             );
           })}
         </div>
-        {/* Extra rows */}
-        <div className="border-t px-4" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-          {[{ icon: '⏱', label: 'Hora' }, { icon: '🔔', label: 'Lembrete' }, { icon: '🔁', label: 'Repetir' }].map(o => (
-            <div key={o.label} className="flex items-center justify-between py-2.5 border-b last:border-0 text-xs text-white/35"
-              style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
-              <span>{o.icon} {o.label}</span>
-              <span className="text-white/20">›</span>
+
+        {/* ── Hora ── */}
+        <div className="border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+          <SectionHeader label="⏱ Hora" expand="hora" />
+          {calExpand === 'hora' && (
+            <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+              {horaOptions.map(h => (
+                <button key={h} onClick={() => { onUpdate(tarefa.id, { hora: tarefa.hora === h ? null : h }); setCalExpand(null); }}
+                  className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-white/5 transition text-sm"
+                  style={{ color: tarefa.hora === h ? '#4a9cf5' : 'rgba(255,255,255,0.7)' }}>
+                  <span>{h}</span>
+                  {tarefa.hora === h && <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>}
+                </button>
+              ))}
+              <div className="px-4 py-2 border-t text-[10px] text-white/25 text-center" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>São Paulo, GMT-3</div>
             </div>
-          ))}
+          )}
+
+          {/* ── Lembrete ── */}
+          <SectionHeader label="🔔 Lembrete" expand="lembrete" />
+          {calExpand === 'lembrete' && (
+            <div>
+              {['No dia (09:00)', '1 dia antes (09:00)', '2 dias antes (09:00)', '3 dias antes (09:00)', '1 semana antes (09:00)', 'Personalizado'].map(opt => (
+                <button key={opt} onClick={() => onUpdate(tarefa.id, { lembrete: tarefa.lembrete === opt ? null : opt })}
+                  className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-white/5 transition text-sm"
+                  style={{ color: tarefa.lembrete === opt ? '#4a9cf5' : 'rgba(255,255,255,0.75)' }}>
+                  <span>{opt}</span>
+                  {tarefa.lembrete === opt && <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>}
+                </button>
+              ))}
+              <div className="flex items-center justify-between px-4 py-3 border-t" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                <span className="text-sm text-white/70">Lembrete constante 🌟</span>
+                <button onClick={() => onUpdate(tarefa.id, { lembreteConstante: !tarefa.lembreteConstante })}
+                  className="w-10 h-5 rounded-full transition-colors relative"
+                  style={{ background: tarefa.lembreteConstante ? '#4a9cf5' : 'rgba(255,255,255,0.15)' }}>
+                  <span className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all"
+                    style={{ left: tarefa.lembreteConstante ? '22px' : '2px' }} />
+                </button>
+              </div>
+              <div className="flex gap-2 px-4 py-3">
+                <button onClick={() => setCalExpand(null)} className="flex-1 py-2 rounded-xl text-xs font-semibold" style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.45)' }}>Cancelar</button>
+                <button onClick={() => setCalExpand(null)} className="flex-1 py-2 rounded-xl text-xs font-semibold" style={{ background: '#4a9cf5', color: '#fff' }}>OK</button>
+              </div>
+            </div>
+          )}
+
+          {/* ── Repetir ── */}
+          <SectionHeader label="🔁 Repetir" expand="repetir" />
+          {calExpand === 'repetir' && (
+            <div>
+              {repetirOpts.map(opt => (
+                <button key={opt.val} onClick={() => { onUpdate(tarefa.id, { repetir: tarefa.repetir === opt.val ? null : opt.val }); setCalExpand(null); }}
+                  className="w-full text-left px-4 py-2.5 hover:bg-white/5 transition text-sm"
+                  style={{ color: tarefa.repetir === opt.val ? '#4a9cf5' : 'rgba(255,255,255,0.75)' }}>
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
+
         {/* Limpar / OK */}
-        <div className="flex gap-2 px-4 py-3">
-          <button onClick={() => { onUpdate(tarefa.id, { vencimento: null }); setShowCal(false); }}
-            className="flex-1 py-2 rounded-xl text-xs font-semibold transition"
+        <div className="flex gap-2 px-4 py-3 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+          <button onClick={() => { onUpdate(tarefa.id, { vencimento: null, hora: null, lembrete: null, repetir: null }); setShowCal(false); setCalExpand(null); }}
+            className="flex-1 py-2 rounded-xl text-xs font-semibold"
             style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.45)' }}>
             Limpar
           </button>
-          <button onClick={() => setShowCal(false)}
+          <button onClick={() => { setShowCal(false); setCalExpand(null); }}
             className="flex-1 py-2 rounded-xl text-xs font-semibold"
             style={{ background: '#4a9cf5', color: '#fff' }}>
             OK
@@ -854,12 +935,16 @@ function TaskDetailPanel({ tarefa, onClose, onUpdate, onRemove, onToggle, grupos
         </div>
 
         {/* Description */}
-        <div className="px-5 pb-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
-          <textarea value={tarefa.descricao || ''}
-            onChange={e => onUpdate(tarefa.id, { descricao: e.target.value })}
-            rows={3}
+        <div className="px-5 pb-4">
+          <textarea ref={descRef} value={tarefa.descricao || ''}
+            onChange={e => {
+              onUpdate(tarefa.id, { descricao: e.target.value });
+              e.target.style.height = 'auto';
+              e.target.style.height = e.target.scrollHeight + 'px';
+            }}
             placeholder="Adicionar descrição..."
-            className="w-full bg-transparent text-white/45 text-sm outline-none resize-none placeholder:text-white/18" />
+            className="w-full bg-transparent text-white/45 text-sm outline-none resize-none placeholder:text-white/18"
+            style={{ minHeight: '2.5rem', overflow: 'hidden' }} />
         </div>
 
         {/* Subtasks — TickTick style */}
