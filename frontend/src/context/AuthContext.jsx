@@ -35,9 +35,14 @@ export function AuthProvider({ children }) {
     const prevUserId = lastUserId.current;
     lastUserId.current = userId;
     if (prevUserId && !userId) {
-      // logout: envia último estado mas NUNCA apaga dados locais
-      // (clearLocalData foi removido — apagar local quando push pode ter falhado = perda irrecuperável)
-      stopCloudSync(true).catch(() => {});
+      // Logout: empurra estado final e limpa localStorage para que o próximo
+      // usuário comece do zero (evita vazamento de dados entre contas).
+      stopCloudSync(true)
+        .catch(() => {})
+        .finally(() => {
+          clearLocalData();
+          localStorage.removeItem('planeje_auth_uid');
+        });
       setPerfil(null);
       setPerfilStatus('loading');
       return;
