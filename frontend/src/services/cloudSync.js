@@ -440,6 +440,11 @@ export async function pullFromCloud(userId) {
   } catch (err) {
     if (handleSyncError(err) === 'stop') { haltSyncCycle(); return; }
   }
+  // Só empurra de volta se o localStorage pertence a este usuário.
+  // Evita que dados de outro usuário (estado contaminado) sejam gravados
+  // no Supabase sob o ID do usuário que acabou de entrar.
+  const storedUid = localStorage.getItem('planeje_auth_uid');
+  if (storedUid !== userId) return;
   try {
     const snap = snapshotLocal();
     if (Object.keys(snap).length > 0) {
