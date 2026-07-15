@@ -862,42 +862,11 @@ function TaskDetailPanel({ tarefa, onClose, onUpdate, onRemove, onToggle, grupos
     <div className="w-full md:w-80 lg:w-96 border-l flex flex-col overflow-hidden flex-shrink-0 relative"
       style={{ borderColor: 'rgba(255,255,255,0.08)', background: '#080f1d' }}>
 
-      {/* TickTick-style header: clipboard | 📅[data]   🚩 ⋮ × */}
-      <div className="flex items-center gap-2 px-4 py-2.5 border-b flex-shrink-0"
-        style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-        {/* Status circle */}
-        <button onClick={() => onToggle(tarefa.id)}
-          className="flex-shrink-0 w-4 h-4 rounded-full border-2 transition-all flex items-center justify-center"
-          style={tarefa.concluido ? { background: 'linear-gradient(135deg,#22c55e,#16a34a)', borderColor: 'transparent' } : { borderColor: 'rgba(255,255,255,0.3)', background: 'transparent' }}>
-          {tarefa.concluido && <svg viewBox="0 0 12 12" fill="none" className="w-2.5 h-2.5"><path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-        </button>
-        {/* Separator */}
-        <span className="text-white/15 text-xs">|</span>
-        {/* Date button (icon only when no date, icon+date when set) */}
-        <div className="relative flex-1">
-          <button onClick={() => setShowCal(v => !v)}
-            className="flex items-center gap-1.5 text-white/40 hover:text-white/70 transition group">
-            <svg viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5 flex-shrink-0">
-              <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd"/>
-            </svg>
-            {tarefa.vencimento ? (
-              <span className="text-xs" style={{ color: '#4a9cf5' }}>{fmtD(tarefa.vencimento)}</span>
-            ) : (
-              <span className="text-xs text-white/30 group-hover:text-white/55">Dia do vencimento</span>
-            )}
-          </button>
-          {showCal && renderCal()}
-        </div>
-        {/* Flag */}
-        <button className="w-6 h-6 flex items-center justify-center text-white/20 hover:text-white/50 transition flex-shrink-0">
-          <svg viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
-            <path fillRule="evenodd" d="M3 6a3 3 0 013-3h10a1 1 0 01.8 1.6L14.25 7l2.55 2.4A1 1 0 0116 11H6a1 1 0 00-1 1v3a1 1 0 11-2 0V6z" clipRule="evenodd"/>
-          </svg>
-        </button>
-        {/* Menu */}
-        <div className="relative flex-shrink-0" ref={menuRef}>
+      {/* Minimal top bar: menu + close */}
+      <div className="flex items-center justify-end gap-1 px-3 pt-2 pb-0 flex-shrink-0">
+        <div className="relative" ref={menuRef}>
           <button onClick={() => setShowMenu(v => !v)}
-            className="w-6 h-6 flex items-center justify-center text-white/20 hover:text-white/60 hover:bg-white/5 transition rounded">
+            className="w-7 h-7 flex items-center justify-center text-white/20 hover:text-white/60 hover:bg-white/5 transition rounded">
             <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
               <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z"/>
             </svg>
@@ -914,9 +883,8 @@ function TaskDetailPanel({ tarefa, onClose, onUpdate, onRemove, onToggle, grupos
             </div>
           )}
         </div>
-        {/* Close */}
         <button onClick={onClose}
-          className="w-6 h-6 flex items-center justify-center text-white/20 hover:text-white/60 hover:bg-white/5 transition rounded text-lg leading-none flex-shrink-0">
+          className="w-7 h-7 flex items-center justify-center text-white/20 hover:text-white/60 hover:bg-white/5 transition rounded text-lg leading-none">
           ×
         </button>
       </div>
@@ -924,7 +892,7 @@ function TaskDetailPanel({ tarefa, onClose, onUpdate, onRemove, onToggle, grupos
       {/* Body */}
       <div className="flex-1 overflow-y-auto flex flex-col">
         {/* Title — big, like TickTick */}
-        <div className="px-5 pt-5 pb-3">
+        <div className="px-5 pt-3 pb-3">
           <textarea value={titulo}
             onChange={e => setTitulo(e.target.value)}
             onBlur={() => onUpdate(tarefa.id, { texto: titulo.trim() || tarefa.texto })}
