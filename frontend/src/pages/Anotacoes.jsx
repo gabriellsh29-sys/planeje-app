@@ -649,8 +649,9 @@ function TaskDetailPanel({ tarefa, onClose, onUpdate, onRemove, onToggle, grupos
   const [subtexto,     setSubtexto]     = useState('');
   const [editSubId,    setEditSubId]    = useState(null);
   const [editSubTexto, setEditSubTexto] = useState('');
-  const menuRef = useRef(null);
-  const calRef  = useRef(null);
+  const menuRef        = useRef(null);
+  const calRef         = useRef(null);
+  const addSubInputRef = useRef(null);
 
   useEffect(() => {
     setTitulo(tarefa.texto); setShowMenu(false); setShowMover(false); setShowCal(false);
@@ -680,6 +681,7 @@ function TaskDetailPanel({ tarefa, onClose, onUpdate, onRemove, onToggle, grupos
     if (!subtexto.trim()) return;
     onUpdate(tarefa.id, { subtarefas: [...subs, { id: newId(), texto: subtexto.trim(), concluido: false }] });
     setSubtexto('');
+    setTimeout(() => addSubInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 30);
   };
   const toggleSub = (sid) => onUpdate(tarefa.id, { subtarefas: subs.map(s => s.id === sid ? { ...s, concluido: !s.concluido } : s) });
   const removeSub = (sid) => onUpdate(tarefa.id, { subtarefas: subs.filter(s => s.id !== sid) });
@@ -909,7 +911,7 @@ function TaskDetailPanel({ tarefa, onClose, onUpdate, onRemove, onToggle, grupos
             </div>
           ))}
           {/* Add subtask — TickTick style: ○ placeholder */}
-          <div className="flex items-center gap-2.5 py-2.5 border-b" style={{ borderColor: 'rgba(255,255,255,0.04)' }}>
+          <div ref={addSubInputRef} className="flex items-center gap-2.5 py-2.5 border-b" style={{ borderColor: 'rgba(255,255,255,0.04)' }}>
             <div className="w-4 h-4 rounded-full border border-white/20 flex-shrink-0" />
             <input value={subtexto} onChange={e => setSubtexto(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') addSub(); }}
