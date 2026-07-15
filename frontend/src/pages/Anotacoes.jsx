@@ -42,6 +42,7 @@ export default function Anotacoes() {
   const [addingSecBottom, setAddingSecBottom] = useState(false);
   const [novaSecNome,   setNovaSecNome]   = useState('');
   const [undo,          setUndo]          = useState(null);
+  const [smartView,     setSmartView]     = useState(null); // 'todas' | 'hoje' | 'proximos7' | null
   const [listModal,     setListModal]     = useState(null);
   const [showEtiqMgr,   setShowEtiqMgr]  = useState(false);
   const [novaEtiqNome,  setNovaEtiqNome]  = useState('');
@@ -71,6 +72,21 @@ export default function Anotacoes() {
 
   const grupoObj = grupos.find(g => g.id === grupoAtivo) || grupos[0] || null;
   const secoes   = grupoObj?.secoes || [];
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const in7Str   = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const smartTasks = smartView === 'todas'
+    ? tarefas.filter(t => !t.concluido)
+    : smartView === 'hoje'
+    ? tarefas.filter(t => !t.concluido && t.vencimento === todayStr)
+    : smartView === 'proximos7'
+    ? tarefas.filter(t => !t.concluido && t.vencimento >= todayStr && t.vencimento <= in7Str)
+    : [];
+  const SMART_VIEWS = [
+    { id: 'todas',      label: 'Todas',          count: tarefas.filter(t => !t.concluido).length },
+    { id: 'hoje',       label: 'Hoje',           count: tarefas.filter(t => !t.concluido && t.vencimento === todayStr).length },
+    { id: 'proximos7',  label: 'Próximos 7 dias', count: tarefas.filter(t => !t.concluido && t.vencimento >= todayStr && t.vencimento <= in7Str).length },
+  ];
 
   // ── Task helpers ────────────────────────────────────────────────
   const updateTarefa = (id, fields) =>
@@ -199,36 +215,38 @@ export default function Anotacoes() {
     const tasks      = daSecao(secao.id);
 
     return (
-      <div key={secao.id} className="mt-3">
-        <div className="flex items-center gap-1 group/sec py-1">
+      <div key={secao.id} className="mt-5">
+        {/* TickTick-style section header: NAME ─────── count [actions] */}
+        <div className="flex items-center gap-2 group/sec mb-1">
           <button onClick={() => setSecoesColl(p => ({ ...p, [secao.id]: !p[secao.id] }))}
-            className="flex items-center gap-1.5 flex-1 min-w-0 text-left">
+            className="flex-shrink-0 text-white/30 hover:text-white/60 transition">
             <svg viewBox="0 0 20 20" fill="currentColor"
-              className={`w-3 h-3 text-white/35 flex-shrink-0 transition-transform ${collapsed ? '-rotate-90' : ''}`}>
+              className={`w-3 h-3 transition-transform ${collapsed ? '-rotate-90' : ''}`}>
               <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd"/>
             </svg>
-            {editSecaoId === secao.id ? (
-              <input autoFocus value={editSecaoNome}
-                onChange={e => setEditSecaoNome(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') saveSecao(secao.id); if (e.key === 'Escape') setEditSecaoId(null); }}
-                onBlur={() => saveSecao(secao.id)}
-                onClick={e => e.stopPropagation()}
-                className="bg-transparent text-white text-xs font-bold uppercase tracking-wider outline-none border-b border-white/30 flex-1 pb-px" />
-            ) : (
-              <span className="text-white/70 text-xs font-bold uppercase tracking-wider truncate">{secao.nome}</span>
-            )}
-            {tasks.length > 0 && !editSecaoId && (
-              <span className="text-white/25 text-xs flex-shrink-0">{tasks.length}</span>
-            )}
           </button>
-          <div className="flex items-center gap-0.5 opacity-0 group-hover/sec:opacity-100 transition">
+          {editSecaoId === secao.id ? (
+            <input autoFocus value={editSecaoNome}
+              onChange={e => setEditSecaoNome(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') saveSecao(secao.id); if (e.key === 'Escape') setEditSecaoId(null); }}
+              onBlur={() => saveSecao(secao.id)}
+              className="bg-transparent text-white text-xs font-bold uppercase tracking-wider outline-none border-b border-white/30 pb-px w-32" />
+          ) : (
+            <span className="text-white/55 text-xs font-bold uppercase tracking-wider flex-shrink-0">{secao.nome}</span>
+          )}
+          {/* Line extending to the right — the TickTick signature */}
+          <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.08)' }} />
+          {tasks.length > 0 && !editSecaoId && (
+            <span className="text-white/25 text-xs flex-shrink-0 font-medium">{tasks.length}</span>
+          )}
+          <div className="flex items-center gap-0.5 opacity-0 group-hover/sec:opacity-100 transition flex-shrink-0">
             <button onClick={() => { setAddingIn(secao.id); setNovaTexto(''); }}
-              className="w-6 h-6 rounded flex items-center justify-center text-white/35 hover:text-white/70 hover:bg-white/5 transition text-base leading-none">
+              className="w-5 h-5 rounded flex items-center justify-center text-white/35 hover:text-white/70 hover:bg-white/5 transition text-sm leading-none">
               +
             </button>
             <button onClick={e => openSecaoMenu(e, secao, index)}
-              className="w-6 h-6 rounded flex items-center justify-center text-white/35 hover:text-white/70 hover:bg-white/5 transition">
-              <svg viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+              className="w-5 h-5 rounded flex items-center justify-center text-white/35 hover:text-white/70 hover:bg-white/5 transition">
+              <svg viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
                 <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z"/>
               </svg>
             </button>
@@ -271,37 +289,60 @@ export default function Anotacoes() {
     <div className="flex flex-col md:flex-row h-[calc(100vh-112px)] md:h-[calc(100vh-0px)] overflow-hidden animate-fade-in">
 
       {/* ── Sidebar desktop ─────────────────────────────────────── */}
-      <div className="hidden md:flex w-48 flex-shrink-0 flex-col border-r py-4 overflow-y-auto"
-        style={{ background: 'rgba(34,197,94,0.04)', borderColor: 'rgba(34,197,94,0.12)' }}>
-        <p className="text-text-3 text-[9px] font-bold uppercase tracking-widest px-4 mb-1">Listas</p>
+      <div className="hidden md:flex w-52 flex-shrink-0 flex-col border-r overflow-y-auto"
+        style={{ background: 'rgba(10,15,30,0.6)', borderColor: 'rgba(255,255,255,0.07)' }}>
+
+        {/* Smart views */}
+        <div className="pt-4 pb-1">
+          {SMART_VIEWS.map(sv => {
+            const active = smartView === sv.id;
+            return (
+              <button key={sv.id}
+                onClick={() => { setSmartView(sv.id); setGrupoAtivo(null); }}
+                className="w-full flex items-center justify-between px-4 py-2 text-left transition-all group"
+                style={active ? { background: 'rgba(34,197,94,0.1)', borderLeft: '2px solid #22c55e' } : { borderLeft: '2px solid transparent' }}>
+                <span className={`text-sm ${active ? 'text-white font-semibold' : 'text-white/55 hover:text-white/80'} transition`}>{sv.label}</span>
+                {sv.count > 0 && <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${active ? 'text-accent' : 'text-white/30'}`}>{sv.count}</span>}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Divider */}
+        <div className="mx-4 my-2 h-px" style={{ background: 'rgba(255,255,255,0.07)' }} />
+
+        {/* Lists */}
+        <p className="text-white/25 text-[9px] font-bold uppercase tracking-widest px-4 mb-1">Listas</p>
         {grupos.map(g => {
           const count  = tarefas.filter(t => t.grupo === g.id && !t.concluido).length;
-          const active = grupoAtivo === g.id;
+          const active = !smartView && grupoAtivo === g.id;
           return (
             <div key={g.id}
               className="w-full flex items-center justify-between px-3 py-2 text-left group transition-all cursor-pointer"
-              style={active ? { background: 'rgba(34,197,94,0.12)', borderLeft: `2px solid ${g.cor}` } : { borderLeft: '2px solid transparent' }}
-              onClick={() => setGrupoAtivo(g.id)}>
+              style={active ? { background: 'rgba(34,197,94,0.1)', borderLeft: `2px solid ${g.cor}` } : { borderLeft: '2px solid transparent' }}
+              onClick={() => { setSmartView(null); setGrupoAtivo(g.id); }}>
               <div className="flex items-center gap-2 min-w-0">
                 <span className="flex-shrink-0" style={{ color: g.cor }}><AppIcon id={g.emoji} className="w-4 h-4" /></span>
-                <span className={`text-sm truncate ${active ? 'text-text-1 font-semibold' : 'text-text-2'}`}>{g.nome}</span>
+                <span className={`text-sm truncate ${active ? 'text-white font-semibold' : 'text-white/60'}`}>{g.nome}</span>
               </div>
               <div className="flex items-center gap-1 flex-shrink-0">
                 {count > 0 && <span className="text-[10px] font-bold" style={{ color: g.cor }}>{count}</span>}
                 <button onClick={e => { e.stopPropagation(); setListModal({ modo: 'edit', grupo: g }); }}
-                  className="opacity-0 group-hover:opacity-100 text-text-3 hover:text-accent text-xs w-4 h-4 flex items-center justify-center transition">✎</button>
+                  className="opacity-0 group-hover:opacity-100 text-white/25 hover:text-accent text-xs w-4 h-4 flex items-center justify-center transition">✎</button>
                 <button onClick={e => { e.stopPropagation(); removeGrupo(g.id); }}
-                  className="opacity-0 group-hover:opacity-100 text-text-3 hover:text-expense text-xs w-4 h-4 flex items-center justify-center transition">×</button>
+                  className="opacity-0 group-hover:opacity-100 text-white/25 hover:text-expense text-xs w-4 h-4 flex items-center justify-center transition">×</button>
               </div>
             </div>
           );
         })}
         <button onClick={() => setListModal({ modo: 'add' })}
-          className="mx-3 mt-1 py-1.5 text-xs text-text-3 hover:text-accent hover:bg-white/5 transition text-left px-2 rounded-lg">
+          className="mx-3 mt-1 py-1.5 text-xs text-white/30 hover:text-accent hover:bg-white/5 transition text-left px-2 rounded-lg">
           + Nova lista
         </button>
-        <div className="mt-auto px-4 pb-2 pt-4 border-t text-text-3 text-[10px]"
-          style={{ borderColor: 'rgba(34,197,94,0.1)' }}>
+
+        {/* Footer */}
+        <div className="mt-auto px-4 pb-3 pt-4 border-t text-white/20 text-[10px]"
+          style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
           {tarefas.filter(t => t.concluido).length} concluídos
         </div>
       </div>
@@ -333,7 +374,50 @@ export default function Anotacoes() {
 
       {/* ── Main ────────────────────────────────────────────────── */}
       <div className="flex-1 flex overflow-hidden">
-        {grupos.length === 0 ? (
+        {smartView ? (
+          // ── Smart view content (Todas / Hoje / Próximos 7 dias) ──
+          <>
+            <div className={`flex-1 flex flex-col overflow-hidden ${tarefaObj ? 'hidden md:flex' : 'flex'}`}>
+              <div className="px-4 md:px-5 py-3 flex items-center gap-2 flex-shrink-0"
+                style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <h2 className="text-white font-bold text-base">
+                  {SMART_VIEWS.find(s => s.id === smartView)?.label}
+                </h2>
+                <span className="text-white/30 text-sm">{smartTasks.length}</span>
+              </div>
+              <div className="flex-1 overflow-y-auto px-4 md:px-5 py-3">
+                {smartTasks.length === 0 ? (
+                  <p className="text-white/25 text-sm text-center pt-12">Nenhuma tarefa</p>
+                ) : (
+                  grupos.map(g => {
+                    const gTasks = smartTasks.filter(t => t.grupo === g.id);
+                    if (gTasks.length === 0) return null;
+                    return (
+                      <div key={g.id} className="mt-5 first:mt-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <AppIcon id={g.emoji} className="w-3.5 h-3.5 flex-shrink-0" style={{ color: g.cor }} />
+                          <span className="text-xs font-bold uppercase tracking-wider flex-shrink-0" style={{ color: g.cor }}>{g.nome}</span>
+                          <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.08)' }} />
+                          <span className="text-white/25 text-xs flex-shrink-0">{gTasks.length}</span>
+                        </div>
+                        {gTasks.map(t => (
+                          <TarefaRow key={t.id} tarefa={t} isSelected={tarefaDetalhe === t.id}
+                            onToggle={toggleConcluido} onClick={() => setTarefaDetalhe(t.id === tarefaDetalhe ? null : t.id)} />
+                        ))}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+            {tarefaObj && (
+              <TaskDetailPanel tarefa={tarefaObj} onClose={() => setTarefaDetalhe(null)}
+                onUpdate={updateTarefa} onRemove={removeTarefa} onToggle={toggleConcluido}
+                grupos={grupos} grupoAtivo={grupoAtivo}
+                onMoveToGrupo={(tId, gId) => { updateTarefa(tId, { grupo: gId, secao: null }); setTarefaDetalhe(null); }} />
+            )}
+          </>
+        ) : grupos.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-text-3 gap-4 p-6">
             <AppIcon id="clipboard-list" className="w-12 h-12 opacity-30" />
             <p className="text-sm font-medium text-text-2">Nenhuma lista criada ainda</p>
