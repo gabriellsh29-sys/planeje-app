@@ -72,8 +72,16 @@ export default function LoginPage() {
       if (err) setError('E-mail ou senha incorretos');
     } else {
       const { error: err } = await signUp(email.trim(), password, nome.trim());
-      if (err) setError(err.message);
-      else setInfo('Conta criada! Verifique seu e-mail para confirmar o cadastro.');
+      if (err) {
+        if (err.message?.toLowerCase().includes('sending confirmation') || err.message?.toLowerCase().includes('email'))
+          setError('Erro ao enviar e-mail de confirmação. Tente novamente em alguns minutos ou entre com Google.');
+        else if (err.message?.toLowerCase().includes('already registered') || err.message?.toLowerCase().includes('already been registered'))
+          setError('Este e-mail já está cadastrado. Clique em "Entrar".');
+        else
+          setError('Não foi possível criar a conta. Tente novamente.');
+      } else {
+        setInfo('Conta criada! Verifique seu e-mail para confirmar o cadastro.');
+      }
     }
     setLoading(false);
   };
