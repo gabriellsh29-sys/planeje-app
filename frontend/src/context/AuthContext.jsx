@@ -47,10 +47,13 @@ export function AuthProvider({ children }) {
       setSyncing(true);
       // Fail-closed: até o perfil ser confirmado, acesso permanece negado.
       setPerfilStatus('loading');
-      // Só limpa local ao trocar de usuário na mesma sessão (ex: logout/login de outra conta no mesmo device)
-      if (prevUserId && prevUserId !== userId) {
+      // Limpa dados locais ao trocar de usuário — tanto na mesma sessão
+      // quanto entre sessões diferentes no mesmo dispositivo.
+      const storedUid = localStorage.getItem('planeje_auth_uid');
+      if (storedUid && storedUid !== userId) {
         clearLocalData();
       }
+      localStorage.setItem('planeje_auth_uid', userId);
       // startCloudSync é chamado imediatamente — não pode depender de queries que podem falhar
       startCloudSync(userId);
 
