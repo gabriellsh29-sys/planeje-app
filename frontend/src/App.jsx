@@ -159,7 +159,7 @@ function Dashboard() {
 
         {/* Mobile top bar */}
         <div className="md:hidden sticky top-0 z-20 flex flex-col flex-shrink-0"
-          style={{ background: 'rgba(15,23,42,0.92)', backdropFilter: 'blur(16px)', borderBottom: '1px solid rgba(34,197,94,0.12)' }}>
+          style={{ background: 'rgba(15,23,42,0.92)', backdropFilter: 'blur(16px)', borderBottom: '1px solid rgba(34,197,94,0.12)', paddingTop: 'env(safe-area-inset-top)' }}>
           <div className="flex items-center justify-between px-4 py-2.5">
             <span className="text-text-1 font-bold text-base">{PAGE_TITLES[page]}</span>
             <div className="flex items-center gap-1.5">
