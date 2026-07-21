@@ -210,7 +210,7 @@ async function archiveCurrentCloud(userId) {
 async function pruneHistory(userId, keep = 10) {
   try {
     const { data } = await supabase.from('user_data_history')
-      .select('id').eq('user_id', userId).order('created_at', { ascending: false });
+      .select('id').eq('user_id', userId).order('saved_at', { ascending: false });
     if (!data || data.length <= keep) return;
     const toDelete = data.slice(keep).map(r => r.id);
     if (toDelete.length) {
@@ -256,6 +256,11 @@ export async function restoreFromBackup(userId, historyId) {
 async function pushToCloud(userId) {
   const snap = snapshotLocal();
   if (Object.keys(snap).length === 0) return;
+  const totalChars = Object.values(snap).reduce((acc, v) => acc + (v?.length ?? 0), 0);
+  if (totalChars < 100) {
+    console.warn('[cloudSync] pushToCloud cancelado — dados suspeitos (', totalChars, 'chars), abortando push final');
+    return;
+  }
   try { await archiveCurrentCloud(userId); } catch (err) {
     console.error('[cloudSync] pushToCloud/archive falhou:', err?.message ?? err);
   }
