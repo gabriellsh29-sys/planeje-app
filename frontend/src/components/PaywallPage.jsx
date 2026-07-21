@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
 const PRICE_MENSAL = import.meta.env.VITE_STRIPE_PRICE_MENSAL;
-const PRICE_ANUAL = import.meta.env.VITE_STRIPE_PRICE_ANUAL;
+const PRICE_ANUAL = import.meta.env.VITE_STRIPE_PRECOS_ANUAL;
 
 export default function PaywallPage() {
   const { logout, user, session } = useAuth();

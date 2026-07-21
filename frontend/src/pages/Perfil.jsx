@@ -16,7 +16,7 @@ function detectarNomeDispositivo() {
 }
 
 const PRICE_MENSAL = import.meta.env.VITE_STRIPE_PRICE_MENSAL;
-const PRICE_ANUAL = import.meta.env.VITE_STRIPE_PRICE_ANUAL;
+const PRICE_ANUAL = import.meta.env.VITE_STRIPE_PRECOS_ANUAL;
 
 const TABS = [
   { id: 'dados', label: 'Dados' },
