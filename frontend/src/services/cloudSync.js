@@ -269,8 +269,16 @@ async function pushToCloud(userId) {
 }
 
 async function lightPushToCloud(userId) {
+  // Nunca empurra antes do pull inicial terminar — local pode ter arrays vazios do React mount
+  if (!pullCompleted) return;
   const snap = snapshotLocal();
   if (Object.keys(snap).length === 0) return;
+  // Não empurra se todos os valores são arrays vazios (estado inicial do React antes de qualquer dado)
+  const totalChars = Object.values(snap).reduce((acc, v) => acc + (v?.length ?? 0), 0);
+  if (totalChars < 100) {
+    console.warn('[cloudSync] push cancelado — dados locais suspeitos (', totalChars, 'chars), aguardando dados reais');
+    return;
+  }
   const ts = new Date().toISOString();
   try {
     await runResilient(() => supabase.from('user_data')
@@ -442,26 +450,18 @@ export async function pullFromCloud(userId) {
     }
   } catch (err) {
     if (handleSyncError(err) === 'stop') { pullCompleted = true; haltSyncCycle(); return; }
+    // Pull falhou após retries (erro de rede, etc.) — libera o guard para não bloquear
+    // pushes futuros do usuário, mas NÃO empurra nada: o local pode estar vazio
+    // (arrays vazios do React mount) e sobrescreveria dados bons na nuvem.
+    console.error('[cloudSync] pull falhou após retries — abortando push inicial para proteger dados da nuvem');
+    pullCompleted = true;
+    return;
   }
-  // Libera pushes agora que o pull terminou — qualquer write local antes deste ponto
-  // era estado inicial do React (arrays vazios) e não deve sobrescrever a nuvem.
+  // Libera pushes agora que o pull terminou com sucesso.
   pullCompleted = true;
-  // Só empurra de volta se o localStorage pertence a este usuário.
-  // Evita que dados de outro usuário (estado contaminado) sejam gravados
-  // no Supabase sob o ID do usuário que acabou de entrar.
-  const storedUid = localStorage.getItem('planeje_auth_uid');
-  if (storedUid !== userId) return;
-  try {
-    const snap = snapshotLocal();
-    if (Object.keys(snap).length > 0) {
-      await archiveCurrentCloud(userId);
-      await runResilient(() => supabase.from('user_data')
-        .upsert({ user_id: userId, data: snap, updated_at: new Date().toISOString() }, { onConflict: 'user_id' }));
-      console.log('[cloudSync] push concluído —', Object.keys(snap).length, 'chaves');
-    }
-  } catch (err) {
-    if (handleSyncError(err) === 'stop') haltSyncCycle();
-  }
+  // Push pós-pull removido: o polling de 5s (autoSyncCycle) já empurra dados locais
+  // de forma segura. O push imediato aqui era desnecessário e criava janela de perda
+  // de dados quando o estado local estava incompleto.
 }
 
 // Cria (ou recria) o canal de Realtime e monitora sua saúde: em CHANNEL_ERROR/
