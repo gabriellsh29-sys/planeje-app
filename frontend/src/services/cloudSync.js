@@ -29,6 +29,7 @@ let onlineCleanup     = null;   // remove o listener de 'online'
 let archiveInterval   = null;   // snapshot automático a cada 30 min
 let lastAppliedCloudTs = null;  // dedup: último updated_at da nuvem já aplicado
 let pullCompleted     = false;  // guarda: bloqueia pushes até o pull inicial terminar
+let syncGeneration    = 0;      // invalida stopCloudSync em curso quando nova sessão começa
 
 // ---------------------------------------------------------------------------
 // Utilitários de resiliência
@@ -488,8 +489,23 @@ export function setupRealtime(userId) {
 }
 
 export function startCloudSync(userId) {
+  // Incrementa geração — invalida qualquer stopCloudSync em curso (logout race)
+  syncGeneration++;
   currentUserId = userId;
-  if (unpatch) return;
+
+  // Se a sessão anterior ainda está ativa (troca rápida de conta), desmonta tudo agora
+  // em vez de retornar cedo. O stopCloudSync em curso vai detectar a geração mudou e abortar.
+  if (unpatch) { unpatch(); unpatch = null; }
+  if (realtimeChannel) { try { supabase.removeChannel(realtimeChannel); } catch {} realtimeChannel = null; }
+  if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+  if (pushTimer) { clearTimeout(pushTimer); pushTimer = null; }
+  if (visibilityCleanup) { visibilityCleanup(); visibilityCleanup = null; }
+  if (onlineCleanup) { onlineCleanup(); onlineCleanup = null; }
+  if (archiveInterval) { clearInterval(archiveInterval); archiveInterval = null; }
+  if (bc) { try { bc.close(); } catch {} bc = null; }
+  lastAppliedCloudTs = null;
+  pullCompleted = false;
+  dirtyKeys.clear();
 
   localStorage.setItem = (key, value) => {
     if (DATA_KEYS.includes(key)) {
@@ -559,12 +575,21 @@ export function startCloudSync(userId) {
 }
 
 export async function stopCloudSync(finalPush = false) {
+  // Captura a geração antes do await — se startCloudSync for chamado por uma nova
+  // sessão enquanto esperamos o push final, detectamos e abortamos o cleanup.
+  const myGen = syncGeneration;
+
   if (pushTimer) { clearTimeout(pushTimer); pushTimer = null; }
   // Push final limitado a 5s: se travar (rede/celular bloqueado), o logout segue
   // mesmo assim — nunca bloqueia o usuário indefinidamente.
   if (finalPush && currentUserId) {
     try { await withTimeout(pushToCloud(currentUserId), 5000); }
     catch (err) { console.error('[cloudSync] push final falhou/timeout — prosseguindo com logout:', err?.message ?? err); }
+  }
+  // Se uma nova sessão começou enquanto fazíamos o push final, não zeramos o estado dela.
+  if (myGen !== syncGeneration) {
+    console.warn('[cloudSync] stopCloudSync superseded por nova sessão — abortando cleanup');
+    return;
   }
   if (unpatch) { unpatch(); unpatch = null; }
   if (realtimeChannel) { supabase.removeChannel(realtimeChannel); realtimeChannel = null; }
