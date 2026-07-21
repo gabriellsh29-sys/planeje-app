@@ -447,6 +447,11 @@ export async function pullFromCloud(userId) {
       lastAppliedCloudTs = row.updated_at || lastAppliedCloudTs;
       applyCloudData(row.data);
       console.log('[cloudSync] pull concluído');
+    } else {
+      // Nuvem vazia para este usuário: qualquer dado local é de outra conta (sessão
+      // anterior com bug) — limpa para não mostrar dados errados.
+      clearLocalData();
+      console.log('[cloudSync] nuvem vazia — localStorage limpo para garantir estado neutro');
     }
   } catch (err) {
     if (handleSyncError(err) === 'stop') { pullCompleted = true; haltSyncCycle(); return; }
