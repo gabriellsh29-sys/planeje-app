@@ -219,7 +219,7 @@ function Dashboard() {
 }
 
 function AppContent() {
-  const { user, loading, acessoLiberado, perfilStatus, retryPerfil, isRecovery, refreshPerfil } = useAuth();
+  const { user, loading, acessoLiberado, perfilStatus, retryPerfil, isRecovery, refreshPerfil, logout } = useAuth();
 
   const [waitingPayment, setWaitingPayment] = useState(() =>
     new URLSearchParams(window.location.search).get('pagamento') === 'sucesso'
@@ -274,6 +274,12 @@ function AppContent() {
             className="px-6 py-2.5 rounded-xl text-sm font-semibold transition-all active:scale-95"
             style={{ background: 'linear-gradient(135deg,#22c55e,#16a34a)', color: '#07090f' }}>
             Tentar novamente
+          </button>
+          <button
+            onClick={logout}
+            className="text-sm underline mt-1"
+            style={{ color: 'rgba(255,255,255,0.35)' }}>
+            Sair da conta
           </button>
         </div>
       </div>
