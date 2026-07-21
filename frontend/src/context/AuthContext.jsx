@@ -40,8 +40,14 @@ export function AuthProvider({ children }) {
       stopCloudSync(true)
         .catch(() => {})
         .finally(() => {
-          clearLocalData();
-          localStorage.removeItem('planeje_auth_uid');
+          // Guard: só limpa se nenhum novo usuário logou durante o stopCloudSync (até 5s).
+          // Se outro usuário já entrou, o login path dele já chamou clearLocalData —
+          // limpar aqui sobrescreveria os dados do novo usuário.
+          const currentUid = localStorage.getItem('planeje_auth_uid');
+          if (!currentUid || currentUid === prevUserId) {
+            clearLocalData();
+            localStorage.removeItem('planeje_auth_uid');
+          }
         });
       setPerfil(null);
       setPerfilStatus('loading');
