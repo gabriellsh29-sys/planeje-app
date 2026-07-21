@@ -28,6 +28,7 @@ let bc                = null;   // BroadcastChannel: sincroniza abas do mesmo na
 let onlineCleanup     = null;   // remove o listener de 'online'
 let archiveInterval   = null;   // snapshot automático a cada 30 min
 let lastAppliedCloudTs = null;  // dedup: último updated_at da nuvem já aplicado
+let pullCompleted     = false;  // guarda: bloqueia pushes até o pull inicial terminar
 
 // ---------------------------------------------------------------------------
 // Utilitários de resiliência
@@ -283,6 +284,7 @@ async function lightPushToCloud(userId) {
 }
 
 function schedulePush(userId) {
+  if (!pullCompleted) return; // não empurra antes do pull inicial terminar
   if (pushTimer) clearTimeout(pushTimer);
   pushTimer = setTimeout(() => lightPushToCloud(userId), 500);
 }
@@ -438,8 +440,11 @@ export async function pullFromCloud(userId) {
       console.log('[cloudSync] pull concluído');
     }
   } catch (err) {
-    if (handleSyncError(err) === 'stop') { haltSyncCycle(); return; }
+    if (handleSyncError(err) === 'stop') { pullCompleted = true; haltSyncCycle(); return; }
   }
+  // Libera pushes agora que o pull terminou — qualquer write local antes deste ponto
+  // era estado inicial do React (arrays vazios) e não deve sobrescrever a nuvem.
+  pullCompleted = true;
   // Só empurra de volta se o localStorage pertence a este usuário.
   // Evita que dados de outro usuário (estado contaminado) sejam gravados
   // no Supabase sob o ID do usuário que acabou de entrar.
@@ -569,6 +574,7 @@ export async function stopCloudSync(finalPush = false) {
   if (onlineCleanup) { onlineCleanup(); onlineCleanup = null; }
   if (archiveInterval) { clearInterval(archiveInterval); archiveInterval = null; }
   lastAppliedCloudTs = null;
+  pullCompleted      = false;
   dirtyKeys.clear();
   currentUserId = null;
 }
