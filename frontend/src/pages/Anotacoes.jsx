@@ -320,7 +320,7 @@ export default function Anotacoes() {
         </div>
 
         {!collapsed && (
-          <div onDragOver={e => e.preventDefault()} onDrop={e => handleContainerDrop(e, secao.id)}>
+          <div style={{ minHeight: 28 }} onDragOver={e => e.preventDefault()} onDrop={e => handleContainerDrop(e, secao.id)}>
             {addingIn === secao.id && <InlineAdd secaoId={secao.id} />}
             {tasks.map(t => (
               <TarefaRow key={t.id} tarefa={t} isSelected={tarefaDetalhe === t.id}
@@ -714,12 +714,8 @@ function TarefaRow({ tarefa, isSelected, onToggle, onClick, onRemove, draggable,
         <p className={`text-sm leading-snug select-none ${tarefa.concluido ? 'text-white/25 line-through' : 'text-white/85'}`}>
           {tarefa.texto}
         </p>
-        {(tarefa.vencimento || (tarefa.descricao && tarefa.descricao.trim())) && !tarefa.concluido && (
-          <p className="text-[11px] text-white/30 mt-0.5">
-            {tarefa.vencimento && fmtD(tarefa.vencimento)}
-            {tarefa.vencimento && tarefa.descricao?.trim() && ' · '}
-            {tarefa.descricao?.trim() && <span className="italic">nota</span>}
-          </p>
+        {tarefa.vencimento && !tarefa.concluido && (
+          <p className="text-[11px] text-white/30 mt-0.5">{fmtD(tarefa.vencimento)}</p>
         )}
       </div>
       {subs.length > 0 && (
