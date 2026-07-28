@@ -230,6 +230,17 @@ export default function Receitas({ month, year }) {
     window.addEventListener('planeje-sync', reload);
     return () => window.removeEventListener('planeje-sync', reload);
   }, []);
+
+  // Anos disponíveis no seletor: baseados nos dados reais cadastrados (não numa
+  // janela flutuante ±N que "deriva" e pode deixar o ano atual inalcançável.
+  const anosDisponiveis = React.useMemo(() => {
+    const anos = new Set([new Date().getFullYear(), ly]);
+    receitas.forEach(r => {
+      const dateStr = r.data || r.recebimentoData;
+      if (dateStr) anos.add(Number(dateStr.split('-')[0]));
+    });
+    return [...anos].sort((a, b) => a - b);
+  }, [receitas, ly]);
   const [showForm,    setShowForm]    = useState(false);
   const [form,        setForm]        = useState(emptyForm());
   const [editId,      setEditId]      = useState(null);
@@ -430,7 +441,7 @@ export default function Receitas({ month, year }) {
         <select value={ly} onChange={e => setLy(Number(e.target.value))}
           className="rounded-xl px-3 py-2 text-xs font-semibold text-white outline-none cursor-pointer [color-scheme:dark]"
           style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
-          {[ly-2,ly-1,ly,ly+1,ly+2].map(yr => <option key={yr} value={yr}>{yr}</option>)}
+          {anosDisponiveis.map(yr => <option key={yr} value={yr}>{yr}</option>)}
         </select>
       </div>
 

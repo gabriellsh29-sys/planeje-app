@@ -3,12 +3,12 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelL
 
 const fmt = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
 
-// Cores do ranking de despesas: todas escuras o suficiente para texto branco
-// e sem tons de vermelho (que remetem a "negativo"/alerta).
-const BAR_COLORS = ['#b8860b','#16a34a','#2563eb','#7c3aed','#0891b2','#ea580c','#0d9488','#4338ca','#65a30d','#a16207'];
-
-// Cores das receitas: tons positivos (verde/dourado) da paleta do app.
-const INCOME_COLORS = ['#22c55e','#c9a84c','#34d399','#16a34a','#a3e635','#fbbf24','#10b981','#84cc16'];
+// Paleta categórica validada (contraste + separação para daltonismo) contra o
+// fundo real dos cards do app (#1e293b) — mesma ordem fixa nos dois rankings
+// para manter a identidade visual consistente entre Despesas e Receitas.
+const CATEGORICAL_COLORS = ['#3987e5','#d95926','#199e70','#c98500','#d55181','#008300','#9085e9','#e66767'];
+const BAR_COLORS = CATEGORICAL_COLORS;
+const INCOME_COLORS = CATEGORICAL_COLORS;
 
 function CenteredYAxisTick({ x, y, payload }) {
   if (!payload || payload.value == null) return null;

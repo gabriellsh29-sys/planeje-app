@@ -222,15 +222,16 @@ function DropdownSelect({ id, label, options, selected, onToggle, openDropdown, 
         <svg viewBox="0 0 20 20" fill="currentColor" className={`w-3 h-3 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`}><path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd"/></svg>
       </button>
       {isOpen && (
-        <div className="absolute top-full left-0 mt-1 z-50 rounded-xl py-1 min-w-[200px]"
-          style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 16px 40px rgba(0,0,0,0.6)' }}>
-          <p className="px-3 pt-2 pb-1 text-[9px] uppercase tracking-widest font-bold text-text-3">{label}</p>
+        <div className="absolute top-full left-0 mt-1 z-50 rounded-xl py-1 min-w-[200px] flex flex-col"
+          style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 16px 40px rgba(0,0,0,0.6)', maxHeight: 260 }}>
+          <p className="px-3 pt-2 pb-1 text-[9px] uppercase tracking-widest font-bold text-text-3 flex-shrink-0">{label}</p>
           {selected.length > 0 && (
             <button onClick={() => onToggle(null)}
-              className="w-full text-left px-3 py-1.5 text-[11px] text-expense hover:bg-white/5 transition">
+              className="w-full text-left px-3 py-1.5 text-[11px] text-expense hover:bg-white/5 transition flex-shrink-0">
               Limpar seleção
             </button>
           )}
+          <div className="overflow-y-auto">
           {options.map(opt => (
             <label key={opt.val} onMouseDown={e => { e.preventDefault(); onToggle(opt.val); }}
               className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-white/5 transition">
@@ -247,6 +248,7 @@ function DropdownSelect({ id, label, options, selected, onToggle, openDropdown, 
               <span className={`text-[12px] ${selected.includes(opt.val) ? 'text-text-1 font-medium' : 'text-text-2'}`}>{opt.label}</span>
             </label>
           ))}
+          </div>
         </div>
       )}
     </div>
@@ -567,6 +569,17 @@ export default function Dividas({ month, year }) {
 
   const dividasPeriodo = filtrarPeriodo(dividas, m, y);
 
+  // Anos disponíveis no seletor: baseados nos dados reais cadastrados (não numa
+  // janela flutuante ±N que "deriva" e pode deixar o ano atual inalcançável.
+  const anosDisponiveis = React.useMemo(() => {
+    const anos = new Set([new Date().getFullYear(), y]);
+    dividas.forEach(d => {
+      const dateStr = d.vencimento || d.pagamentoData;
+      if (dateStr) anos.add(Number(dateStr.split('-')[0]));
+    });
+    return [...anos].sort((a, b) => a - b);
+  }, [dividas, y]);
+
   const today = new Date().toISOString().split('T')[0];
   const in7days = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
 
@@ -695,7 +708,7 @@ export default function Dividas({ month, year }) {
               <select value={localYear} onChange={e => setLocalYear(Number(e.target.value))}
                 className="rounded-xl px-3 py-2 text-xs font-semibold text-text-2 outline-none cursor-pointer"
                 style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                {[localYear-2,localYear-1,localYear,localYear+1,localYear+2].map(yr => <option key={yr} value={yr}>{yr}</option>)}
+                {anosDisponiveis.map(yr => <option key={yr} value={yr}>{yr}</option>)}
               </select>
 
               {/* Vencimento dropdown */}
