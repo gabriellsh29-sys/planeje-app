@@ -1,19 +1,44 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
+const MARGIN = 8;
+const MAX_H  = 260;
+
 export default function SelectDown({ value, onChange, options, className, style }) {
   const [open, setOpen] = useState(false);
-  const [pos, setPos]   = useState({ top: 0, left: 0, width: 0 });
+  const [pos, setPos]   = useState({ top: 0, left: 0, width: 0, maxHeight: MAX_H, dropUp: false });
   const triggerRef  = useRef(null);
   const dropdownRef = useRef(null);
 
+  const reposition = () => {
+    if (!triggerRef.current) return;
+    const r = triggerRef.current.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - r.bottom - MARGIN;
+    const spaceAbove = r.top - MARGIN;
+    const dropUp = spaceBelow < 160 && spaceAbove > spaceBelow;
+    const maxHeight = Math.min(MAX_H, Math.max(120, dropUp ? spaceAbove : spaceBelow));
+    setPos({
+      top: dropUp ? undefined : r.bottom + 4,
+      bottom: dropUp ? window.innerHeight - r.top + 4 : undefined,
+      left: r.left, width: r.width, maxHeight, dropUp,
+    });
+  };
+
   const toggle = () => {
-    if (!open && triggerRef.current) {
-      const r = triggerRef.current.getBoundingClientRect();
-      setPos({ top: r.bottom + 4, left: r.left, width: r.width });
-    }
+    if (!open) reposition();
     setOpen(o => !o);
   };
+
+  useEffect(() => {
+    if (!open) return;
+    const onScrollResize = () => reposition();
+    window.addEventListener('resize', onScrollResize);
+    window.addEventListener('scroll', onScrollResize, true);
+    return () => {
+      window.removeEventListener('resize', onScrollResize);
+      window.removeEventListener('scroll', onScrollResize, true);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -46,13 +71,14 @@ export default function SelectDown({ value, onChange, options, className, style 
           style={{
             position: 'fixed',
             top: pos.top,
+            bottom: pos.bottom,
             left: pos.left,
             width: pos.width,
             zIndex: 9999,
             background: '#1e293b',
             border: '1px solid rgba(255,255,255,0.1)',
             borderRadius: '0.75rem',
-            maxHeight: 220,
+            maxHeight: pos.maxHeight,
             overflowY: 'auto',
             boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
           }}>

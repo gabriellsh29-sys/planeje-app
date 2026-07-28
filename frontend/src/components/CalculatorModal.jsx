@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 const KEYS = [
   ['C', '%', '⌫', '÷'],
@@ -100,9 +101,9 @@ export default function CalculatorModal({ initialValue, onClose, onConfirm }) {
 
   const exprFontSize = expr.length > 18 ? 16 : expr.length > 12 ? 22 : 28;
 
-  return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div className="absolute inset-0 bg-black/75" style={{ backdropFilter: 'blur(8px)' }} />
+  return createPortal(
+    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="absolute inset-0 bg-black/75" style={{ backdropFilter: 'blur(8px)' }} onClick={onClose} />
       <div
         className="relative w-full max-w-xs rounded-[1.5rem] shadow-2xl animate-scale-in overflow-hidden p-4"
         style={{ background: '#0d1117', border: '1px solid rgba(255,255,255,0.08)' }}
@@ -150,6 +151,7 @@ export default function CalculatorModal({ initialValue, onClose, onConfirm }) {
           })}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
