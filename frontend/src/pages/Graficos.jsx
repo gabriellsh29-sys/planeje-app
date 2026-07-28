@@ -34,6 +34,8 @@ function CenteredYAxisTick({ x, y, payload }) {
 
 const DIVIDA_KEY = 'financeiro_dividas';
 const RECEITA_KEY = 'financeiro_receitas';
+const CARTAO_KEY = 'planeje_cartoes';
+const FATURA_KEY = 'planeje_faturas';
 
 function parcelaValor(d) {
   if (d.recorrencia === 'parcelar' && d.totalParcelas > 1) return d.valor / d.totalParcelas;
@@ -129,6 +131,30 @@ function loadReceitas(month, year) {
   } catch { return []; }
 }
 
+// Fatura do cartão de crédito do mês — mesmo critério usado no Resumo, para
+// que "Cartão de Crédito" apareça também no ranking de despesas dos Gráficos.
+function loadFaturas(month, year) {
+  try {
+    const cartoes = JSON.parse(localStorage.getItem(CARTAO_KEY) || '[]');
+    const lancs = JSON.parse(localStorage.getItem(FATURA_KEY) || '[]');
+    return cartoes.map(c => {
+      const total = lancs.filter(l => l.cartaoId === c.id && l.mes === month && l.ano === year)
+        .reduce((s, l) => s + (l.valor / (l.parcelas || 1)), 0);
+      if (total <= 0) return null;
+      const mm = String(month).padStart(2, '0');
+      const dia = String(c.diaPagamento || 10).padStart(2, '0');
+      return {
+        id: 'fat_' + c.id,
+        type: 'expense',
+        description: `Fatura ${c.nome}`,
+        category: 'Cartão de Crédito',
+        amount: total,
+        date: `${year}-${mm}-${dia}`,
+      };
+    }).filter(Boolean);
+  } catch { return []; }
+}
+
 const tooltipStyle = {
   contentStyle: { background: '#0d1117', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, fontSize: 11, padding: '8px 12px' },
   labelStyle: { color: '#ffffff', marginBottom: 4 },
@@ -143,7 +169,7 @@ export default function Graficos({ month, year }) {
     return () => window.removeEventListener('planeje-sync', reload);
   }, []);
 
-  const transactions = useMemo(() => [...loadTransacoes(month, year), ...loadReceitas(month, year)], [month, year, syncVer]);
+  const transactions = useMemo(() => [...loadTransacoes(month, year), ...loadReceitas(month, year), ...loadFaturas(month, year)], [month, year, syncVer]);
   const expenseByCategory = useMemo(() => {
     const bycat = {};
     transactions.filter(t => t.type === 'expense').forEach(tx => {
