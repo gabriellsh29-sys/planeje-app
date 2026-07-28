@@ -154,7 +154,7 @@ function Dashboard() {
     <div className="flex min-h-screen" style={{ background: '#0f172a' }}>
       <Sidebar page={page} setPage={setPage} month={month} year={year} onPrev={prevMonth} onNext={nextMonth} onToday={goToToday} />
 
-      <main className="flex-1 flex flex-col overflow-hidden md:pl-0">
+      <main className="flex-1 flex flex-col overflow-hidden min-h-0 md:pl-0">
         <TrialBanner onClickPlanos={goToPerfil} />
 
         {/* Mobile top bar */}

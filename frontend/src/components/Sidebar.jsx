@@ -18,7 +18,7 @@ export default function Sidebar({ page, setPage, month, year, onPrev, onNext, on
   return (
     <>
       {/* ─── Desktop sidebar ─── */}
-      <aside className="hidden md:flex flex-col w-[220px] min-h-screen flex-shrink-0 relative"
+      <aside className="hidden md:flex flex-col w-[220px] h-screen sticky top-0 flex-shrink-0 relative"
         style={{
           background: 'linear-gradient(180deg, #1a2535 0%, #0f172a 100%)',
           borderRight: '1px solid rgba(34,197,94,0.12)',
