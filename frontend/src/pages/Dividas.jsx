@@ -356,9 +356,15 @@ export default function Dividas({ month, year }) {
   const [novaCategoria, setNovaCategoria] = useState('');
   const [showNovaCategoria, setShowNovaCategoria] = useState(false);
   const [efetivandoId, setEfetivandoId] = useState(null);
+  const [efetivandoMes, setEfetivandoMes] = useState(null);
+  const [efetivandoAno, setEfetivandoAno] = useState(null);
   const [efetivDate, setEfetivDate] = useState('');
   const [efetivValor, setEfetivValor] = useState('');
   const [detalheId, setDetalheId] = useState(null);
+  const [detalheMes, setDetalheMes] = useState(null);
+  const [detalheAno, setDetalheAno] = useState(null);
+  const [editMes, setEditMes] = useState(null);
+  const [editAno, setEditAno] = useState(null);
   const [pendingEdit, setPendingEdit] = useState(null);
 
   const updateForm = (patch) => setForm(f => ({ ...f, ...patch }));
@@ -403,7 +409,7 @@ export default function Dividas({ month, year }) {
       const original = dividas.find(d => d.id === editId);
       const isRecorrente = original && (original.recorrencia === 'fixa' || original.recorrencia === 'parcelar');
       if (isRecorrente) {
-        const atual = getCamposMes(original, m, y);
+        const atual = getCamposMes(original, editMes ?? m, editAno ?? y);
         const novoDia = novosCampos.vencimento ? novosCampos.vencimento.split('-')[2] : '';
         const mudou = atual.nome !== novosCampos.nome
           || atual.valor !== novosCampos.valor
@@ -423,6 +429,7 @@ export default function Dividas({ month, year }) {
   // ou 'futuro' (deste mês em diante, preservando histórico dos meses anteriores)
   const finalizarSave = (novosCampos, modo) => {
     let item;
+    const em = editMes ?? m, ea = editAno ?? y;
     if (editId) {
       const original = dividas.find(d => d.id === editId);
       const isRecorrente = original.recorrencia === 'fixa' || original.recorrencia === 'parcelar';
@@ -434,7 +441,7 @@ export default function Dividas({ month, year }) {
       if (!isRecorrente || !modo) {
         item = { ...baseUpdate, ...novosCampos };
       } else if (modo === 'mes') {
-        const key = mesKey(m, y);
+        const key = mesKey(em, ea);
         const dia = novosCampos.vencimento ? novosCampos.vencimento.split('-')[2] : (original.vencimento || '').split('-')[2];
         item = {
           ...baseUpdate,
@@ -444,8 +451,8 @@ export default function Dividas({ month, year }) {
           },
         };
       } else {
-        const prevKey = mesKeyAnterior(mesKey(m, y));
-        const camposAntigos = getCamposMes(original, m, y);
+        const prevKey = mesKeyAnterior(mesKey(em, ea));
+        const camposAntigos = getCamposMes(original, em, ea);
         const histEntry = {
           ate: prevKey,
           nome: camposAntigos.nome, valor: camposAntigos.valor,
@@ -453,7 +460,7 @@ export default function Dividas({ month, year }) {
           categoria: camposAntigos.categoria, observacao: camposAntigos.observacao,
         };
         const novoDia = novosCampos.vencimento ? novosCampos.vencimento.split('-')[2] : camposAntigos.vencimentoDia;
-        const [oy, om] = (original.vencimento || `${y}-${String(m).padStart(2, '0')}-01`).split('-');
+        const [oy, om] = (original.vencimento || `${ea}-${String(em).padStart(2, '0')}-01`).split('-');
         item = {
           ...baseUpdate, ...novosCampos,
           vencimento: `${oy}-${om}-${novoDia}`,
@@ -473,53 +480,55 @@ export default function Dividas({ month, year }) {
     }
     if (editId) {
       const original = dividas.find(d => d.id === editId);
-      const oldTotal = original.recorrencia === 'parcelar' ? parcelaValorMes(original, m, y) : getCamposMes(original, m, y).valor;
-      const newTotal = item.recorrencia === 'parcelar' ? parcelaValorMes(item, m, y) : getCamposMes(item, m, y).valor;
-      const status = statusMes(item, m, y);
+      const oldTotal = original.recorrencia === 'parcelar' ? parcelaValorMes(original, em, ea) : getCamposMes(original, em, ea).valor;
+      const newTotal = item.recorrencia === 'parcelar' ? parcelaValorMes(item, em, ea) : getCamposMes(item, em, ea).valor;
+      const status = statusMes(item, em, ea);
       // Se a conta já estava quitada com o valor antigo (pagamento integral, não parcial),
       // atualiza o valorPago junto para refletir a correção do valor.
       if (status.pago && status.valorPago != null && Math.abs(status.valorPago - oldTotal) < 0.01 && Math.abs(newTotal - oldTotal) > 0.001) {
-        item = aplicarStatusMes(item, m, y, { ...status, valorPago: newTotal });
+        item = aplicarStatusMes(item, em, ea, { ...status, valorPago: newTotal });
       }
     }
 
     item = { ...item, updatedAt: new Date().toISOString() };
     const updated = editId ? dividas.map(d => d.id === editId ? item : d) : [item, ...dividas];
     setDividas(updated); saveDividas(updated);
-    setShowForm(false); setForm(emptyForm()); setEditId(null); setPendingEdit(null);
+    setShowForm(false); setForm(emptyForm()); setEditId(null); setEditMes(null); setEditAno(null); setPendingEdit(null);
   };
 
-  const openEfetivar = (id, modo = 'total') => {
+  const openEfetivar = (id, modo = 'total', mes = m, ano = y) => {
     const d = dividas.find(x => x.id === id);
-    const pv = d ? parcelaValorMes(d, m, y) : 0;
-    const st = d ? statusMes(d, m, y) : null;
+    const pv = d ? parcelaValorMes(d, mes, ano) : 0;
+    const st = d ? statusMes(d, mes, ano) : null;
     const jaPago = st?.valorPago || 0;
     const restante = Math.max(pv - jaPago, 0);
     setEfetivDate(st?.pagamentoData || new Date().toISOString().split('T')[0]);
     const fmtBRL = v => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     setEfetivValor(modo === 'parcial' ? '' : (restante ? fmtBRL(restante) : ''));
     setEfetivandoId(id);
+    setEfetivandoMes(mes); setEfetivandoAno(ano);
   };
 
   const confirmEfetivar = () => {
     if (!efetivandoId) return;
+    const mes = efetivandoMes ?? m, ano = efetivandoAno ?? y;
     const valorDigitado = parseFloat(String(efetivValor).replace(/\./g,'').replace(',','.')) || 0;
     const updated = dividas.map(d => {
       if (d.id !== efetivandoId) return d;
-      const total = parcelaValorMes(d, m, y);
-      const st = statusMes(d, m, y);
+      const total = parcelaValorMes(d, mes, ano);
+      const st = statusMes(d, mes, ano);
       const novoValorPago = (st.valorPago || 0) + valorDigitado;
       const pago = novoValorPago >= total - 0.005;
-      return aplicarStatusMes(d, m, y, { pago, pagamentoData: efetivDate, valorPago: novoValorPago });
+      return aplicarStatusMes(d, mes, ano, { pago, pagamentoData: efetivDate, valorPago: novoValorPago });
     });
     setDividas(updated); saveDividas(updated);
-    setEfetivandoId(null);
+    setEfetivandoId(null); setEfetivandoMes(null); setEfetivandoAno(null);
   };
 
-  const desfazerEfetivar = (id) => {
+  const desfazerEfetivar = (id, mes = m, ano = y) => {
     const updated = dividas.map(d => {
       if (d.id !== id) return d;
-      return aplicarStatusMes(d, m, y, { pago: false, pagamentoData: null, valorPago: null });
+      return aplicarStatusMes(d, mes, ano, { pago: false, pagamentoData: null, valorPago: null });
     });
     setDividas(updated); saveDividas(updated);
   };
@@ -529,13 +538,13 @@ export default function Dividas({ month, year }) {
     setDividas(updated); saveDividas(updated); setConfirmId(null);
   };
 
-  const duplicar = (d, dataStr) => {
-    const campos = getCamposMes(d, m, y);
+  const duplicar = (d, dataStr, mes = m, ano = y) => {
+    const campos = getCamposMes(d, mes, ano);
     const novo = {
       id: newId(),
       nome: campos.nome,
       categoria: campos.categoria,
-      valor: parcelaValorMes(d, m, y),
+      valor: parcelaValorMes(d, mes, ano),
       vencimento: dataStr,
       observacao: campos.observacao || '',
       recorrencia: 'nao',
@@ -547,11 +556,11 @@ export default function Dividas({ month, year }) {
     setDividas(updated); saveDividas(updated);
   };
 
-  const openEdit = (d) => {
-    const campos = getCamposMes(d, m, y);
+  const openEdit = (d, mes = m, ano = y) => {
+    const campos = getCamposMes(d, mes, ano);
     let vencimentoForm = d.vencimento || '';
     if ((d.recorrencia === 'fixa' || d.recorrencia === 'parcelar') && campos.vencimentoDia && d.vencimento) {
-      vencimentoForm = `${y}-${String(m).padStart(2, '0')}-${campos.vencimentoDia}`;
+      vencimentoForm = `${ano}-${String(mes).padStart(2, '0')}-${campos.vencimentoDia}`;
     }
     setForm({
       nome: campos.nome, categoria: campos.categoria,
@@ -564,10 +573,16 @@ export default function Dividas({ month, year }) {
       observacao: campos.observacao || '',
       valorMode: 'total',
     });
-    setEditId(d.id); setShowForm(true);
+    setEditId(d.id); setEditMes(mes); setEditAno(ano); setShowForm(true);
   };
 
-  const dividasPeriodo = filtrarPeriodo(dividas, m, y);
+  // m === 0 significa "Todos" (ano todo): expande cada divida numa linha por mês
+  // em que ela aparece, cada uma marcada com seu próprio mês/ano (_m/_y) para
+  // que status de pagamento, valores e ações operem no mês correto daquela linha.
+  const dividasPeriodo = m === 0
+    ? Array.from({ length: 12 }, (_, i) => i + 1)
+        .flatMap(mm => filtrarPeriodo(dividas, mm, y).map(d => ({ ...d, _m: mm, _y: y })))
+    : filtrarPeriodo(dividas, m, y).map(d => ({ ...d, _m: m, _y: y }));
 
   // Anos disponíveis no seletor: baseados nos dados reais cadastrados (não numa
   // janela flutuante ±N que "deriva" e pode deixar o ano atual inalcançável.
@@ -583,12 +598,12 @@ export default function Dividas({ month, year }) {
   const today = new Date().toISOString().split('T')[0];
   const in7days = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
 
-  const vencimentoPeriodo = (d) => {
+  const vencimentoPeriodo = (d, mes = m, ano = y) => {
     if (!d.vencimento) return null;
     if (d.recorrencia === 'fixa' || d.recorrencia === 'parcelar') {
-      const campos = getCamposMes(d, m, y);
+      const campos = getCamposMes(d, mes, ano);
       const day = campos.vencimentoDia || d.vencimento.split('-')[2];
-      return `${y}-${String(m).padStart(2, '0')}-${day}`;
+      return `${ano}-${String(mes).padStart(2, '0')}-${day}`;
     }
     return d.vencimento;
   };
@@ -604,13 +619,13 @@ export default function Dividas({ month, year }) {
   };
 
   const filtered = dividasPeriodo.filter(d => {
-    const st = statusMes(d, m, y);
+    const st = statusMes(d, d._m, d._y);
     if (filter === 'pendentes' && st.pago) return false;
     if (filter === 'pagas' && !st.pago) return false;
     if (search.trim() && !d.nome.toLowerCase().includes(search.trim().toLowerCase())) return false;
     if (filterCategorias.length > 0 && !filterCategorias.includes(d.categoria)) return false;
     if (filterVencs.length > 0) {
-      const vd = vencimentoPeriodo(d) || '';
+      const vd = vencimentoPeriodo(d, d._m, d._y) || '';
       const passVenc = filterVencs.some(fv => {
         if (fv === 'vencidas') return !st.pago && vd && vd < today;
         if (fv === 'hoje') return vd === today;
@@ -622,12 +637,12 @@ export default function Dividas({ month, year }) {
     return true;
   });
 
-  const totalPendente = dividasPeriodo.filter(d => !statusMes(d, m, y).pago).reduce((s, d) => s + parcelaValorMes(d, m, y), 0);
-  const totalPago = dividasPeriodo.filter(d => statusMes(d, m, y).pago).reduce((s, d) => s + parcelaValorMes(d, m, y), 0);
+  const totalPendente = dividasPeriodo.filter(d => !statusMes(d, d._m, d._y).pago).reduce((s, d) => s + parcelaValorMes(d, d._m, d._y), 0);
+  const totalPago = dividasPeriodo.filter(d => statusMes(d, d._m, d._y).pago).reduce((s, d) => s + parcelaValorMes(d, d._m, d._y), 0);
 
   const filteredSorted = [...filtered].sort((a, b) => {
-    const va = vencimentoPeriodo(a) || a.vencimento || '';
-    const vb = vencimentoPeriodo(b) || b.vencimento || '';
+    const va = vencimentoPeriodo(a, a._m, a._y) || a.vencimento || '';
+    const vb = vencimentoPeriodo(b, b._m, b._y) || b.vencimento || '';
     return vb.localeCompare(va);
   });
 
@@ -637,7 +652,7 @@ export default function Dividas({ month, year }) {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-text-1 font-bold text-lg">Transações</h2>
         <button
-          onClick={() => { setForm(emptyForm()); setEditId(null); setShowForm(true); }}
+          onClick={() => { setForm(emptyForm()); setEditId(null); setEditMes(null); setEditAno(null); setShowForm(true); }}
           className="btn-gold flex items-center gap-1.5 py-2 px-4 text-sm"
         >
           <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd"/></svg>
@@ -653,7 +668,7 @@ export default function Dividas({ month, year }) {
             <p className="text-text-3 text-xs">Em aberto</p>
           </div>
           <p className="hv text-expense font-bold text-lg">{fmt(totalPendente)}</p>
-          <p className="text-text-3 text-[10px] mt-0.5">{dividasPeriodo.filter(d => !statusMes(d, m, y).pago).length} registros</p>
+          <p className="text-text-3 text-[10px] mt-0.5">{dividasPeriodo.filter(d => !statusMes(d, d._m, d._y).pago).length} registros</p>
         </div>
         <div className="card-premium p-4">
           <div className="flex items-center gap-2 mb-1">
@@ -661,7 +676,7 @@ export default function Dividas({ month, year }) {
             <p className="text-text-3 text-xs">Quitadas</p>
           </div>
           <p className="hv text-income font-bold text-lg">{fmt(totalPago)}</p>
-          <p className="text-text-3 text-[10px] mt-0.5">{dividasPeriodo.filter(d => statusMes(d, m, y).pago).length} registros</p>
+          <p className="text-text-3 text-[10px] mt-0.5">{dividasPeriodo.filter(d => statusMes(d, d._m, d._y).pago).length} registros</p>
         </div>
       </div>
 
@@ -703,6 +718,7 @@ export default function Dividas({ month, year }) {
               <select value={localMonth} onChange={e => setLocalMonth(Number(e.target.value))}
                 className="rounded-xl px-3 py-2 text-xs font-semibold text-text-2 outline-none cursor-pointer"
                 style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <option value={0}>Todos (ano)</option>
                 {MONTHS_LABEL.map((lbl, i) => <option key={i+1} value={i+1}>{lbl}</option>)}
               </select>
               <select value={localYear} onChange={e => setLocalYear(Number(e.target.value))}
@@ -761,13 +777,13 @@ export default function Dividas({ month, year }) {
           {filteredSorted.map((d, idx) => {
             const isParcelada = d.recorrencia === 'parcelar';
             const isFixa = d.recorrencia === 'fixa';
-            const st = statusMes(d, m, y);
-            const campos = getCamposMes(d, m, y);
+            const st = statusMes(d, d._m, d._y);
+            const campos = getCamposMes(d, d._m, d._y);
             const today = new Date().toISOString().split('T')[0];
             const todayM = new Date().getMonth() + 1;
             const todayY = new Date().getFullYear();
-            const vencAjustado = vencimentoPeriodo(d);
-            const isCurrentPeriod = m === todayM && y === todayY;
+            const vencAjustado = vencimentoPeriodo(d, d._m, d._y);
+            const isCurrentPeriod = d._m === todayM && d._y === todayY;
             const vencida = !st.pago && vencAjustado && (
               d.recorrencia === 'nao'
                 ? vencAjustado < today
@@ -776,7 +792,7 @@ export default function Dividas({ month, year }) {
             const parcelaAtual = (() => {
               if (!isParcelada || !d.vencimento) return d.parcelaInicial || 1;
               const [vy, vm] = d.vencimento.split('-').map(Number);
-              const offset = (y * 12 + (m - 1)) - (vy * 12 + (vm - 1));
+              const offset = (d._y * 12 + (d._m - 1)) - (vy * 12 + (vm - 1));
               return (d.parcelaInicial || 1) + offset;
             })();
             const pct = isParcelada && d.totalParcelas > 0
@@ -785,8 +801,8 @@ export default function Dividas({ month, year }) {
             const valorColor = st.pago ? '#22c55e' : vencida ? '#f59e0b' : '#f43f5e';
 
             return (
-              <div key={d.id} className="card-premium cursor-pointer transition-all active:scale-[0.99]"
-                onClick={() => setDetalheId(d.id)}
+              <div key={`${d.id}_${d._m}_${d._y}`} className="card-premium cursor-pointer transition-all active:scale-[0.99]"
+                onClick={() => { setDetalheId(d.id); setDetalheMes(d._m); setDetalheAno(d._y); }}
               >
                 <div className="px-4 pt-3.5 pb-3">
 
@@ -846,7 +862,7 @@ export default function Dividas({ month, year }) {
 
                     {/* Valor */}
                     <div className="flex-shrink-0 text-right">
-                      <p className="hv text-sm font-bold" style={{ color: valorColor }}>{fmt(parcelaValorMes(d, m, y))}</p>
+                      <p className="hv text-sm font-bold" style={{ color: valorColor }}>{fmt(parcelaValorMes(d, d._m, d._y))}</p>
                       {isParcelada && (
                         <p className="text-[10px] text-white/60">por parcela</p>
                       )}
@@ -875,9 +891,9 @@ export default function Dividas({ month, year }) {
                         Pago {fmt(st.valorPago)}{st.pagamentoData ? ` em ${fmtDate(st.pagamentoData)}` : ''}
                       </span>
                       <span className="text-[11px] text-white/50">
-                        · Restam {fmt(Math.max(parcelaValorMes(d, m, y) - st.valorPago, 0))}
+                        · Restam {fmt(Math.max(parcelaValorMes(d, d._m, d._y) - st.valorPago, 0))}
                       </span>
-                      <button onClick={(e) => { e.stopPropagation(); desfazerEfetivar(d.id); }}
+                      <button onClick={(e) => { e.stopPropagation(); desfazerEfetivar(d.id, d._m, d._y); }}
                         className="text-[11px] text-white/40 hover:text-white/70 transition">
                         ↩ Desfazer
                       </button>
@@ -902,7 +918,7 @@ export default function Dividas({ month, year }) {
                     {/* Efetivar / status */}
                     <div>
                       {!st.pago ? (
-                        <button onClick={() => openEfetivar(d.id)}
+                        <button onClick={() => openEfetivar(d.id, 'total', d._m, d._y)}
                           className="text-xs font-semibold px-3 py-1 rounded-lg transition-all"
                           style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.2)' }}>
                           Efetivar pagamento
@@ -921,9 +937,9 @@ export default function Dividas({ month, year }) {
                         </div>
                       ) : (
                         <AcoesMenu
-                          onEdit={() => openEdit(d)}
-                          onPagamentoParcial={() => openEfetivar(d.id, 'parcial')}
-                          onDuplicar={(dataStr) => duplicar(d, dataStr)}
+                          onEdit={() => openEdit(d, d._m, d._y)}
+                          onPagamentoParcial={() => openEfetivar(d.id, 'parcial', d._m, d._y)}
+                          onDuplicar={(dataStr) => duplicar(d, dataStr, d._m, d._y)}
                           onExcluir={() => setConfirmId(d.id)}
                           vencimentoAtual={vencAjustado}
                           openUp={idx >= filteredSorted.length - 2}
@@ -948,16 +964,17 @@ export default function Dividas({ month, year }) {
         const todayY = new Date().getFullYear();
         const isParcelada = d.recorrencia === 'parcelar';
         const isFixa = d.recorrencia === 'fixa';
-        const st = statusMes(d, m, y);
-        const campos = getCamposMes(d, m, y);
-        const vencAjustadoDetalhe = vencimentoPeriodo(d);
-        const isCurrentPeriodDetalhe = m === todayM && y === todayY;
+        const dm = detalheMes ?? m, dy = detalheAno ?? y;
+        const st = statusMes(d, dm, dy);
+        const campos = getCamposMes(d, dm, dy);
+        const vencAjustadoDetalhe = vencimentoPeriodo(d, dm, dy);
+        const isCurrentPeriodDetalhe = dm === todayM && dy === todayY;
         const vencida = !st.pago && vencAjustadoDetalhe && (
           d.recorrencia === 'nao'
             ? vencAjustadoDetalhe < today
             : isCurrentPeriodDetalhe && vencAjustadoDetalhe < today
         );
-        const pv = parcelaValorMes(d, m, y);
+        const pv = parcelaValorMes(d, dm, dy);
 
         // Progresso parcelamento
         const parcelasPagas = isParcelada ? (d.parcelaInicial - 1 + (st.pago ? 1 : 0)) : 0;
@@ -987,12 +1004,12 @@ export default function Dividas({ month, year }) {
 
               {/* Header */}
               <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                <button onClick={() => setDetalheId(null)} className="w-11 h-11 flex items-center justify-center rounded-lg text-text-3 hover:text-text-1 hover:bg-white/5 transition">
+                <button onClick={() => { setDetalheId(null); setDetalheMes(null); setDetalheAno(null); }} className="w-11 h-11 flex items-center justify-center rounded-lg text-text-3 hover:text-text-1 hover:bg-white/5 transition">
                   <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"/></svg>
                 </button>
                 <span className="text-text-2 text-sm font-medium">Detalhes</span>
                 <div className="flex gap-1">
-                  <button onClick={() => { setDetalheId(null); openEdit(d); }} className="w-8 h-8 flex items-center justify-center rounded-lg text-text-3 hover:text-gold hover:bg-white/5 transition">
+                  <button onClick={() => { setDetalheId(null); openEdit(d, dm, dy); }} className="w-8 h-8 flex items-center justify-center rounded-lg text-text-3 hover:text-gold hover:bg-white/5 transition">
                     <svg viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5"><path d="M12.854.146a.5.5 0 00-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 000-.708l-3-3zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 01.5.5v.5h.5a.5.5 0 01.5.5v.5h.5a.5.5 0 01.5.5v.5h.5a.5.5 0 01.5.5v.207l6.5-6.5zm-7.468 7.468A.5.5 0 016 13.5V13h-.5a.5.5 0 01-.5-.5V12h-.5a.5.5 0 01-.5-.5V11h-.5a.5.5 0 01-.5-.5V10h-.5a.499.499 0 01-.175-.032l-.179.178a.5.5 0 00-.11.168l-2 5a.5.5 0 00.65.65l5-2a.5.5 0 00.168-.11l.178-.178z"/></svg>
                   </button>
                   <button onClick={() => { remove(d.id); setDetalheId(null); }} className="w-8 h-8 flex items-center justify-center rounded-lg text-text-3 hover:text-expense hover:bg-white/5 transition">
@@ -1076,12 +1093,12 @@ export default function Dividas({ month, year }) {
                 {/* Efetivar / Desfazer */}
                 <div className="pb-2">
                   {st.pago ? (
-                    <button onClick={() => { desfazerEfetivar(d.id); setDetalheId(null); }}
+                    <button onClick={() => { desfazerEfetivar(d.id, dm, dy); setDetalheId(null); }}
                       className="btn-ghost w-full text-center text-sm">
                       Desfazer pagamento
                     </button>
                   ) : (
-                    <button onClick={() => { setDetalheId(null); openEfetivar(d.id); }}
+                    <button onClick={() => { setDetalheId(null); openEfetivar(d.id, 'total', dm, dy); }}
                       className="btn-gold w-full text-center">
                       Efetivar pagamento
                     </button>
@@ -1264,7 +1281,7 @@ export default function Dividas({ month, year }) {
             <div className="relative card-premium p-6 w-full max-w-sm animate-scale-in" onClick={e => e.stopPropagation()}>
               <h3 className="text-text-1 font-bold text-base mb-2">Como deseja aplicar essas alterações?</h3>
               <p className="text-text-3 text-sm mb-4">
-                Essa é uma transação {tipo} e você pode escolher entre aplicar essas alterações apenas para o mês selecionado ({MONTHS_LABEL[m - 1].toLowerCase()}) ou dele em diante.
+                Essa é uma transação {tipo} e você pode escolher entre aplicar essas alterações apenas para o mês selecionado ({MONTHS_LABEL[(editMes ?? m) - 1].toLowerCase()}) ou dele em diante.
               </p>
               <div className="flex flex-col gap-2">
                 <button onClick={() => finalizarSave(pendingEdit, 'mes')} className="btn-gold w-full text-center text-sm">
@@ -1292,8 +1309,9 @@ export default function Dividas({ month, year }) {
       {/* Efetivar modal */}
       {efetivandoId && (() => {
         const d = dividas.find(x => x.id === efetivandoId);
-        const total = d ? parcelaValorMes(d, m, y) : 0;
-        const st = d ? statusMes(d, m, y) : null;
+        const emes = efetivandoMes ?? m, eano = efetivandoAno ?? y;
+        const total = d ? parcelaValorMes(d, emes, eano) : 0;
+        const st = d ? statusMes(d, emes, eano) : null;
         const jaPago = st?.valorPago || 0;
         const restante = Math.max(total - jaPago, 0);
         return (
@@ -1338,7 +1356,7 @@ export default function Dividas({ month, year }) {
               </div>
             </div>
             <div className="flex gap-2">
-              <button onClick={() => setEfetivandoId(null)} className="btn-ghost flex-1">Cancelar</button>
+              <button onClick={() => { setEfetivandoId(null); setEfetivandoMes(null); setEfetivandoAno(null); }} className="btn-ghost flex-1">Cancelar</button>
               <button onClick={confirmEfetivar} className="btn-gold flex-1 text-center">Confirmar</button>
             </div>
           </div>
