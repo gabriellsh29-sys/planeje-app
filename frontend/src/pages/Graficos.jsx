@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LabelList } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts';
 
 const fmt = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
 
@@ -201,81 +201,57 @@ export default function Graficos({ month, year }) {
         </div>
       </div>
 
-      {/* Expense bar chart */}
+      {/* Ranking de Despesas */}
       {expenseByCategory.length > 0 && (
-        <div className="card-premium p-4">
-          <h3 className="text-text-1 text-sm font-semibold mb-4">Ranking de Despesas</h3>
-          <div className="hv">
-          <ResponsiveContainer width="100%" height={Math.max(160, expenseByCategory.length * 34)}>
-            <BarChart data={expenseByCategory} layout="vertical" margin={{ left: 0, right: 115, top: 0, bottom: 0 }}>
-              <XAxis type="number" hide />
-              <YAxis type="category" dataKey="name" tick={<CenteredYAxisTick width={90} />} axisLine={false} tickLine={false} width={90} />
-              <Tooltip {...tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.04)' }} formatter={(v) => [fmt(v), 'Total']} />
-              <Bar dataKey="value" radius={[0, 6, 6, 0]}>
-                <LabelList
-                  dataKey="value"
-                  content={({ x, y, width, height, index }) => {
-                    if (width < 4) return null;
-                    const d = expenseByCategory[index];
-                    if (!d) return null;
-                    const pct = totalExpense > 0 ? Math.round(d.value / totalExpense * 100) : 0;
-                    const fullText = `${fmt(d.value)} · ${pct}%`;
-                    const fitsInside = width >= fullText.length * 6.2 + 12;
-                    if (fitsInside) {
-                      return (
-                        <text x={x + width / 2} y={y + height / 2} fill="#ffffff" textAnchor="middle" dominantBaseline="central" fontSize={11} fontWeight={600}>
-                          {fullText}
-                        </text>
-                      );
-                    }
-                    return (
-                      <text x={x + width + 6} y={y + height / 2} fill="rgba(255,255,255,0.75)" textAnchor="start" dominantBaseline="central" fontSize={10} fontWeight={500}>
-                        {fullText}
-                      </text>
-                    );
-                  }}
-                />
-                {expenseByCategory.map((_, i) => <Cell key={i} fill={BAR_COLORS[i % BAR_COLORS.length]} />)}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-          </div>
-        </div>
+        <RankingBarChart title="Ranking de Despesas" data={expenseByCategory} total={totalExpense} colors={BAR_COLORS} />
       )}
 
-      {/* Donut Receitas */}
+      {/* Ranking de Receitas */}
       {incomeByCategory.length > 0 && (
-        <DonutCard title="Receitas" data={incomeByCategory} total={totalIncome} colors={INCOME_COLORS} />
+        <RankingBarChart title="Ranking de Receitas" data={incomeByCategory} total={totalIncome} colors={INCOME_COLORS} />
       )}
     </div>
   );
 }
 
-function DonutCard({ title, data, total, colors }) {
+function RankingBarChart({ title, data, total, colors }) {
   return (
     <div className="card-premium p-4">
-      <h3 className="text-text-1 text-sm font-semibold mb-3">{title} por Categoria</h3>
-      <div className="hv flex items-center gap-4">
-        <div className="flex-shrink-0">
-          <PieChart width={128} height={128}>
-            <Pie data={data} cx={64} cy={64} innerRadius={34} outerRadius={56} dataKey="value" paddingAngle={2}>
+      <h3 className="text-text-1 text-sm font-semibold mb-4">{title}</h3>
+      <div className="hv">
+        <ResponsiveContainer width="100%" height={Math.max(160, data.length * 34)}>
+          <BarChart data={data} layout="vertical" margin={{ left: 0, right: 115, top: 0, bottom: 0 }}>
+            <XAxis type="number" hide />
+            <YAxis type="category" dataKey="name" tick={<CenteredYAxisTick width={90} />} axisLine={false} tickLine={false} width={90} />
+            <Tooltip {...tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.04)' }} formatter={(v) => [fmt(v), 'Total']} />
+            <Bar dataKey="value" radius={[0, 6, 6, 0]}>
+              <LabelList
+                dataKey="value"
+                content={({ x, y, width, height, index }) => {
+                  if (width < 4) return null;
+                  const d = data[index];
+                  if (!d) return null;
+                  const pct = total > 0 ? Math.round(d.value / total * 100) : 0;
+                  const fullText = `${fmt(d.value)} · ${pct}%`;
+                  const fitsInside = width >= fullText.length * 6.2 + 12;
+                  if (fitsInside) {
+                    return (
+                      <text x={x + width / 2} y={y + height / 2} fill="#ffffff" textAnchor="middle" dominantBaseline="central" fontSize={11} fontWeight={600}>
+                        {fullText}
+                      </text>
+                    );
+                  }
+                  return (
+                    <text x={x + width + 6} y={y + height / 2} fill="rgba(255,255,255,0.75)" textAnchor="start" dominantBaseline="central" fontSize={10} fontWeight={500}>
+                      {fullText}
+                    </text>
+                  );
+                }}
+              />
               {data.map((_, i) => <Cell key={i} fill={colors[i % colors.length]} />)}
-            </Pie>
-          </PieChart>
-        </div>
-        <div className="flex-1 space-y-1.5">
-          {data.map((d, i) => (
-            <div key={d.name} className="flex items-center justify-between gap-1">
-              <div className="flex items-center gap-1.5 min-w-0">
-                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: colors[i % colors.length] }} />
-                <span className="text-white text-xs truncate">{d.name}</span>
-              </div>
-              <span className="text-white text-xs font-medium flex-shrink-0">
-                {total > 0 ? Math.round(d.value / total * 100) : 0}%
-              </span>
-            </div>
-          ))}
-        </div>
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
       </div>
     </div>
   );
