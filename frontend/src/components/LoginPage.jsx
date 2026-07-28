@@ -58,7 +58,16 @@ export default function LoginPage() {
       setLoading(true);
       const { error: err } = await resetPassword(email.trim());
       setLoading(false);
-      if (err) setError('Não foi possível enviar o e-mail. Tente novamente.');
+      if (err) {
+        console.error('resetPasswordForEmail falhou:', err);
+        const msg = (err.message || '').toLowerCase();
+        if (msg.includes('rate limit') || err.status === 429)
+          setError('Muitas tentativas de recuperação. Aguarde alguns minutos e tente novamente.');
+        else if (msg.includes('sending') || msg.includes('smtp') || msg.includes('email'))
+          setError('Erro ao enviar o e-mail de recuperação. Tente novamente em alguns minutos.');
+        else
+          setError(`Não foi possível enviar o e-mail. (${err.message || 'erro desconhecido'})`);
+      }
       else setInfo('Link enviado! Verifique sua caixa de entrada (e a pasta de spam).');
       return;
     }

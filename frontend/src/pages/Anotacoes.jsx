@@ -47,6 +47,9 @@ export default function Anotacoes() {
   const [showEtiqMgr,   setShowEtiqMgr]  = useState(false);
   const [novaEtiqNome,  setNovaEtiqNome]  = useState('');
   const [novaEtiqCor,   setNovaEtiqCor]   = useState(COR_OPTIONS[0]);
+  const [draggingId,    setDraggingId]    = useState(null);
+  const [dragOverId,    setDragOverId]    = useState(null);
+  const [tarefaMenu,    setTarefaMenu]    = useState(null);
 
   useEffect(() => {
     const reload = () => {
@@ -69,6 +72,13 @@ export default function Anotacoes() {
     document.addEventListener('mousedown', close);
     return () => document.removeEventListener('mousedown', close);
   }, [secaoMenu]);
+
+  useEffect(() => {
+    if (!tarefaMenu) return;
+    const close = () => setTarefaMenu(null);
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [tarefaMenu]);
 
   const grupoObj = grupos.find(g => g.id === grupoAtivo) || grupos[0] || null;
   const secoes   = grupoObj?.secoes || [];
@@ -115,7 +125,63 @@ export default function Anotacoes() {
   const removeTarefa = (id) => {
     setTarefas(prev => prev.filter(t => t.id !== id));
     if (tarefaDetalhe === id) setTarefaDetalhe(null);
+    setTarefaMenu(m => m && m.id === id ? null : m);
   };
+
+  // ── Drag & drop entre seções ─────────────────────────────────────
+  const moveTarefa = (dragId, secaoId, beforeId) => {
+    if (dragId === beforeId) return;
+    setTarefas(prev => {
+      const dragItem = prev.find(t => t.id === dragId);
+      if (!dragItem) return prev;
+      const without = prev.filter(t => t.id !== dragId);
+      const updatedDrag = { ...dragItem, secao: secaoId || null, grupo: grupoAtivo, updatedAt: new Date().toISOString() };
+      let insertAt;
+      if (beforeId) {
+        insertAt = without.findIndex(t => t.id === beforeId);
+        if (insertAt === -1) insertAt = without.length;
+      } else {
+        let lastIdx = -1;
+        without.forEach((t, i) => { if (t.grupo === grupoAtivo && (t.secao || null) === (secaoId || null)) lastIdx = i; });
+        insertAt = lastIdx === -1 ? without.length : lastIdx + 1;
+      }
+      const result = [...without];
+      result.splice(insertAt, 0, updatedDrag);
+      return result;
+    });
+  };
+
+  const handleRowDrop = (e, targetId, targetSecao) => {
+    e.preventDefault(); e.stopPropagation();
+    const dragId = e.dataTransfer.getData('text/plain');
+    if (dragId) moveTarefa(dragId, targetSecao, targetId);
+    setDraggingId(null); setDragOverId(null);
+  };
+
+  const handleContainerDrop = (e, secaoId) => {
+    e.preventDefault();
+    const dragId = e.dataTransfer.getData('text/plain');
+    if (dragId) moveTarefa(dragId, secaoId, null);
+    setDraggingId(null); setDragOverId(null);
+  };
+
+  const openTarefaMenu = (e, id) => {
+    e.preventDefault(); e.stopPropagation();
+    setTarefaMenu({ id, top: e.clientY + 4, left: e.clientX });
+  };
+
+  // Props comuns de drag & drop + menu de contexto para uma TarefaRow arrastável
+  const dragRowProps = (t) => ({
+    draggable: true,
+    isDragging: draggingId === t.id,
+    isDragOver: dragOverId === t.id && draggingId !== t.id,
+    onDragStart: (e) => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', t.id); setDraggingId(t.id); },
+    onDragEnd: () => { setDraggingId(null); setDragOverId(null); },
+    onDragOver: (e) => { e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = 'move'; if (dragOverId !== t.id) setDragOverId(t.id); },
+    onDrop: (e) => handleRowDrop(e, t.id, t.secao || null),
+    onContextMenu: (e) => openTarefaMenu(e, t.id),
+    onRemove: removeTarefa,
+  });
 
   const desfazerConcluido = () => {
     if (!undo) return;
@@ -254,11 +320,12 @@ export default function Anotacoes() {
         </div>
 
         {!collapsed && (
-          <>
+          <div onDragOver={e => e.preventDefault()} onDrop={e => handleContainerDrop(e, secao.id)}>
             {addingIn === secao.id && <InlineAdd secaoId={secao.id} />}
             {tasks.map(t => (
               <TarefaRow key={t.id} tarefa={t} isSelected={tarefaDetalhe === t.id}
-                onToggle={toggleConcluido} onClick={() => setTarefaDetalhe(t.id === tarefaDetalhe ? null : t.id)} />
+                onToggle={toggleConcluido} onClick={() => setTarefaDetalhe(t.id === tarefaDetalhe ? null : t.id)}
+                {...dragRowProps(t)} />
             ))}
             {concl.length > 0 && (
               <div className="mt-0.5">
@@ -271,11 +338,12 @@ export default function Anotacoes() {
                 </button>
                 {!conclHide && concl.map(t => (
                   <TarefaRow key={t.id} tarefa={t} isSelected={tarefaDetalhe === t.id}
+                    onRemove={removeTarefa}
                     onToggle={toggleConcluido} onClick={() => setTarefaDetalhe(t.id === tarefaDetalhe ? null : t.id)} />
                 ))}
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
     );
@@ -402,7 +470,8 @@ export default function Anotacoes() {
                         </div>
                         {gTasks.map(t => (
                           <TarefaRow key={t.id} tarefa={t} isSelected={tarefaDetalhe === t.id}
-                            onToggle={toggleConcluido} onClick={() => setTarefaDetalhe(t.id === tarefaDetalhe ? null : t.id)} />
+                            onToggle={toggleConcluido} onClick={() => setTarefaDetalhe(t.id === tarefaDetalhe ? null : t.id)}
+                            onRemove={removeTarefa} />
                         ))}
                       </div>
                     );
@@ -450,26 +519,30 @@ export default function Anotacoes() {
                   </button>
                 )}
 
-                {rootTasks.map(t => (
-                  <TarefaRow key={t.id} tarefa={t} isSelected={tarefaDetalhe === t.id}
-                    onToggle={toggleConcluido} onClick={() => setTarefaDetalhe(t.id === tarefaDetalhe ? null : t.id)} />
-                ))}
+                <div onDragOver={e => e.preventDefault()} onDrop={e => handleContainerDrop(e, null)}>
+                  {rootTasks.map(t => (
+                    <TarefaRow key={t.id} tarefa={t} isSelected={tarefaDetalhe === t.id}
+                      onToggle={toggleConcluido} onClick={() => setTarefaDetalhe(t.id === tarefaDetalhe ? null : t.id)}
+                      {...dragRowProps(t)} />
+                  ))}
 
-                {rootConcl.length > 0 && (
-                  <div className="mt-1">
-                    <button onClick={() => setConclColl(p => ({ ...p, root: !p.root }))}
-                      className="flex items-center gap-1.5 text-white/25 hover:text-white/45 transition text-xs py-1 font-medium">
-                      <svg viewBox="0 0 20 20" fill="currentColor" className={`w-3 h-3 transition-transform ${rootConclH ? '-rotate-90' : ''}`}>
-                        <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd"/>
-                      </svg>
-                      Concluído {rootConcl.length}
-                    </button>
-                    {!rootConclH && rootConcl.map(t => (
-                      <TarefaRow key={t.id} tarefa={t} isSelected={tarefaDetalhe === t.id}
-                        onToggle={toggleConcluido} onClick={() => setTarefaDetalhe(t.id === tarefaDetalhe ? null : t.id)} />
-                    ))}
-                  </div>
-                )}
+                  {rootConcl.length > 0 && (
+                    <div className="mt-1">
+                      <button onClick={() => setConclColl(p => ({ ...p, root: !p.root }))}
+                        className="flex items-center gap-1.5 text-white/25 hover:text-white/45 transition text-xs py-1 font-medium">
+                        <svg viewBox="0 0 20 20" fill="currentColor" className={`w-3 h-3 transition-transform ${rootConclH ? '-rotate-90' : ''}`}>
+                          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd"/>
+                        </svg>
+                        Concluído {rootConcl.length}
+                      </button>
+                      {!rootConclH && rootConcl.map(t => (
+                        <TarefaRow key={t.id} tarefa={t} isSelected={tarefaDetalhe === t.id}
+                          onRemove={removeTarefa}
+                          onToggle={toggleConcluido} onClick={() => setTarefaDetalhe(t.id === tarefaDetalhe ? null : t.id)} />
+                      ))}
+                    </div>
+                  )}
+                </div>
 
                 {secoes.map((s, i) => renderSecao(s, i))}
 
@@ -529,6 +602,19 @@ export default function Anotacoes() {
               {item.label}
             </button>
           ))}
+        </div>,
+        document.body
+      )}
+
+      {/* ── Tarefa menu de contexto (portal) ─────────────────────── */}
+      {tarefaMenu && createPortal(
+        <div onMouseDown={e => e.stopPropagation()}
+          style={{ position: 'fixed', top: tarefaMenu.top, left: tarefaMenu.left, zIndex: 9999, background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.6)', minWidth: 160, overflow: 'hidden' }}>
+          <button onClick={() => { removeTarefa(tarefaMenu.id); setTarefaMenu(null); }}
+            className="w-full text-left px-4 py-2.5 text-sm transition hover:bg-white/5"
+            style={{ color: '#f43f5e', display: 'block' }}>
+            Deletar
+          </button>
         </div>,
         document.body
       )}
@@ -597,13 +683,22 @@ export default function Anotacoes() {
 }
 
 // ── TarefaRow ────────────────────────────────────────────────────
-function TarefaRow({ tarefa, isSelected, onToggle, onClick }) {
+function TarefaRow({ tarefa, isSelected, onToggle, onClick, onRemove, draggable, isDragOver, isDragging, onDragStart, onDragEnd, onDragOver, onDrop, onContextMenu }) {
   const fmtD = (d) => { if (!d) return null; const [y,m,day] = d.split('-'); return `${day}/${m}/${String(y).slice(2)}`; };
   const subs = tarefa.subtarefas || [];
   const subsDone = subs.filter(s => s.concluido).length;
   return (
-    <div className={`group flex items-center gap-2 py-2 px-1.5 rounded-lg cursor-pointer transition-all ${isSelected ? 'bg-white/[0.07]' : 'hover:bg-white/[0.04]'}`}
-      style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+    <div className={`group flex items-center gap-2 py-2 px-1.5 rounded-lg cursor-pointer transition-all ${isSelected ? 'bg-white/[0.07]' : 'hover:bg-white/[0.04]'} ${isDragging ? 'opacity-40' : ''}`}
+      style={{
+        borderBottom: '1px solid rgba(255,255,255,0.04)',
+        borderTop: isDragOver ? '2px solid #4a9cf5' : '2px solid transparent',
+      }}
+      draggable={draggable}
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      onContextMenu={onContextMenu}>
       <button onClick={e => { e.stopPropagation(); onToggle(tarefa.id); }}
         className="flex-shrink-0 w-4 h-4 rounded border transition-all flex items-center justify-center"
         style={tarefa.concluido
@@ -629,6 +724,15 @@ function TarefaRow({ tarefa, isSelected, onToggle, onClick }) {
       </div>
       {subs.length > 0 && (
         <span className="text-[10px] text-white/25 flex-shrink-0 font-medium">{subsDone}/{subs.length}</span>
+      )}
+      {onRemove && (
+        <button onClick={e => { e.stopPropagation(); onRemove(tarefa.id); }}
+          title="Excluir"
+          className="opacity-0 group-hover:opacity-100 flex-shrink-0 w-6 h-6 flex items-center justify-center text-white/25 hover:text-expense transition rounded hover:bg-white/5">
+          <svg viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd"/>
+          </svg>
+        </button>
       )}
     </div>
   );
