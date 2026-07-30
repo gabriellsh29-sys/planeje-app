@@ -1,15 +1,24 @@
 import { createClient } from '@supabase/supabase-js';
+import crypto from 'crypto';
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+function isValidCronSecret(token) {
+  const expected = process.env.CRON_SECRET || '';
+  const a = Buffer.from(token);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
+
 export default async function handler(req, res) {
   // Vercel envia Authorization: Bearer CRON_SECRET automaticamente nos crons
   const auth = req.headers.authorization || '';
   const token = auth.replace('Bearer ', '');
-  if (token !== process.env.CRON_SECRET) {
+  if (!isValidCronSecret(token)) {
     return res.status(401).json({ error: 'Não autorizado' });
   }
 
@@ -47,6 +56,6 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true, afetados: rows.length });
   } catch (err) {
     console.error('[monitor]', err.message);
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: 'Erro ao processar monitoramento.' });
   }
 }
