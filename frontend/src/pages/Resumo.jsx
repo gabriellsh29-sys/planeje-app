@@ -17,6 +17,35 @@ const COLORS = ['#22c55e', '#3b82f6', '#f59e0b', '#f43f5e', '#a855f7', '#06b6d4'
 function getSaldoInicial() { try { return parseFloat(localStorage.getItem(SALDO_KEY) || '0') || 0; } catch { return 0; } }
 function setSaldoInicial(v) { localStorage.setItem(SALDO_KEY, v.toString()); }
 
+// Encontra o mês/ano mais antigo com algum registro (vencimento, data ou
+// pagamento/recebimento), pra saber a partir de onde acumular o saldo.
+function getPeriodoMaisAntigo() {
+  let min = null;
+  const considerar = (y, m) => { if (!y || !m) return; const k = y * 12 + (m - 1); if (min === null || k < min) min = k; };
+  const considerarData = (str) => { if (!str) return; const [y, m] = str.split('-').map(Number); considerar(y, m); };
+  try {
+    const dividas = JSON.parse(localStorage.getItem(DIVIDA_KEY) || '[]');
+    dividas.forEach(d => {
+      considerarData(d.vencimento);
+      considerarData(d.pagamentoData);
+      if (d.pagamentos) Object.values(d.pagamentos).forEach(p => considerarData(p?.pagamentoData));
+    });
+  } catch {}
+  try {
+    const receitas = JSON.parse(localStorage.getItem(RECEITA_KEY) || '[]');
+    receitas.forEach(r => {
+      considerarData(r.data);
+      considerarData(r.recebimentoData);
+      if (r.recebimentos) Object.values(r.recebimentos).forEach(p => considerarData(p?.data));
+    });
+  } catch {}
+  try {
+    const faturas = JSON.parse(localStorage.getItem(FATURA_KEY) || '[]');
+    faturas.forEach(l => considerar(l.ano, l.mes));
+  } catch {}
+  return min;
+}
+
 function parcelaValor(d) {
   if (d.recorrencia === 'parcelar' && d.totalParcelas > 1) return d.valor / d.totalParcelas;
   return d.valor;
@@ -183,7 +212,28 @@ export default function Resumo({ loading, month, year }) {
   const pagoIncome     = receitas.filter(t => t.pago && t.pagamentoData).reduce((s, t) => s + parseFloat(t.amount || 0), 0);
   const pendingExpense = despesas.filter(t => !t.pago).reduce((s, t) => s + parseFloat(t.amount || 0), 0);
   const pendingCount   = despesas.filter(t => !t.pago).length;
-  const saldoConta     = saldoInicial - pagoExpense + pagoIncome;
+
+  // Saldo em conta é acumulado (como saldo bancário real): soma tudo que já foi
+  // pago/recebido desde o início dos registros até o mês selecionado (inclusive),
+  // não só o mês atual.
+  const acumulado = useMemo(() => {
+    const endKey = year * 12 + (month - 1);
+    const inicio = getPeriodoMaisAntigo();
+    const startKey = inicio !== null ? Math.min(inicio, endKey) : endKey;
+    let expense = 0, income = 0;
+    for (let k = startKey; k <= endKey; k++) {
+      const yy = Math.floor(k / 12), mm = (k % 12) + 1;
+      const desp = [...loadDespesas(mm, yy), ...loadFaturas(mm, yy)];
+      const rec  = loadReceitas(mm, yy);
+      const atrasados = loadPagamentosAtrasadosNoMes(mm, yy);
+      expense += desp.filter(t => t.pago && t.pagamentoData).reduce((s, t) => s + parseFloat(t.valorPago ?? t.amount ?? 0), 0)
+               + atrasados.reduce((s, t) => s + parseFloat(t.valorPago ?? t.amount ?? 0), 0);
+      income  += rec.filter(t => t.pago && t.pagamentoData).reduce((s, t) => s + parseFloat(t.amount || 0), 0);
+    }
+    return { expense, income };
+  }, [month, year, syncVer]);
+
+  const saldoConta = saldoInicial - acumulado.expense + acumulado.income;
 
   const openEditSaldo = () => { setSaldoInput(saldoInicial > 0 ? saldoInicial.toFixed(2).replace('.', ',') : ''); setEditSaldo(true); };
   const saveSaldo = () => { const val = parseFloat(saldoInput.replace(',', '.')) || 0; setSaldo(val); setSaldoInicial(val); setEditSaldo(false); };
