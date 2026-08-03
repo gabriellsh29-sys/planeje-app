@@ -34,6 +34,39 @@ function mesKey(month, year) {
   return `${year}-${String(month).padStart(2, '0')}`;
 }
 
+// Retorna a chave 'YYYY-MM' do mês anterior à chave informada.
+function mesKeyAnterior(key) {
+  const [yy, mm] = key.split('-').map(Number);
+  const date = new Date(yy, mm - 2, 1);
+  return mesKey(date.getMonth() + 1, date.getFullYear());
+}
+
+// Para receitas "fixa"/"parcelar", nome/valor/categoria/observação/dia podem variar
+// por mês: r.overrides['YYYY-MM'] (somente aquele mês) ou r.historico (snapshots de
+// períodos anteriores a uma alteração "deste mês em diante"). Mesmo mecanismo já
+// usado em Dividas.jsx para despesas.
+function getCamposMesReceita(r, month, year) {
+  const base = {
+    nome: r.nome, valor: r.valor, categoria: r.categoria, observacao: r.observacao,
+    dia: r.data ? r.data.split('-')[2] : null,
+  };
+  if (r.recorrencia !== 'fixa' && r.recorrencia !== 'parcelar') return base;
+  const key = mesKey(month, year);
+  if (r.overrides && r.overrides[key]) return { ...base, ...r.overrides[key] };
+  if (r.historico && r.historico.length) {
+    const found = r.historico.find(h => key <= h.ate);
+    if (found) return { ...base, ...found };
+  }
+  return base;
+}
+
+// Valor da parcela/mês considerando overrides/histórico.
+function parcelaValorMesReceita(r, month, year) {
+  const campos = getCamposMesReceita(r, month, year);
+  if (r.recorrencia === 'parcelar' && r.totalParcelas > 1) return campos.valor / r.totalParcelas;
+  return campos.valor;
+}
+
 // Calcula qual parcela é no mês visualizado e a data desse mês.
 function parcelaInfo(r, month, year) {
   if (!r.data || r.recorrencia !== 'parcelar') return null;
@@ -261,6 +294,9 @@ export default function Receitas({ month, year }) {
   const [search,      setSearch]      = useState('');
   const [showCalc,    setShowCalc]    = useState(false);
   const [showParcelas, setShowParcelas] = useState(false);
+  const [editMes,     setEditMes]     = useState(null);
+  const [editAno,     setEditAno]     = useState(null);
+  const [pendingEdit, setPendingEdit] = useState(null);
 
   const upd = (p) => setForm(f => ({ ...f, ...p }));
 
@@ -272,22 +308,101 @@ export default function Receitas({ month, year }) {
     if (!form.nome.trim() || !form.valor) return;
     const valorBase = parseFloat(form.valor) / 100;
     const isParcelarMode = form.recorrencia === 'parcelar' && form.valorMode === 'parcela';
-    const valor = isParcelarMode ? valorBase * form.totalParcelas : valorBase;
-    const existing = editId ? receitas.find(r => r.id === editId) : null;
-    const item = {
-      id: editId || newId(),
-      nome: form.nome.trim(), categoria: form.categoria, valor, data: form.data,
-      recorrencia: form.recorrencia,
-      parcelaInicial: form.parcelaInicial, totalParcelas: form.totalParcelas,
-      periodicidade: form.periodicidade, observacao: form.observacao,
-      recebida: existing?.recebida || false,
-      recebimentoData: existing?.recebimentoData || null,
-      recebimentos: existing?.recebimentos || {},
-      updatedAt: new Date().toISOString(),
-    };
+    const valorFinal = isParcelarMode ? valorBase * form.totalParcelas : valorBase;
+    const novosCampos = { nome: form.nome.trim(), categoria: form.categoria, valor: valorFinal, observacao: form.observacao };
+
+    if (editId) {
+      const original = receitas.find(r => r.id === editId);
+      const isRecorrente = original && (original.recorrencia === 'fixa' || original.recorrencia === 'parcelar');
+      if (isRecorrente) {
+        const em = editMes ?? lm, ea = editAno ?? ly;
+        const atual = getCamposMesReceita(original, em, ea);
+        const novoDia = form.data ? form.data.split('-')[2] : '';
+        const mudou = atual.nome !== novosCampos.nome
+          || atual.valor !== novosCampos.valor
+          || atual.categoria !== novosCampos.categoria
+          || (atual.observacao || '') !== (novosCampos.observacao || '')
+          || (atual.dia || '') !== novoDia;
+        if (mudou) {
+          setPendingEdit(novosCampos);
+          return;
+        }
+      }
+    }
+    finalizarSave(novosCampos, null);
+  };
+
+  // modo: null (não recorrente / sem mudança relevante), 'mes' (somente o mês
+  // selecionado) ou 'futuro' (deste mês em diante, preservando histórico anterior).
+  const finalizarSave = (novosCampos, modo) => {
+    let item;
+    const em = editMes ?? lm, ea = editAno ?? ly;
+    if (editId) {
+      const original = receitas.find(r => r.id === editId);
+      const isRecorrente = original.recorrencia === 'fixa' || original.recorrencia === 'parcelar';
+      const baseUpdate = {
+        ...original,
+        recorrencia: form.recorrencia,
+        parcelaInicial: form.parcelaInicial, totalParcelas: form.totalParcelas, periodicidade: form.periodicidade,
+      };
+      if (!isRecorrente || !modo) {
+        item = { ...baseUpdate, ...novosCampos, data: form.data };
+      } else if (modo === 'mes') {
+        const key = mesKey(em, ea);
+        const dia = form.data ? form.data.split('-')[2] : (original.data || '').split('-')[2];
+        item = {
+          ...baseUpdate,
+          overrides: {
+            ...(original.overrides || {}),
+            [key]: { nome: novosCampos.nome, valor: novosCampos.valor, dia, categoria: novosCampos.categoria, observacao: novosCampos.observacao },
+          },
+        };
+      } else {
+        const prevKey = mesKeyAnterior(mesKey(em, ea));
+        const camposAntigos = getCamposMesReceita(original, em, ea);
+        const histEntry = {
+          ate: prevKey,
+          nome: camposAntigos.nome, valor: camposAntigos.valor, dia: camposAntigos.dia,
+          categoria: camposAntigos.categoria, observacao: camposAntigos.observacao,
+        };
+        const novoDia = form.data ? form.data.split('-')[2] : camposAntigos.dia;
+        const [oy, om] = (original.data || `${ea}-${String(em).padStart(2, '0')}-01`).split('-');
+        item = {
+          ...baseUpdate, ...novosCampos,
+          data: `${oy}-${om}-${novoDia}`,
+          historico: [...(original.historico || []), histEntry],
+        };
+      }
+    } else {
+      item = {
+        id: newId(),
+        ...novosCampos, data: form.data,
+        recorrencia: form.recorrencia,
+        parcelaInicial: form.parcelaInicial, totalParcelas: form.totalParcelas,
+        periodicidade: form.periodicidade,
+        recebida: false, recebimentoData: null, recebimentos: {},
+      };
+    }
+    if (editId) {
+      const original = receitas.find(r => r.id === editId);
+      const oldTotal = original.recorrencia === 'parcelar' ? parcelaValorMesReceita(original, em, ea) : getCamposMesReceita(original, em, ea).valor;
+      const newTotal = item.recorrencia === 'parcelar' ? parcelaValorMesReceita(item, em, ea) : getCamposMesReceita(item, em, ea).valor;
+      const status = statusMesReceita(item, em, ea);
+      // Se já estava confirmada como recebida com o valor antigo (integral, não parcial),
+      // atualiza o valor recebido junto para refletir a correção.
+      if (status.recebida && status.valorRecebido != null && Math.abs(status.valorRecebido - oldTotal) < 0.01 && Math.abs(newTotal - oldTotal) > 0.001) {
+        if (item.recorrencia === 'fixa' || item.recorrencia === 'parcelar') {
+          const key = mesKey(em, ea);
+          item = { ...item, recebimentos: { ...(item.recebimentos || {}), [key]: { ...status, recebida: true, valorRecebido: newTotal } } };
+        } else {
+          item = { ...item, valorRecebido: newTotal };
+        }
+      }
+    }
+    item = { ...item, updatedAt: new Date().toISOString() };
     const updated = editId ? receitas.map(r => r.id === editId ? item : r) : [item, ...receitas];
     setReceitas(updated); saveReceitas(updated);
-    setShowForm(false); setForm(emptyForm()); setEditId(null);
+    setShowForm(false); setForm(emptyForm()); setEditId(null); setEditMes(null); setEditAno(null); setPendingEdit(null);
   };
 
   const openEfetivar = (id) => {
@@ -295,7 +410,7 @@ export default function Receitas({ month, year }) {
     const st = statusMesReceita(r, lm, ly);
     setEfDate(st.data || new Date().toISOString().slice(0,10));
     const fmtBRL = v => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    setEfValor(st.valorRecebido ? fmtBRL(st.valorRecebido) : (r ? fmtBRL(parcelaValor(r)) : ''));
+    setEfValor(st.valorRecebido ? fmtBRL(st.valorRecebido) : (r ? fmtBRL(parcelaValorMesReceita(r, lm, ly)) : ''));
     setEfetivId(id);
   };
 
@@ -308,7 +423,7 @@ export default function Receitas({ month, year }) {
           ...r,
           recebimentos: {
             ...(r.recebimentos || {}),
-            [key]: { recebida: true, data: efDate, valorRecebido: parseFloat(String(efValor).replace(/\./g,'').replace(',','.')) || parcelaValor(r) },
+            [key]: { recebida: true, data: efDate, valorRecebido: parseFloat(String(efValor).replace(/\./g,'').replace(',','.')) || parcelaValorMesReceita(r, lm, ly) },
           },
           updatedAt: new Date().toISOString(),
         };
@@ -341,25 +456,32 @@ export default function Receitas({ month, year }) {
   const remover = (id) => { const u = receitas.filter(r => r.id !== id); setReceitas(u); saveReceitas(u); setConfirmId(null); };
 
   const duplicar = (r, dataStr) => {
+    const campos = getCamposMesReceita(r, lm, ly);
     const novo = {
       id: newId(),
-      nome: r.nome, categoria: r.categoria, valor: r.valor, data: dataStr,
-      recorrencia: 'nao', periodicidade: 'Mensal', observacao: r.observacao || '',
+      nome: campos.nome, categoria: campos.categoria, valor: parcelaValorMesReceita(r, lm, ly), data: dataStr,
+      recorrencia: 'nao', periodicidade: 'Mensal', observacao: campos.observacao || '',
       recebida: false, recebimentoData: null, recebimentos: {},
       updatedAt: new Date().toISOString(),
     };
     const updated = [novo, ...receitas];
     setReceitas(updated); saveReceitas(updated);
   };
-  const openEdit = (r) => {
+  const openEdit = (r, mes = lm, ano = ly) => {
+    const campos = getCamposMesReceita(r, mes, ano);
+    let dataForm = r.data || '';
+    if ((r.recorrencia === 'fixa' || r.recorrencia === 'parcelar') && campos.dia && r.data) {
+      dataForm = `${ano}-${String(mes).padStart(2, '0')}-${campos.dia}`;
+    }
     setForm({
-      nome: r.nome, categoria: r.categoria, valor: Math.round(r.valor * 100).toString(), data: r.data || '',
+      nome: campos.nome, categoria: campos.categoria,
+      valor: Math.round(campos.valor * 100).toString(), data: dataForm,
       recorrencia: r.recorrencia || 'nao',
       parcelaInicial: r.parcelaInicial || 1, totalParcelas: r.totalParcelas || 2,
       periodicidade: r.periodicidade || 'Mensal', valorMode: 'total',
-      observacao: r.observacao || '',
+      observacao: campos.observacao || '',
     });
-    setEditId(r.id); setShowForm(true);
+    setEditId(r.id); setEditMes(mes); setEditAno(ano); setShowForm(true);
   };
 
   const addCateg = () => {
@@ -378,10 +500,10 @@ export default function Receitas({ month, year }) {
     return true;
   });
 
-  const totalPendente = periodo.filter(r => !statusMesReceita(r, lm, ly).recebida).reduce((s, r) => s + parcelaValor(r), 0);
+  const totalPendente = periodo.filter(r => !statusMesReceita(r, lm, ly).recebida).reduce((s, r) => s + parcelaValorMesReceita(r, lm, ly), 0);
   const totalRecebido = periodo.filter(r => statusMesReceita(r, lm, ly).recebida).reduce((s, r) => {
     const st = statusMesReceita(r, lm, ly);
-    return s + (st.valorRecebido || parcelaValor(r));
+    return s + (st.valorRecebido || parcelaValorMesReceita(r, lm, ly));
   }, 0);
 
   return (
@@ -390,7 +512,7 @@ export default function Receitas({ month, year }) {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-white font-bold text-lg">Receitas</h2>
-        <button onClick={() => { setForm(emptyForm()); setEditId(null); setShowForm(true); }}
+        <button onClick={() => { setForm(emptyForm()); setEditId(null); setEditMes(null); setEditAno(null); setShowForm(true); }}
           className="btn-gold flex items-center gap-1.5 py-2 px-4 text-sm">
           <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd"/></svg>
           Nova
@@ -473,6 +595,8 @@ export default function Receitas({ month, year }) {
           {filtered.map((r, idx) => {
             const st = statusMesReceita(r, lm, ly);
             const pi = parcelaInfo(r, lm, ly);
+            const campos = getCamposMesReceita(r, lm, ly);
+            const valorMes = parcelaValorMesReceita(r, lm, ly);
             return (
               <div key={r.id} className="card-premium transition-all active:scale-[0.99]">
                 <div className="px-4 pt-3.5 pb-3">
@@ -487,10 +611,10 @@ export default function Receitas({ month, year }) {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className={`text-sm font-semibold truncate ${st.recebida ? 'text-white/60 line-through' : 'text-white'}`}>
-                        {r.nome}
+                        {campos.nome}
                       </p>
                       <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                        <span className="text-[10px] text-white/70">{r.categoria}</span>
+                        <span className="text-[10px] text-white/70">{campos.categoria}</span>
                         {r.recorrencia === 'fixa' && (
                           <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
                             style={{ background: 'rgba(34,197,94,0.12)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.2)' }}>
@@ -506,8 +630,8 @@ export default function Receitas({ month, year }) {
                       </div>
                     </div>
                     <div className="flex-shrink-0 text-right">
-                      <p className="hv text-sm font-bold text-income">{fmt(parcelaValor(r))}</p>
-                      {st.recebida && st.valorRecebido && st.valorRecebido !== parcelaValor(r) && (
+                      <p className="hv text-sm font-bold text-income">{fmt(valorMes)}</p>
+                      {st.recebida && st.valorRecebido && st.valorRecebido !== valorMes && (
                         <p className="text-[10px] text-white/50">recebido {fmt(st.valorRecebido)}</p>
                       )}
                     </div>
@@ -523,7 +647,7 @@ export default function Receitas({ month, year }) {
                         {r.recorrencia === 'fixa'
                           ? `Desde ${fmtDate(r.data)}`
                           : r.recorrencia === 'parcelar' && pi
-                            ? fmtDate(pi.dataAtual)
+                            ? fmtDate(campos.dia ? `${pi.dataAtual.slice(0, 8)}${campos.dia}` : pi.dataAtual)
                             : fmtDate(r.data)}
                       </span>
                       {st.recebida && st.data && (
@@ -557,7 +681,7 @@ export default function Receitas({ month, year }) {
                         </div>
                       ) : (
                         <AcoesMenu
-                          onEdit={() => openEdit(r)}
+                          onEdit={() => openEdit(r, lm, ly)}
                           onPagamentoParcial={() => openEfetivar(r.id)}
                           onDuplicar={(dataStr) => duplicar(r, dataStr)}
                           onExcluir={() => setConfirmId(r.id)}
@@ -719,6 +843,31 @@ export default function Receitas({ month, year }) {
         />,
         document.body
       )}
+
+      {/* Escolha: aplicar edição só neste mês ou daqui em diante (receitas fixas/parceladas) */}
+      {pendingEdit && (() => {
+        const original = receitas.find(x => x.id === editId);
+        const tipo = original?.recorrencia === 'fixa' ? 'fixa' : 'parcelada';
+        return (
+          <div className="fixed inset-0 z-[80] flex items-center justify-center px-4">
+            <div className="absolute inset-0 bg-black/70" style={{ backdropFilter: 'blur(8px)' }} />
+            <div className="relative card-premium p-6 w-full max-w-sm animate-scale-in" onClick={e => e.stopPropagation()}>
+              <h3 className="text-white font-bold text-base mb-2">Como deseja aplicar essas alterações?</h3>
+              <p className="text-white/60 text-sm mb-4">
+                Essa é uma receita {tipo} e você pode escolher entre aplicar essas alterações apenas para o mês selecionado ({MONTHS_LABEL[(editMes ?? lm) - 1].toLowerCase()}) ou dele em diante.
+              </p>
+              <div className="flex flex-col gap-2">
+                <button onClick={() => finalizarSave(pendingEdit, 'mes')} className="btn-gold w-full text-center text-sm">
+                  Apenas no mês selecionado
+                </button>
+                <button onClick={() => finalizarSave(pendingEdit, 'futuro')} className="btn-ghost w-full text-center text-sm">
+                  Mês selecionado em diante
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Modal confirmar recebimento */}
       {efetivId && (

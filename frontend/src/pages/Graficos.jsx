@@ -37,9 +37,26 @@ const RECEITA_KEY = 'financeiro_receitas';
 const CARTAO_KEY = 'planeje_cartoes';
 const FATURA_KEY = 'planeje_faturas';
 
-function parcelaValor(d) {
-  if (d.recorrencia === 'parcelar' && d.totalParcelas > 1) return d.valor / d.totalParcelas;
-  return d.valor;
+function mesKey(month, year) { return `${year}-${String(month).padStart(2, '0')}`; }
+
+// Para despesas/receitas "fixa"/"parcelar", nome/valor/categoria podem variar por mês
+// (overrides/historico) — mesmo mecanismo de Dividas.jsx/Receitas.jsx. Sem isso, um
+// ajuste "somente este mês" não refletia no ranking de categorias.
+function getCamposMes(d, month, year) {
+  const base = { nome: d.nome, valor: d.valor, categoria: d.categoria };
+  if (d.recorrencia !== 'fixa' && d.recorrencia !== 'parcelar') return base;
+  const key = mesKey(month, year);
+  if (d.overrides && d.overrides[key]) return { ...base, ...d.overrides[key] };
+  if (d.historico && d.historico.length) {
+    const found = d.historico.find(h => key <= h.ate);
+    if (found) return { ...base, ...found };
+  }
+  return base;
+}
+function parcelaValorMes(d, month, year) {
+  const campos = getCamposMes(d, month, year);
+  if (d.recorrencia === 'parcelar' && d.totalParcelas > 1) return campos.valor / d.totalParcelas;
+  return campos.valor;
 }
 
 function statusMes(d, month, year) {
@@ -92,17 +109,36 @@ function loadTransacoes(month, year) {
         } else {
           date = d.pagamentoData || d.vencimento || `${year}-${mm}-01`;
         }
+        const campos = getCamposMes(d, month, year);
         return {
           id: 'div_' + d.id,
           type: 'expense',
-          description: d.nome,
-          category: d.categoria || 'Outros',
-          amount: parcelaValor(d),
+          description: campos.nome,
+          category: campos.categoria || 'Outros',
+          amount: parcelaValorMes(d, month, year),
           date,
           pago: statusMes(d, month, year).pago,
         };
       });
   } catch { return []; }
+}
+
+// Idem para receitas fixas/parceladas.
+function getCamposMesReceita(r, month, year) {
+  const base = { nome: r.nome, valor: r.valor, categoria: r.categoria };
+  if (r.recorrencia !== 'fixa' && r.recorrencia !== 'parcelar') return base;
+  const key = mesKey(month, year);
+  if (r.overrides && r.overrides[key]) return { ...base, ...r.overrides[key] };
+  if (r.historico && r.historico.length) {
+    const found = r.historico.find(h => key <= h.ate);
+    if (found) return { ...base, ...found };
+  }
+  return base;
+}
+function parcelaValorMesReceita(r, month, year) {
+  const campos = getCamposMesReceita(r, month, year);
+  if (r.recorrencia === 'parcelar' && r.totalParcelas > 1) return campos.valor / r.totalParcelas;
+  return campos.valor;
 }
 
 // Receitas parceladas guardam a data-base em r.data (não r.vencimento como despesas).
@@ -134,12 +170,13 @@ function loadReceitas(month, year) {
       const date = (r.recorrencia === 'fixa' || r.recorrencia === 'parcelar')
         ? `${year}-${mm}-${day}`
         : (r.recebimentoData || r.data || `${year}-${mm}-01`);
+      const campos = getCamposMesReceita(r, month, year);
       return {
         id: 'rec_' + r.id,
         type: 'income',
-        description: r.nome,
-        category: r.categoria || 'Outros',
-        amount: parseFloat(r.valorRecebido || parcelaValor(r) || 0),
+        description: campos.nome,
+        category: campos.categoria || 'Outros',
+        amount: parseFloat(r.valorRecebido || parcelaValorMesReceita(r, month, year) || 0),
         date,
       };
     });

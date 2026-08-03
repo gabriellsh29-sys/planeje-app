@@ -24,17 +24,36 @@ function getGastoFatura(month, year) {
   } catch { return 0; }
 }
 
+function mesKey(month, year) { return `${year}-${String(month).padStart(2, '0')}`; }
+
+// Para despesas "fixa"/"parcelar", categoria/valor podem variar por mês
+// (d.overrides['YYYY-MM'] ou d.historico) — mesmo mecanismo de Dividas.jsx. Sem
+// isso, uma despesa recategorizada "somente este mês" continuava contando pro
+// orçamento da categoria antiga, e o valor de override não era somado.
+function getCamposMes(d, month, year) {
+  const base = { categoria: d.categoria, valor: d.valor };
+  if (d.recorrencia !== 'fixa' && d.recorrencia !== 'parcelar') return base;
+  const key = mesKey(month, year);
+  if (d.overrides && d.overrides[key]) return { ...base, ...d.overrides[key] };
+  if (d.historico && d.historico.length) {
+    const found = d.historico.find(h => key <= h.ate);
+    if (found) return { ...base, ...found };
+  }
+  return base;
+}
+
 function getGastoCategoria(categoria, month, year) {
   try {
     const dividas = JSON.parse(localStorage.getItem(DIVIDA_KEY) || '[]');
     const baseDividas = dividas.filter(d => {
-      if (d.categoria !== categoria) return false;
       if (d.recorrencia === 'fixa') {
+        if (getCamposMes(d, month, year).categoria !== categoria) return false;
         if (!d.vencimento) return true;
         const [vy, vm] = d.vencimento.split('-').map(Number);
         return (year * 12 + (month - 1)) >= (vy * 12 + (vm - 1));
       }
       if (d.recorrencia === 'parcelar') {
+        if (getCamposMes(d, month, year).categoria !== categoria) return false;
         if (!d.vencimento) return false;
         const [vy, vm] = d.vencimento.split('-').map(Number);
         const inicio = vy * 12 + (vm - 1);
@@ -42,12 +61,14 @@ function getGastoCategoria(categoria, month, year) {
         const atual = year * 12 + (month - 1);
         return atual >= inicio && atual <= fim;
       }
+      if (d.categoria !== categoria) return false;
       const ds = d.pagamentoData || d.vencimento;
       if (!ds) return false;
       const [y, m] = ds.split('-').map(Number);
       return y === year && m === month;
     }).reduce((s, d) => {
-      const val = (d.recorrencia === 'parcelar' && d.totalParcelas > 1) ? d.valor / d.totalParcelas : d.valor;
+      const campos = getCamposMes(d, month, year);
+      const val = (d.recorrencia === 'parcelar' && d.totalParcelas > 1) ? campos.valor / d.totalParcelas : campos.valor;
       return s + val;
     }, 0);
     if (categoria === 'Cartão de Crédito') return baseDividas + getGastoFatura(month, year);

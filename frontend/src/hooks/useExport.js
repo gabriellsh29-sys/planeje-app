@@ -8,9 +8,24 @@ function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt
 
 function mesKey(month, year) { return `${year}-${String(month).padStart(2, '0')}`; }
 
-function parcelaValor(d) {
-  if (d.recorrencia === 'parcelar' && d.totalParcelas > 1) return d.valor / d.totalParcelas;
-  return d.valor;
+// Para "fixa"/"parcelar", nome/valor/categoria podem variar por mês (overrides/
+// historico) — mesmo mecanismo de Dividas.jsx/Receitas.jsx. Sem isso, um ajuste
+// "somente este mês" não aparecia no relatório exportado.
+function getCamposMes(d, month, year) {
+  const base = { nome: d.nome, valor: d.valor, categoria: d.categoria };
+  if (d.recorrencia !== 'fixa' && d.recorrencia !== 'parcelar') return base;
+  const key = mesKey(month, year);
+  if (d.overrides && d.overrides[key]) return { ...base, ...d.overrides[key] };
+  if (d.historico && d.historico.length) {
+    const found = d.historico.find(h => key <= h.ate);
+    if (found) return { ...base, ...found };
+  }
+  return base;
+}
+function parcelaValorMes(d, month, year) {
+  const campos = getCamposMes(d, month, year);
+  if (d.recorrencia === 'parcelar' && d.totalParcelas > 1) return campos.valor / d.totalParcelas;
+  return campos.valor;
 }
 
 // Status de pagamento por mês (mesma regra de Dividas.jsx): "fixa"/"parcelar" guardam
@@ -42,6 +57,24 @@ function statusMesReceita(r, month, year) {
     return { recebida: false, valorRecebido: null };
   }
   return { recebida: !!r.recebida, valorRecebido: r.valorRecebido || null };
+}
+
+// Idem, para receitas.
+function getCamposMesReceita(r, month, year) {
+  const base = { nome: r.nome, valor: r.valor, categoria: r.categoria };
+  if (r.recorrencia !== 'fixa' && r.recorrencia !== 'parcelar') return base;
+  const key = mesKey(month, year);
+  if (r.overrides && r.overrides[key]) return { ...base, ...r.overrides[key] };
+  if (r.historico && r.historico.length) {
+    const found = r.historico.find(h => key <= h.ate);
+    if (found) return { ...base, ...found };
+  }
+  return base;
+}
+function parcelaValorMesReceita(r, month, year) {
+  const campos = getCamposMesReceita(r, month, year);
+  if (r.recorrencia === 'parcelar' && r.totalParcelas > 1) return campos.valor / r.totalParcelas;
+  return campos.valor;
 }
 
 // Receitas parceladas guardam a data-base em r.data (não r.vencimento como despesas).
@@ -114,37 +147,37 @@ export function exportCSV(month, year) {
     ['DESPESAS'],
     ['Nome','Categoria','Valor','Vencimento','Status','Recorrência','Parcelas'],
     ...despesas.map(d => [
-      d.nome,
-      d.categoria || 'Outros',
-      parcelaValor(d).toFixed(2).replace('.', ','),
+      getCamposMes(d, month, year).nome,
+      getCamposMes(d, month, year).categoria || 'Outros',
+      parcelaValorMes(d, month, year).toFixed(2).replace('.', ','),
       fmtDate(d.vencimento),
       statusMes(d, month, year).pago ? 'Pago' : 'Pendente',
       d.recorrencia === 'fixa' ? 'Fixa' : d.recorrencia === 'parcelar' ? 'Parcelado' : 'Única',
       d.recorrencia === 'parcelar' ? `${d.totalParcelas}x` : '',
     ]),
     [],
-    [`Total despesas: ${fmt(despesas.reduce((s, d) => s + parcelaValor(d), 0))}`],
-    [`Total pago: ${fmt(despesas.filter(d => statusMes(d, month, year).pago).reduce((s, d) => s + parseFloat(statusMes(d, month, year).valorPago ?? parcelaValor(d)), 0))}`],
-    [`Total pendente: ${fmt(despesas.filter(d => !statusMes(d, month, year).pago).reduce((s, d) => s + parcelaValor(d), 0))}`],
+    [`Total despesas: ${fmt(despesas.reduce((s, d) => s + parcelaValorMes(d, month, year), 0))}`],
+    [`Total pago: ${fmt(despesas.filter(d => statusMes(d, month, year).pago).reduce((s, d) => s + parseFloat(statusMes(d, month, year).valorPago ?? parcelaValorMes(d, month, year)), 0))}`],
+    [`Total pendente: ${fmt(despesas.filter(d => !statusMes(d, month, year).pago).reduce((s, d) => s + parcelaValorMes(d, month, year), 0))}`],
     [],
     ['RECEITAS'],
     ['Nome','Categoria','Valor','Data','Status','Recorrência'],
     ...receitas.map(r => [
-      r.nome,
-      r.categoria || 'Outros',
-      (parseFloat(statusMesReceita(r, month, year).valorRecebido || parcelaValor(r) || 0)).toFixed(2).replace('.', ','),
+      getCamposMesReceita(r, month, year).nome,
+      getCamposMesReceita(r, month, year).categoria || 'Outros',
+      (parseFloat(statusMesReceita(r, month, year).valorRecebido || parcelaValorMesReceita(r, month, year) || 0)).toFixed(2).replace('.', ','),
       fmtDate(r.recebimentoData || r.data),
       statusMesReceita(r, month, year).recebida ? 'Recebido' : 'A receber',
       r.recorrencia === 'fixa' ? 'Fixa' : r.recorrencia === 'parcelar' ? 'Parcelado' : 'Única',
     ]),
     [],
-    [`Total receitas: ${fmt(receitas.reduce((s, r) => s + parcelaValor(r), 0))}`],
-    [`Total recebido: ${fmt(receitas.filter(r => statusMesReceita(r, month, year).recebida).reduce((s, r) => s + parseFloat(statusMesReceita(r, month, year).valorRecebido || parcelaValor(r)), 0))}`],
+    [`Total receitas: ${fmt(receitas.reduce((s, r) => s + parcelaValorMesReceita(r, month, year), 0))}`],
+    [`Total recebido: ${fmt(receitas.filter(r => statusMesReceita(r, month, year).recebida).reduce((s, r) => s + parseFloat(statusMesReceita(r, month, year).valorRecebido || parcelaValorMesReceita(r, month, year)), 0))}`],
     [],
     ['RESUMO'],
-    [`Total despesas,${fmt(despesas.reduce((s, d) => s + parcelaValor(d), 0))}`],
-    [`Total receitas,${fmt(receitas.reduce((s, r) => s + parcelaValor(r), 0))}`],
-    [`Saldo previsto,${fmt(receitas.reduce((s, r) => s + parcelaValor(r), 0) - despesas.reduce((s, d) => s + parcelaValor(d), 0))}`],
+    [`Total despesas,${fmt(despesas.reduce((s, d) => s + parcelaValorMes(d, month, year), 0))}`],
+    [`Total receitas,${fmt(receitas.reduce((s, r) => s + parcelaValorMesReceita(r, month, year), 0))}`],
+    [`Saldo previsto,${fmt(receitas.reduce((s, r) => s + parcelaValorMesReceita(r, month, year), 0) - despesas.reduce((s, d) => s + parcelaValorMes(d, month, year), 0))}`],
   ];
 
   const csvContent = '﻿' + rows.map(row =>
@@ -170,20 +203,21 @@ export function exportPDF(month, year) {
   const mesAno   = `${MONTHS[month - 1]} ${year}`;
   const hoje     = new Date().toLocaleDateString('pt-BR');
 
-  const totalDesp  = despesas.reduce((s, d) => s + parcelaValor(d), 0);
-  const totalRec   = receitas.reduce((s, r) => s + parcelaValor(r), 0);
-  const pagoDesp   = despesas.filter(d => statusMes(d, month, year).pago).reduce((s, d) => s + parseFloat(statusMes(d, month, year).valorPago ?? parcelaValor(d)), 0);
-  const pendDesp   = despesas.filter(d => !statusMes(d, month, year).pago).reduce((s, d) => s + parcelaValor(d), 0);
-  const recebRec   = receitas.filter(r => statusMesReceita(r, month, year).recebida).reduce((s, r) => s + parseFloat(statusMesReceita(r, month, year).valorRecebido || parcelaValor(r)), 0);
+  const totalDesp  = despesas.reduce((s, d) => s + parcelaValorMes(d, month, year), 0);
+  const totalRec   = receitas.reduce((s, r) => s + parcelaValorMesReceita(r, month, year), 0);
+  const pagoDesp   = despesas.filter(d => statusMes(d, month, year).pago).reduce((s, d) => s + parseFloat(statusMes(d, month, year).valorPago ?? parcelaValorMes(d, month, year)), 0);
+  const pendDesp   = despesas.filter(d => !statusMes(d, month, year).pago).reduce((s, d) => s + parcelaValorMes(d, month, year), 0);
+  const recebRec   = receitas.filter(r => statusMesReceita(r, month, year).recebida).reduce((s, r) => s + parseFloat(statusMesReceita(r, month, year).valorRecebido || parcelaValorMesReceita(r, month, year)), 0);
   const saldo      = totalRec - totalDesp;
 
   const rowsDesp = despesas.map(d => {
     const pago = statusMes(d, month, year).pago;
+    const campos = getCamposMes(d, month, year);
     return `
     <tr>
-      <td>${esc(d.nome)}</td>
-      <td>${esc(d.categoria || 'Outros')}</td>
-      <td style="text-align:right">${esc(fmt(parcelaValor(d)))}</td>
+      <td>${esc(campos.nome)}</td>
+      <td>${esc(campos.categoria || 'Outros')}</td>
+      <td style="text-align:right">${esc(fmt(parcelaValorMes(d, month, year)))}</td>
       <td>${esc(fmtDate(d.vencimento))}</td>
       <td><span class="${pago ? 'badge-green' : 'badge-red'}">${pago ? 'Pago' : 'Pendente'}</span></td>
     </tr>`;
@@ -191,11 +225,12 @@ export function exportPDF(month, year) {
 
   const rowsRec = receitas.map(r => {
     const recebida = statusMesReceita(r, month, year).recebida;
+    const campos = getCamposMesReceita(r, month, year);
     return `
     <tr>
-      <td>${esc(r.nome)}</td>
-      <td>${esc(r.categoria || 'Outros')}</td>
-      <td style="text-align:right">${esc(fmt(parcelaValor(r)))}</td>
+      <td>${esc(campos.nome)}</td>
+      <td>${esc(campos.categoria || 'Outros')}</td>
+      <td style="text-align:right">${esc(fmt(parcelaValorMesReceita(r, month, year)))}</td>
       <td>${esc(fmtDate(r.recebimentoData || r.data))}</td>
       <td><span class="${recebida ? 'badge-green' : 'badge-yellow'}">${recebida ? 'Recebido' : 'A receber'}</span></td>
     </tr>`;
