@@ -354,6 +354,7 @@ export default function Dividas({ month, year }) {
   const [filter, setFilter] = useState('todas');
   const [filterCategorias, setFilterCategorias] = useState([]);
   const [filterVencs, setFilterVencs] = useState([]);
+  const [filterDias, setFilterDias] = useState([]);
   const [search, setSearch] = useState('');
   const [showCalc, setShowCalc] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
@@ -627,12 +628,12 @@ export default function Dividas({ month, year }) {
 
   const filtered = dividasPeriodo.filter(d => {
     const st = statusMes(d, d._m, d._y);
+    const vd = vencimentoPeriodo(d, d._m, d._y) || '';
     if (filter === 'pendentes' && st.pago) return false;
     if (filter === 'pagas' && !st.pago) return false;
     if (search.trim() && !d.nome.toLowerCase().includes(search.trim().toLowerCase())) return false;
     if (filterCategorias.length > 0 && !filterCategorias.includes(d.categoria)) return false;
     if (filterVencs.length > 0) {
-      const vd = vencimentoPeriodo(d, d._m, d._y) || '';
       const passVenc = filterVencs.some(fv => {
         if (fv === 'vencidas') return !st.pago && vd && vd < today;
         if (fv === 'hoje') return vd === today;
@@ -641,11 +642,20 @@ export default function Dividas({ month, year }) {
       });
       if (!passVenc) return false;
     }
+    if (filterDias.length > 0) {
+      const dia = vd ? String(Number(vd.split('-')[2])) : null;
+      if (!dia || !filterDias.includes(dia)) return false;
+    }
     return true;
   });
 
   const totalPendente = dividasPeriodo.filter(d => !statusMes(d, d._m, d._y).pago).reduce((s, d) => s + parcelaValorMes(d, d._m, d._y), 0);
   const totalPago = dividasPeriodo.filter(d => statusMes(d, d._m, d._y).pago).reduce((s, d) => s + parcelaValorMes(d, d._m, d._y), 0);
+
+  // Total/quantidade do resultado filtrado (busca + status + categoria + vencimento + dia).
+  const totalFiltrado = filtered.reduce((s, d) => s + parcelaValorMes(d, d._m, d._y), 0);
+  const qtdFiltrado = filtered.length;
+  const temFiltroAtivo = filter !== 'todas' || search.trim() !== '' || filterCategorias.length > 0 || filterVencs.length > 0 || filterDias.length > 0;
 
   const filteredSorted = [...filtered].sort((a, b) => {
     const va = vencimentoPeriodo(a, a._m, a._y) || a.vencimento || '';
@@ -717,7 +727,7 @@ export default function Dividas({ month, year }) {
 
       {/* Filtros avançados */}
       {(() => {
-        const activeCount = filterCategorias.length + filterVencs.length;
+        const activeCount = filterCategorias.length + filterVencs.length + filterDias.length;
         return (
           <div className="mb-4">
             <div className="flex flex-wrap items-center gap-2">
@@ -756,9 +766,18 @@ export default function Dividas({ month, year }) {
                 openDropdown={openDropdown} setOpenDropdown={setOpenDropdown}
               />
 
+              {/* Dia dropdown */}
+              <DropdownSelect
+                id="dia" label="Dia"
+                options={Array.from({ length: 31 }, (_, i) => { const n = String(i + 1); return { val: n, label: `Dia ${n}` }; })}
+                selected={filterDias}
+                onToggle={(val) => val === null ? setFilterDias([]) : toggleFilter(filterDias, setFilterDias, val)}
+                openDropdown={openDropdown} setOpenDropdown={setOpenDropdown}
+              />
+
               {/* Limpar tudo */}
               {activeCount > 0 && (
-                <button onClick={() => { setFilterCategorias([]); setFilterVencs([]); }}
+                <button onClick={() => { setFilterCategorias([]); setFilterVencs([]); setFilterDias([]); }}
                   className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-semibold transition-all"
                   style={{ background: 'rgba(244,63,94,0.08)', color: '#f43f5e', border: '1px solid rgba(244,63,94,0.2)' }}>
                   <svg viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"/></svg>
@@ -769,6 +788,17 @@ export default function Dividas({ month, year }) {
           </div>
         );
       })()}
+
+      {/* Total e quantidade do que está filtrado no momento (busca, status, categoria, vencimento, dia) */}
+      {temFiltroAtivo && (
+        <div className="flex items-center justify-between mb-3 px-3 py-2.5 rounded-xl"
+          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <span className="text-text-3 text-xs font-medium">
+            {qtdFiltrado} {qtdFiltrado === 1 ? 'registro' : 'registros'}
+          </span>
+          <span className="hv text-text-1 text-sm font-bold">{fmt(totalFiltrado)}</span>
+        </div>
+      )}
 
       {/* List */}
       {filteredSorted.length === 0 ? (

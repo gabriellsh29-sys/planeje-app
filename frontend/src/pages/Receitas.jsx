@@ -189,6 +189,62 @@ function ConfigurarParcelas({ parcelaInicial, totalParcelas, periodicidade, onCh
   );
 }
 
+function DropdownSelect({ id, label, options, selected, onToggle, openDropdown, setOpenDropdown }) {
+  const ref = useRef(null);
+  const isOpen = openDropdown === id;
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpenDropdown(null); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [setOpenDropdown]);
+  const displayLabel = selected.length === 0 ? label
+    : selected.length === 1 ? selected[0]
+    : `${selected[0]} +${selected.length - 1}`;
+  return (
+    <div ref={ref} className="relative">
+      <button onClick={() => setOpenDropdown(isOpen ? null : id)}
+        className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition-all"
+        style={selected.length > 0
+          ? { background: 'rgba(34,197,94,0.12)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.3)' }
+          : { background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.08)' }
+        }>
+        <span className="max-w-[120px] truncate">{displayLabel}</span>
+        <svg viewBox="0 0 20 20" fill="currentColor" className={`w-3 h-3 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`}><path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd"/></svg>
+      </button>
+      {isOpen && (
+        <div className="absolute top-full left-0 mt-1 z-50 rounded-xl py-1 min-w-[200px] flex flex-col"
+          style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 16px 40px rgba(0,0,0,0.6)', maxHeight: 260 }}>
+          <p className="px-3 pt-2 pb-1 text-[9px] uppercase tracking-widest font-bold text-white/40 flex-shrink-0">{label}</p>
+          {selected.length > 0 && (
+            <button onClick={() => onToggle(null)}
+              className="w-full text-left px-3 py-1.5 text-[11px] text-expense hover:bg-white/5 transition flex-shrink-0">
+              Limpar seleção
+            </button>
+          )}
+          <div className="overflow-y-auto">
+          {options.map(opt => (
+            <label key={opt.val} onMouseDown={e => { e.preventDefault(); onToggle(opt.val); }}
+              className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-white/5 transition">
+              <div className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0"
+                style={selected.includes(opt.val)
+                  ? { background: '#22c55e', border: '1px solid #22c55e' }
+                  : { background: 'transparent', border: '1px solid rgba(255,255,255,0.2)' }}>
+                {selected.includes(opt.val) && (
+                  <svg viewBox="0 0 12 12" fill="none" className="w-3 h-3">
+                    <path d="M2 6l3 3 5-5" stroke="#0f172a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                )}
+              </div>
+              <span className={`text-[12px] ${selected.includes(opt.val) ? 'text-white font-medium' : 'text-white/70'}`}>{opt.label}</span>
+            </label>
+          ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AcoesMenu({ onEdit, onPagamentoParcial, onDuplicar, onExcluir, vencimentoAtual, openUp }) {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState('main'); // main | duplicar | data
@@ -297,6 +353,22 @@ export default function Receitas({ month, year }) {
   const [editMes,     setEditMes]     = useState(null);
   const [editAno,     setEditAno]     = useState(null);
   const [pendingEdit, setPendingEdit] = useState(null);
+  const [filterCategorias, setFilterCategorias] = useState([]);
+  const [filterDias,       setFilterDias]       = useState([]);
+  const [openDropdown,     setOpenDropdown]     = useState(null);
+
+  const toggleFilter = (arr, setArr, val) => {
+    setArr(prev => prev.includes(val) ? prev.filter(x => x !== val) : [...prev, val]);
+  };
+
+  // Data efetiva da receita no mês/ano visualizado (usada pelo filtro de dia).
+  const dataEfetivaMes = (r, month, year) => {
+    const campos = getCamposMesReceita(r, month, year);
+    if ((r.recorrencia === 'fixa' || r.recorrencia === 'parcelar') && campos.dia) {
+      return `${year}-${String(month).padStart(2, '0')}-${campos.dia}`;
+    }
+    return r.recebimentoData || r.data || '';
+  };
 
   const upd = (p) => setForm(f => ({ ...f, ...p }));
 
@@ -497,6 +569,12 @@ export default function Receitas({ month, year }) {
     if (filter === 'pendentes') return !st.recebida;
     if (filter === 'recebidas') return st.recebida;
     if (search.trim() && !r.nome.toLowerCase().includes(search.trim().toLowerCase())) return false;
+    if (filterCategorias.length > 0 && !filterCategorias.includes(r.categoria)) return false;
+    if (filterDias.length > 0) {
+      const de = dataEfetivaMes(r, lm, ly);
+      const dia = de ? String(Number(de.split('-')[2])) : null;
+      if (!dia || !filterDias.includes(dia)) return false;
+    }
     return true;
   });
 
@@ -505,6 +583,12 @@ export default function Receitas({ month, year }) {
     const st = statusMesReceita(r, lm, ly);
     return s + (st.valorRecebido || parcelaValorMesReceita(r, lm, ly));
   }, 0);
+
+  // Total/quantidade do resultado filtrado (busca + status + categoria + dia).
+  const totalFiltrado = filtered.reduce((s, r) => s + parcelaValorMesReceita(r, lm, ly), 0);
+  const qtdFiltrado = filtered.length;
+  const temFiltroAtivo = filter !== 'todas' || search.trim() !== '' || filterCategorias.length > 0 || filterDias.length > 0;
+  const activeCount = filterCategorias.length + filterDias.length;
 
   return (
     <div className="p-4 md:p-6 pb-safe-nav animate-fade-in">
@@ -567,7 +651,7 @@ export default function Receitas({ month, year }) {
       </div>
 
       {/* Período */}
-      <div className="flex gap-2 mb-4">
+      <div className="flex flex-wrap items-center gap-2 mb-4">
         <select value={lm} onChange={e => setLm(Number(e.target.value))}
           className="rounded-xl px-3 py-2 text-xs font-semibold text-white outline-none cursor-pointer [color-scheme:dark]"
           style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
@@ -578,7 +662,43 @@ export default function Receitas({ month, year }) {
           style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
           {anosDisponiveis.map(yr => <option key={yr} value={yr}>{yr}</option>)}
         </select>
+
+        <DropdownSelect
+          id="cat" label="Categoria"
+          options={[...new Set([...categorias, ...receitas.map(r => r.categoria).filter(Boolean)])].sort().map(c => ({ val: c, label: c }))}
+          selected={filterCategorias}
+          onToggle={(val) => val === null ? setFilterCategorias([]) : toggleFilter(filterCategorias, setFilterCategorias, val)}
+          openDropdown={openDropdown} setOpenDropdown={setOpenDropdown}
+        />
+
+        <DropdownSelect
+          id="dia" label="Dia"
+          options={Array.from({ length: 31 }, (_, i) => { const n = String(i + 1); return { val: n, label: `Dia ${n}` }; })}
+          selected={filterDias}
+          onToggle={(val) => val === null ? setFilterDias([]) : toggleFilter(filterDias, setFilterDias, val)}
+          openDropdown={openDropdown} setOpenDropdown={setOpenDropdown}
+        />
+
+        {activeCount > 0 && (
+          <button onClick={() => { setFilterCategorias([]); setFilterDias([]); }}
+            className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-semibold transition-all"
+            style={{ background: 'rgba(244,63,94,0.08)', color: '#f43f5e', border: '1px solid rgba(244,63,94,0.2)' }}>
+            <svg viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"/></svg>
+            Limpar ({activeCount})
+          </button>
+        )}
       </div>
+
+      {/* Total e quantidade do que está filtrado no momento (busca, status, categoria, dia) */}
+      {temFiltroAtivo && (
+        <div className="flex items-center justify-between mb-3 px-3 py-2.5 rounded-xl"
+          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <span className="text-white/60 text-xs font-medium">
+            {qtdFiltrado} {qtdFiltrado === 1 ? 'registro' : 'registros'}
+          </span>
+          <span className="hv text-white text-sm font-bold">{fmt(totalFiltrado)}</span>
+        </div>
+      )}
 
       {/* Lista */}
       {filtered.length === 0 ? (
