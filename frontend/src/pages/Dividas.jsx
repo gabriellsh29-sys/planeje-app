@@ -124,6 +124,48 @@ function parcelaValorMes(d, month, year) {
   return campos.valor;
 }
 
+// Lista de "pago NESTE mês" por fluxo de caixa real — não por vencimento. Uma conta
+// que venceu em julho mas só foi paga em agosto some das Pagas de julho e aparece
+// nas de agosto (o vencimento original continua July se você olhar por Vencimento
+// ou na aba Todas; só a aba Pagas reclassifica pelo mês em que o dinheiro saiu).
+// Cada linha mantém _m/_y = mês/ano da OCORRÊNCIA original (não o mês navegado),
+// pois é essa chave que localiza o registro de pagamento (d.pagamentos[key]).
+function loadPagasNoMes(dividas, month, year) {
+  const out = [];
+  dividas.forEach(d => {
+    if (d.recorrencia === 'fixa' || d.recorrencia === 'parcelar') {
+      let temEntradaModerna = false;
+      if (d.pagamentos) {
+        Object.entries(d.pagamentos).forEach(([key, p]) => {
+          if (!p || !p.pago || !p.pagamentoData) return;
+          temEntradaModerna = true;
+          const [py, pm] = p.pagamentoData.split('-').map(Number);
+          if (py === year && pm === month) {
+            const [ky, km] = key.split('-').map(Number);
+            out.push({ ...d, _m: km, _y: ky });
+          }
+        });
+      }
+      // Migração: parcelar antigo sem entrada própria em pagamentos ainda guarda
+      // pago/pagamentoData num campo global (ver statusMes) — mesma regra aqui.
+      if (d.recorrencia === 'parcelar' && !temEntradaModerna && d.pago && d.pagamentoData) {
+        const [py, pm] = d.pagamentoData.split('-').map(Number);
+        if (py === year && pm === month) {
+          const [vy, vm] = (d.vencimento || d.pagamentoData).split('-').map(Number);
+          out.push({ ...d, _m: vm, _y: vy });
+        }
+      }
+    } else if (d.pago && d.pagamentoData) {
+      const [py, pm] = d.pagamentoData.split('-').map(Number);
+      if (py === year && pm === month) {
+        const [vy, vm] = (d.vencimento || d.pagamentoData).split('-').map(Number);
+        out.push({ ...d, _m: vm, _y: vy });
+      }
+    }
+  });
+  return out;
+}
+
 const emptyForm = () => ({
   nome: '', categoria: 'Cartão de Crédito', valor: '', vencimento: '',
   recorrencia: 'nao', parcelaInicial: 1, totalParcelas: 2,
@@ -592,6 +634,12 @@ export default function Dividas({ month, year }) {
         .flatMap(mm => filtrarPeriodo(dividas, mm, y).map(d => ({ ...d, _m: mm, _y: y })))
     : filtrarPeriodo(dividas, m, y).map(d => ({ ...d, _m: m, _y: y }));
 
+  // Pago por fluxo de caixa real (mês do pagamento, não do vencimento) — usado
+  // pela aba "Pagas" e pelo card "Quitadas". Ver loadPagasNoMes.
+  const dividasPagasNoMes = m === 0
+    ? Array.from({ length: 12 }, (_, i) => i + 1).flatMap(mm => loadPagasNoMes(dividas, mm, y))
+    : loadPagasNoMes(dividas, m, y);
+
   // Anos disponíveis no seletor: baseados nos dados reais cadastrados (não numa
   // janela flutuante ±N que "deriva" e pode deixar o ano atual inalcançável.
   const anosDisponiveis = React.useMemo(() => {
@@ -626,11 +674,14 @@ export default function Dividas({ month, year }) {
     setArr(prev => prev.includes(val) ? prev.filter(x => x !== val) : [...prev, val]);
   };
 
-  const filtered = dividasPeriodo.filter(d => {
+  // "Pagas" usa a lista por fluxo de caixa (dividasPagasNoMes); "Todas"/"Pendentes"
+  // continuam por vencimento/accrual (dividasPeriodo) — ver decisão no loadPagasNoMes.
+  const baseFiltro = filter === 'pagas' ? dividasPagasNoMes : dividasPeriodo;
+
+  const filtered = baseFiltro.filter(d => {
     const st = statusMes(d, d._m, d._y);
     const vd = vencimentoPeriodo(d, d._m, d._y) || '';
     if (filter === 'pendentes' && st.pago) return false;
-    if (filter === 'pagas' && !st.pago) return false;
     if (search.trim() && !d.nome.toLowerCase().includes(search.trim().toLowerCase())) return false;
     if (filterCategorias.length > 0 && !filterCategorias.includes(d.categoria)) return false;
     if (filterVencs.length > 0) {
@@ -650,18 +701,23 @@ export default function Dividas({ month, year }) {
   });
 
   const totalPendente = dividasPeriodo.filter(d => !statusMes(d, d._m, d._y).pago).reduce((s, d) => s + parcelaValorMes(d, d._m, d._y), 0);
-  const totalPago = dividasPeriodo.filter(d => statusMes(d, d._m, d._y).pago).reduce((s, d) => s + parcelaValorMes(d, d._m, d._y), 0);
+  const totalPago = dividasPagasNoMes.reduce((s, d) => s + parcelaValorMes(d, d._m, d._y), 0);
 
   // Total/quantidade do resultado filtrado (busca + status + categoria + vencimento + dia).
   const totalFiltrado = filtered.reduce((s, d) => s + parcelaValorMes(d, d._m, d._y), 0);
   const qtdFiltrado = filtered.length;
   const temFiltroAtivo = filter !== 'todas' || search.trim() !== '' || filterCategorias.length > 0 || filterVencs.length > 0 || filterDias.length > 0;
 
-  const filteredSorted = [...filtered].sort((a, b) => {
-    const va = vencimentoPeriodo(a, a._m, a._y) || a.vencimento || '';
-    const vb = vencimentoPeriodo(b, b._m, b._y) || b.vencimento || '';
-    return vb.localeCompare(va);
-  });
+  // Na aba Pagas, ordena por data de PAGAMENTO (faz mais sentido pra conferir o que
+  // saiu da conta em ordem cronológica); nas outras abas, por vencimento como antes.
+  const sortKey = (d) => {
+    if (filter === 'pagas') {
+      const st = statusMes(d, d._m, d._y);
+      if (st.pagamentoData) return st.pagamentoData;
+    }
+    return vencimentoPeriodo(d, d._m, d._y) || d.vencimento || '';
+  };
+  const filteredSorted = [...filtered].sort((a, b) => sortKey(b).localeCompare(sortKey(a)));
 
   return (
     <div className="p-4 md:p-6 pb-safe-nav animate-fade-in">
@@ -693,7 +749,7 @@ export default function Dividas({ month, year }) {
             <p className="text-text-3 text-xs">Quitadas</p>
           </div>
           <p className="hv text-income font-bold text-lg">{fmt(totalPago)}</p>
-          <p className="text-text-3 text-[10px] mt-0.5">{dividasPeriodo.filter(d => statusMes(d, d._m, d._y).pago).length} registros</p>
+          <p className="text-text-3 text-[10px] mt-0.5">{dividasPagasNoMes.length} registros</p>
         </div>
       </div>
 
