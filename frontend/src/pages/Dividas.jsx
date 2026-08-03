@@ -835,6 +835,11 @@ export default function Dividas({ month, year }) {
             const pct = isParcelada && d.totalParcelas > 0
               ? Math.round((parcelaAtual - 1 + (st.pago ? 1 : 0)) / d.totalParcelas * 100)
               : 0;
+            // Enquanto a parcela ATUAL não for confirmada como paga, a barra fica em
+            // vermelho de alerta em vez de dourado — mesmo com % alto (ex: 6 de 7),
+            // dourado passava a impressão de que já estava tudo certo, quando na
+            // verdade ainda falta efetivar o pagamento desta parcela específica.
+            const pctColor = !st.pago ? '#f43f5e' : (pct === 100 ? '#22c55e' : '#c9a84c');
             const valorColor = st.pago ? '#22c55e' : vencida ? '#f59e0b' : '#f43f5e';
 
             return (
@@ -942,10 +947,10 @@ export default function Dividas({ month, year }) {
                     <div className="mt-2 ml-12">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-[10px] text-white/70">{parcelaAtual - 1 + (st.pago ? 1 : 0)} de {d.totalParcelas} pagas</span>
-                        <span className="text-[10px] font-semibold" style={{ color: pct === 100 ? '#22c55e' : '#c9a84c' }}>{pct}%</span>
+                        <span className="text-[10px] font-semibold" style={{ color: pctColor }}>{pct}%</span>
                       </div>
                       <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
-                        <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: pct === 100 ? '#22c55e' : '#c9a84c' }} />
+                        <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: pctColor }} />
                       </div>
                     </div>
                   )}
@@ -1019,6 +1024,9 @@ export default function Dividas({ month, year }) {
         const valorEfetivado = isParcelada ? parcelasPagas * pv : (st.pago ? pv : 0);
         const valorPendente = isParcelada ? parcelasPendentes * pv : (st.pago ? 0 : pv);
         const progressPct = isParcelada && d.totalParcelas > 0 ? Math.round(parcelasPagas / d.totalParcelas * 100) : 0;
+        // Mesma regra da lista: enquanto a parcela atual não for paga, cor de alerta
+        // em vez de dourado — evita dar a impressão de que já está tudo em dia.
+        const progressColor = !st.pago ? '#f43f5e' : (progressPct === 100 ? '#22c55e' : '#c9a84c');
 
         // Dias de atraso
         let diasAtraso = 0;
@@ -1100,11 +1108,11 @@ export default function Dividas({ month, year }) {
                       </div>
                       <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
                         <div className="h-full rounded-full transition-all"
-                          style={{ width: `${progressPct}%`, background: progressPct === 100 ? '#22c55e' : '#c9a84c' }} />
+                          style={{ width: `${progressPct}%`, background: progressColor }} />
                       </div>
                       <div className="flex justify-between mt-1">
                         <span className="text-text-3 text-[10px]">{parcelasPagas} pagas</span>
-                        <span className="text-[10px] font-medium" style={{ color: progressPct === 100 ? '#22c55e' : '#c9a84c' }}>{progressPct}%</span>
+                        <span className="text-[10px] font-medium" style={{ color: progressColor }}>{progressPct}%</span>
                         <span className="text-text-3 text-[10px]">{parcelasPendentes} pendentes</span>
                       </div>
                     </div>
