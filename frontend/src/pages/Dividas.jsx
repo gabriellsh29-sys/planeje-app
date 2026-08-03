@@ -700,11 +700,18 @@ export default function Dividas({ month, year }) {
     return true;
   });
 
+  // Valor real de uma linha: se já paga com valor diferente do previsto (ex: juros
+  // por atraso), usa o que REALMENTE saiu da conta — não o valor previsto/agendado.
+  const valorRealLinha = (d) => {
+    const st = statusMes(d, d._m, d._y);
+    return st.pago && st.valorPago != null ? st.valorPago : parcelaValorMes(d, d._m, d._y);
+  };
+
   const totalPendente = dividasPeriodo.filter(d => !statusMes(d, d._m, d._y).pago).reduce((s, d) => s + parcelaValorMes(d, d._m, d._y), 0);
-  const totalPago = dividasPagasNoMes.reduce((s, d) => s + parcelaValorMes(d, d._m, d._y), 0);
+  const totalPago = dividasPagasNoMes.reduce((s, d) => s + valorRealLinha(d), 0);
 
   // Total/quantidade do resultado filtrado (busca + status + categoria + vencimento + dia).
-  const totalFiltrado = filtered.reduce((s, d) => s + parcelaValorMes(d, d._m, d._y), 0);
+  const totalFiltrado = filtered.reduce((s, d) => s + valorRealLinha(d), 0);
   const qtdFiltrado = filtered.length;
   const temFiltroAtivo = filter !== 'todas' || search.trim() !== '' || filterCategorias.length > 0 || filterVencs.length > 0 || filterDias.length > 0;
 
@@ -882,6 +889,10 @@ export default function Dividas({ month, year }) {
                 ? vencAjustado < today
                 : isCurrentPeriod && vencAjustado < today
             );
+            // Valor de verdade: se já paga com valor diferente do previsto (ex: juros
+            // por atraso), mostra o que REALMENTE saiu da conta, não o previsto.
+            const valorPrevisto = parcelaValorMes(d, d._m, d._y);
+            const valorExibido = st.pago && st.valorPago != null ? st.valorPago : valorPrevisto;
             const parcelaAtual = (() => {
               if (!isParcelada || !d.vencimento) return d.parcelaInicial || 1;
               const [vy, vm] = d.vencimento.split('-').map(Number);
@@ -960,7 +971,10 @@ export default function Dividas({ month, year }) {
 
                     {/* Valor */}
                     <div className="flex-shrink-0 text-right">
-                      <p className="hv text-sm font-bold" style={{ color: valorColor }}>{fmt(parcelaValorMes(d, d._m, d._y))}</p>
+                      <p className="hv text-sm font-bold" style={{ color: valorColor }}>{fmt(valorExibido)}</p>
+                      {valorExibido !== valorPrevisto && (
+                        <p className="text-[10px] text-white/50">previsto {fmt(valorPrevisto)}</p>
+                      )}
                       {isParcelada && (
                         <p className="text-[10px] text-white/60">por parcela</p>
                       )}
@@ -1073,6 +1087,9 @@ export default function Dividas({ month, year }) {
             : isCurrentPeriodDetalhe && vencAjustadoDetalhe < today
         );
         const pv = parcelaValorMes(d, dm, dy);
+        // Valor de verdade a exibir: se já foi paga com um valor diferente do previsto
+        // (ex: juros por atraso), mostra o que REALMENTE saiu da conta, não o previsto.
+        const pvExibido = st.pago && st.valorPago != null ? st.valorPago : pv;
 
         // Progresso parcelamento
         const parcelasPagas = isParcelada ? (d.parcelaInicial - 1 + (st.pago ? 1 : 0)) : 0;
@@ -1128,8 +1145,9 @@ export default function Dividas({ month, year }) {
                   </div>
                   <div className="text-right flex-shrink-0">
                     <p className={`text-2xl font-bold ${st.pago ? 'text-income' : vencida ? 'text-yellow-500' : 'text-expense'}`}>
-                      {fmt(pv)}
+                      {fmt(pvExibido)}
                     </p>
+                    {pvExibido !== pv && <p className="text-text-3 text-xs">previsto {fmt(pv)}</p>}
                     {isParcelada && <p className="text-text-3 text-xs">por parcela</p>}
                   </div>
                 </div>

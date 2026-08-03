@@ -149,7 +149,7 @@ export function exportCSV(month, year) {
     ...despesas.map(d => [
       getCamposMes(d, month, year).nome,
       getCamposMes(d, month, year).categoria || 'Outros',
-      parcelaValorMes(d, month, year).toFixed(2).replace('.', ','),
+      (statusMes(d, month, year).pago ? (statusMes(d, month, year).valorPago ?? parcelaValorMes(d, month, year)) : parcelaValorMes(d, month, year)).toFixed(2).replace('.', ','),
       fmtDate(d.vencimento),
       statusMes(d, month, year).pago ? 'Pago' : 'Pendente',
       d.recorrencia === 'fixa' ? 'Fixa' : d.recorrencia === 'parcelar' ? 'Parcelado' : 'Única',
@@ -211,15 +211,16 @@ export function exportPDF(month, year) {
   const saldo      = totalRec - totalDesp;
 
   const rowsDesp = despesas.map(d => {
-    const pago = statusMes(d, month, year).pago;
+    const st = statusMes(d, month, year);
     const campos = getCamposMes(d, month, year);
+    const valorLinha = st.pago && st.valorPago != null ? st.valorPago : parcelaValorMes(d, month, year);
     return `
     <tr>
       <td>${esc(campos.nome)}</td>
       <td>${esc(campos.categoria || 'Outros')}</td>
-      <td style="text-align:right">${esc(fmt(parcelaValorMes(d, month, year)))}</td>
+      <td style="text-align:right">${esc(fmt(valorLinha))}</td>
       <td>${esc(fmtDate(d.vencimento))}</td>
-      <td><span class="${pago ? 'badge-green' : 'badge-red'}">${pago ? 'Pago' : 'Pendente'}</span></td>
+      <td><span class="${st.pago ? 'badge-green' : 'badge-red'}">${st.pago ? 'Pago' : 'Pendente'}</span></td>
     </tr>`;
   }).join('');
 

@@ -285,7 +285,13 @@ export default function Resumo({ loading, month, year }) {
       const desp = [...loadDespesas(mm, yy), ...loadFaturas(mm, yy)];
       const rec  = loadReceitas(mm, yy);
       const atrasados = loadPagamentosAtrasadosNoMes(mm, yy);
-      expense += desp.filter(t => t.pago && t.pagamentoData).reduce((s, t) => s + parseFloat(t.valorPago ?? t.amount ?? 0), 0)
+      const keyAtual = mesKey(mm, yy);
+      // Uma "fixa"/"parcelar" com vencimento neste mês mas paga em outro mês (atraso)
+      // continua com pago=true no PRÓPRIO mês de vencimento (loadDespesas usa a chave
+      // de vencimento pra achar o status) — sem esse filtro, ela entraria aqui pelo
+      // mês de vencimento E de novo em "atrasados" pelo mês real do pagamento,
+      // contando o mesmo valor duas vezes na soma acumulada.
+      expense += desp.filter(t => t.pago && t.pagamentoData && t.pagamentoData.slice(0, 7) === keyAtual).reduce((s, t) => s + parseFloat(t.valorPago ?? t.amount ?? 0), 0)
                + atrasados.reduce((s, t) => s + parseFloat(t.valorPago ?? t.amount ?? 0), 0);
       income  += rec.filter(t => t.pago && t.pagamentoData).reduce((s, t) => s + parseFloat(t.amount || 0), 0);
     }
