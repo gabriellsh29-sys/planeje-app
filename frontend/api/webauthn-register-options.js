@@ -5,7 +5,7 @@ import { supabaseAdmin, rpName, rpID, saveChallenge } from './_webauthn.js';
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Método não permitido' });
   if (!checkOrigin(req, res)) return;
-  if (!rateLimit(req, res, { key: 'webauthn-reg-opts', limit: 10, windowMs: 60_000 })) return;
+  if (!(await rateLimit(req, res, { key: 'webauthn-reg-opts', limit: 10, windowMs: 60_000 }))) return;
 
   const user = await requireAuthUser(req, res);
   if (!user) return;

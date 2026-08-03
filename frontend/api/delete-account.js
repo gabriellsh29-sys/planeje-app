@@ -8,7 +8,7 @@ const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABAS
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Método não permitido' });
   if (!checkOrigin(req, res)) return;
-  if (!rateLimit(req, res, { key: 'delete-account', limit: 3, windowMs: 60_000 })) return;
+  if (!(await rateLimit(req, res, { key: 'delete-account', limit: 3, windowMs: 60_000 }))) return;
 
   const user = await requireAuthUser(req, res);
   if (!user) return;

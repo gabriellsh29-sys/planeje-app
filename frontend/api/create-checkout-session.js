@@ -8,7 +8,7 @@ const ALLOWED_PRICES = [process.env.VITE_STRIPE_PRICE_MENSAL, process.env.VITE_S
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Método não permitido' });
   if (!checkOrigin(req, res)) return;
-  if (!rateLimit(req, res, { key: 'checkout', limit: 10, windowMs: 60_000 })) return;
+  if (!(await rateLimit(req, res, { key: 'checkout', limit: 10, windowMs: 60_000 }))) return;
 
   const { priceId, userId } = req.body || {};
   if (!priceId || !userId) return res.status(400).json({ error: 'Dados inválidos' });
