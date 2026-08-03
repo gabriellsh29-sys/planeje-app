@@ -48,9 +48,16 @@ function parcelaInfo(r, month, year) {
 // Para receitas fixas, status é por mês (recebimentos[YYYY-MM]).
 // Para não-fixas, usa os campos legados recebida/recebimentoData.
 function statusMesReceita(r, month, year) {
-  if (r.recorrencia === 'fixa') {
+  if (r.recorrencia === 'fixa' || r.recorrencia === 'parcelar') {
     const p = r.recebimentos && r.recebimentos[mesKey(month, year)];
     if (p) return { recebida: !!p.recebida, data: p.data || null, valorRecebido: p.valorRecebido || null };
+    // Migração: dado antigo de "parcelar" guardava recebida/recebimentoData num campo
+    // global (bug que fazia confirmar 1 parcela marcar todas como recebidas). Se essa
+    // data cair no mês consultado, respeita como já recebida; senão, mantém pendente.
+    if (r.recorrencia === 'parcelar' && r.recebida && r.recebimentoData) {
+      const [ry, rm] = r.recebimentoData.split('-').map(Number);
+      if (ry === year && rm === month) return { recebida: true, data: r.recebimentoData, valorRecebido: r.valorRecebido || null };
+    }
     return { recebida: false, data: null, valorRecebido: null };
   }
   return { recebida: !!r.recebida, data: r.recebimentoData || null, valorRecebido: r.valorRecebido || null };
@@ -295,7 +302,7 @@ export default function Receitas({ month, year }) {
   const confirmarEfetivar = () => {
     const updated = receitas.map(r => {
       if (r.id !== efetivId) return r;
-      if (r.recorrencia === 'fixa') {
+      if (r.recorrencia === 'fixa' || r.recorrencia === 'parcelar') {
         const key = mesKey(lm, ly);
         return {
           ...r,
@@ -314,11 +321,17 @@ export default function Receitas({ month, year }) {
   const desfazer = (id) => {
     const updated = receitas.map(r => {
       if (r.id !== id) return r;
-      if (r.recorrencia === 'fixa') {
+      if (r.recorrencia === 'fixa' || r.recorrencia === 'parcelar') {
         const key = mesKey(lm, ly);
         const recebimentos = { ...(r.recebimentos || {}) };
         delete recebimentos[key];
-        return { ...r, recebimentos, updatedAt: new Date().toISOString() };
+        const patch = { ...r, recebimentos, updatedAt: new Date().toISOString() };
+        // Também limpa o campo legado global se ele apontava pra este mesmo mês
+        // (dado antigo de "parcelar" pré-migração).
+        if (r.recorrencia === 'parcelar' && r.recebida && r.recebimentoData && r.recebimentoData.slice(0, 7) === key) {
+          patch.recebida = false; patch.recebimentoData = null; patch.valorRecebido = null;
+        }
+        return patch;
       }
       return { ...r, recebida: false, recebimentoData: null, updatedAt: new Date().toISOString() };
     });

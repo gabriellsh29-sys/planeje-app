@@ -61,10 +61,15 @@ function parcelaAbrangeMs(d, month, year) {
 // Itens "fixa" guardam o pagamento por mês em d.pagamentos['YYYY-MM'],
 // para que quitar um mês não afete os demais.
 function statusMes(d, month, year) {
-  if (d.recorrencia === 'fixa') {
+  if (d.recorrencia === 'fixa' || d.recorrencia === 'parcelar') {
     const key = `${year}-${String(month).padStart(2, '0')}`;
     const p = d.pagamentos && d.pagamentos[key];
     if (p) return { pago: !!p.pago, pagamentoData: p.pagamentoData || null, valorPago: p.valorPago ?? null };
+    // Migração: dado antigo de "parcelar" guardava pago/pagamentoData num campo global.
+    if (d.recorrencia === 'parcelar' && d.pago && d.pagamentoData) {
+      const [py, pm] = d.pagamentoData.split('-').map(Number);
+      if (py === year && pm === month) return { pago: true, pagamentoData: d.pagamentoData, valorPago: d.valorPago ?? null };
+    }
     return { pago: false, pagamentoData: null, valorPago: null };
   }
   return { pago: !!d.pago, pagamentoData: d.pagamentoData || null, valorPago: d.valorPago ?? null };
@@ -150,10 +155,15 @@ function loadFaturas(month, year) {
 
 // Receitas fixas guardam status por mês em r.recebimentos['YYYY-MM'].
 function statusMesReceita(r, month, year) {
-  if (r.recorrencia === 'fixa') {
+  if (r.recorrencia === 'fixa' || r.recorrencia === 'parcelar') {
     const key = `${year}-${String(month).padStart(2, '0')}`;
     const p = r.recebimentos && r.recebimentos[key];
     if (p) return { recebida: !!p.recebida, data: p.data || null, valorRecebido: p.valorRecebido || null };
+    // Migração: dado antigo de "parcelar" guardava recebida/recebimentoData num campo global.
+    if (r.recorrencia === 'parcelar' && r.recebida && r.recebimentoData) {
+      const [ry, rm] = r.recebimentoData.split('-').map(Number);
+      if (ry === year && rm === month) return { recebida: true, data: r.recebimentoData, valorRecebido: r.valorRecebido || null };
+    }
     return { recebida: false, data: null, valorRecebido: null };
   }
   return { recebida: !!r.recebida, data: r.recebimentoData || null, valorRecebido: r.valorRecebido || null };

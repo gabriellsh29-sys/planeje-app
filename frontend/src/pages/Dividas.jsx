@@ -69,9 +69,16 @@ function parcelaValor(d) {
 function mesKey(month, year) { return `${year}-${String(month).padStart(2, '0')}`; }
 
 function statusMes(d, month, year) {
-  if (d.recorrencia === 'fixa') {
+  if (d.recorrencia === 'fixa' || d.recorrencia === 'parcelar') {
     const p = d.pagamentos && d.pagamentos[mesKey(month, year)];
     if (p) return { pago: !!p.pago, pagamentoData: p.pagamentoData || null, valorPago: p.valorPago ?? null };
+    // Migração: dado antigo de "parcelar" guardava pago/pagamentoData num campo global
+    // (bug que fazia pagar 1 parcela marcar todas como pagas). Se essa data cair no
+    // mês consultado, respeita como já pago; senão, mantém pendente.
+    if (d.recorrencia === 'parcelar' && d.pago && d.pagamentoData) {
+      const [py, pm] = d.pagamentoData.split('-').map(Number);
+      if (py === year && pm === month) return { pago: true, pagamentoData: d.pagamentoData, valorPago: d.valorPago ?? null };
+    }
     return { pago: false, pagamentoData: null, valorPago: null };
   }
   return { pago: !!d.pago, pagamentoData: d.pagamentoData || null, valorPago: d.valorPago ?? null };
@@ -79,7 +86,7 @@ function statusMes(d, month, year) {
 
 function aplicarStatusMes(d, month, year, status) {
   const stamp = new Date().toISOString();
-  if (d.recorrencia === 'fixa') {
+  if (d.recorrencia === 'fixa' || d.recorrencia === 'parcelar') {
     return { ...d, pagamentos: { ...(d.pagamentos || {}), [mesKey(month, year)]: status }, updatedAt: stamp };
   }
   return { ...d, ...status, updatedAt: stamp };

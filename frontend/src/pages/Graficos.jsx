@@ -43,10 +43,15 @@ function parcelaValor(d) {
 }
 
 function statusMes(d, month, year) {
-  if (d.recorrencia === 'fixa') {
+  if (d.recorrencia === 'fixa' || d.recorrencia === 'parcelar') {
     const key = `${year}-${String(month).padStart(2, '0')}`;
     const p = d.pagamentos && d.pagamentos[key];
     if (p) return { pago: !!p.pago };
+    // Migração: dado antigo de "parcelar" guardava pago/pagamentoData num campo global.
+    if (d.recorrencia === 'parcelar' && d.pago && d.pagamentoData) {
+      const [py, pm] = d.pagamentoData.split('-').map(Number);
+      if (py === year && pm === month) return { pago: true };
+    }
     return { pago: false };
   }
   return { pago: !!d.pago };
