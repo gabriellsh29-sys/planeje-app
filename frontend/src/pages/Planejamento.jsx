@@ -79,7 +79,7 @@ function getGastoCategoria(categoria, month, year) {
 function getCategoriasDividas() {
   try {
     const dividas = JSON.parse(localStorage.getItem(DIVIDA_KEY) || '[]');
-    return [...new Set(dividas.map(d => d.categoria).filter(Boolean))].sort();
+    return [...new Set(dividas.map(d => d.categoria).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
   } catch { return []; }
 }
 

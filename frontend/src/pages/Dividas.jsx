@@ -760,7 +760,7 @@ export default function Dividas({ month, year }) {
               {/* Categoria dropdown */}
               <DropdownSelect
                 id="cat" label="Categoria"
-                options={[...new Set([...categorias, ...dividas.map(d => d.categoria).filter(Boolean)])].sort().map(c => ({ val: c, label: c }))}
+                options={[...new Set([...categorias, ...dividas.map(d => d.categoria).filter(Boolean)])].sort((a, b) => a.localeCompare(b, 'pt-BR')).map(c => ({ val: c, label: c }))}
                 selected={filterCategorias}
                 onToggle={(val) => val === null ? setFilterCategorias([]) : toggleFilter(filterCategorias, setFilterCategorias, val)}
                 openDropdown={openDropdown} setOpenDropdown={setOpenDropdown}

@@ -665,7 +665,7 @@ export default function Receitas({ month, year }) {
 
         <DropdownSelect
           id="cat" label="Categoria"
-          options={[...new Set([...categorias, ...receitas.map(r => r.categoria).filter(Boolean)])].sort().map(c => ({ val: c, label: c }))}
+          options={[...new Set([...categorias, ...receitas.map(r => r.categoria).filter(Boolean)])].sort((a, b) => a.localeCompare(b, 'pt-BR')).map(c => ({ val: c, label: c }))}
           selected={filterCategorias}
           onToggle={(val) => val === null ? setFilterCategorias([]) : toggleFilter(filterCategorias, setFilterCategorias, val)}
           openDropdown={openDropdown} setOpenDropdown={setOpenDropdown}
