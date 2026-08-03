@@ -10,7 +10,7 @@
  *  2. applyCloudData — objeto vazio não modifica localStorage
  *  3. applyCloudData — '[]' não sobrescreve dado existente
  *  4. Tombstones — filtragem com IDs numéricos (coerção String)
- *  5. dirtyKeys — chave marcada dirty é ignorada durante applyCloudData
+ *  5. dirtyKeys — chave marcada dirty ainda é mesclada (não descartada) em applyCloudData
  *  6. Billing — perfil=null → acessoLiberado=false
  *  7. Billing — perfilStatus='loading' → acessoLiberado=false
  *  8. Billing — perfil carregado com plano válido → acessoLiberado=true
@@ -69,7 +69,15 @@ vi.mock('../../data/demoData', () => ({
 // para testar a lógica pura sem side-effects de módulo.
 // ---------------------------------------------------------------------------
 
-// Replica exata de mergeKey (cloudSync.js linha 85-110)
+// Replica exata de resolveItemConflict (cloudSync.js) — item mais recente por updatedAt vence.
+function resolveItemConflict(cloudItem, localItem) {
+  const cu = cloudItem && cloudItem.updatedAt;
+  const lu = localItem && localItem.updatedAt;
+  if (cu && lu) return lu > cu ? localItem : cloudItem;
+  return cloudItem;
+}
+
+// Replica exata de mergeKey (cloudSync.js)
 function mergeKey(cloudVal, localVal, tombstones = new Set()) {
   try {
     const cParsed = JSON.parse(cloudVal);
@@ -81,9 +89,14 @@ function mergeKey(cloudVal, localVal, tombstones = new Set()) {
       }
       const cFiltered = cParsed.filter(item => item.id && !tombstones.has(String(item.id)));
       const lFiltered = lParsed.filter(item => item.id && !tombstones.has(String(item.id)));
+      const localById = new Map(lFiltered.map(item => [String(item.id), item]));
       const cloudIds = new Set(cFiltered.map(item => String(item.id)));
+      const shared = cFiltered.map(cItem => {
+        const lItem = localById.get(String(cItem.id));
+        return lItem ? resolveItemConflict(cItem, lItem) : cItem;
+      });
       const onlyLocal = lFiltered.filter(item => !cloudIds.has(String(item.id)));
-      return JSON.stringify([...cFiltered, ...onlyLocal]);
+      return JSON.stringify([...shared, ...onlyLocal]);
     }
     if (cParsed && typeof cParsed === 'object' && !Array.isArray(cParsed) &&
         lParsed && typeof lParsed === 'object' && !Array.isArray(lParsed)) {
@@ -125,9 +138,12 @@ const DATA_KEYS = [
 
 const TOMB = '__tomb';
 
-// Replica de applyCloudData (cloudSync.js linha 112-151)
-// Recebe getItem/setItem injetados para ser testável sem global.
-function applyCloudData(data, { getItem, setItem }, dirtyKeys = new Set()) {
+// Replica de applyCloudData (cloudSync.js). dirtyKeys é aceito só por compatibilidade
+// de assinatura com os testes abaixo — o código real NÃO pula mais o merge de chaves
+// dirty (ver fix: pular descartava por completo o lado da nuvem e um push seguinte
+// reenviava só o array local, possivelmente truncado, apagando dado real na nuvem).
+// mergeKey já protege a edição local via updatedAt/onlyLocal, então mesclar sempre é seguro.
+function applyCloudData(data, { getItem, setItem }, _dirtyKeys = new Set()) {
   if (!data || Object.keys(data).length === 0) return false;
 
   function getTombstones(key) {
@@ -152,7 +168,6 @@ function applyCloudData(data, { getItem, setItem }, dirtyKeys = new Set()) {
   DATA_KEYS.forEach(key => {
     const cloudVal = data[key];
     if (cloudVal === undefined) return;
-    if (dirtyKeys.has(key)) return;
     const localVal = getItem(key);
     const tombstones = getTombstones(key);
     let merged;
@@ -263,8 +278,13 @@ describe('Tombstones — filtragem com IDs numéricos (coerção String)', () =>
   });
 });
 
-describe('dirtyKeys — chave marcada dirty é ignorada durante applyCloudData', () => {
-  it('5. Chave dirty não é sobrescrita pela nuvem', () => {
+describe('dirtyKeys — chave marcada dirty ainda é mesclada (não descartada) em applyCloudData', () => {
+  it('5. Chave dirty faz merge: item só-local é preservado E item só-da-nuvem não é perdido', () => {
+    // Cenário do bug real: pular o merge de chaves dirty descartava por completo o
+    // lado da nuvem. Um push seguinte reenviava só o array local (aqui, só "local-1"),
+    // apagando "cloud-1" (que só existia na nuvem) para sempre. Mesclar é seguro:
+    // "local-1" (só local, ainda não enviado) é preservado, e "cloud-1" (só nuvem,
+    // talvez de outro dispositivo) não é descartado.
     const localDividas = JSON.stringify([{ id: 'local-1', nome: 'Novo item local ainda não enviado' }]);
     const ls = makeLocalStore({ financeiro_dividas: localDividas });
     const dirtyKeys = new Set(['financeiro_dividas']);
@@ -273,9 +293,11 @@ describe('dirtyKeys — chave marcada dirty é ignorada durante applyCloudData',
 
     applyCloudData(cloudData, ls, dirtyKeys);
 
-    // Não deve ter escrito em financeiro_dividas
     const writesToDividas = ls.setItem.mock.calls.filter(c => c[0] === 'financeiro_dividas');
-    expect(writesToDividas.length).toBe(0);
+    expect(writesToDividas.length).toBe(1);
+    const merged = JSON.parse(writesToDividas[0][1]);
+    expect(merged.some(i => i.id === 'local-1')).toBe(true);
+    expect(merged.some(i => i.id === 'cloud-1')).toBe(true);
   });
 
   it('5b. Chave NÃO dirty é atualizada normalmente', () => {

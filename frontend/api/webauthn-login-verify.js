@@ -25,6 +25,17 @@ export default async function handler(req, res) {
 
     if (!cred) return res.status(401).json({ error: 'Não autorizado' });
 
+    // Confirma que a credencial ainda pertence a uma conta viva com ESTE e-mail.
+    // Sem isso: se a conta original for excluída e o e-mail reaproveitado por
+    // outra pessoa, a passkey órfã (linha antiga em webauthn_credentials que a
+    // exclusão de conta não limpava) permitiria logar na conta NOVA que ocupa
+    // o e-mail — a assinatura WebAuthn bate (é a mesma chave), mas o dono mudou.
+    const { data: ownerCheck, error: ownerErr } = await supabaseAdmin.auth.admin.getUserById(cred.user_id);
+    if (ownerErr || !ownerCheck?.user || ownerCheck.user.email?.toLowerCase() !== normalizedEmail) {
+      console.error('[webauthn-login-verify] credencial órfã ou e-mail não corresponde ao dono atual — negando login');
+      return res.status(401).json({ error: 'Não autorizado' });
+    }
+
     const verification = await verifyAuthenticationResponse({
       response: assertionResponse,
       expectedChallenge,

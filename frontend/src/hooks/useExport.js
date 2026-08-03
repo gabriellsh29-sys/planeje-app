@@ -6,9 +6,51 @@ function fmt(v) { return new Intl.NumberFormat('pt-BR', { style: 'currency', cur
 function fmtDate(d) { try { return new Date(d + 'T00:00:00').toLocaleDateString('pt-BR'); } catch { return d || ''; } }
 function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
+function mesKey(month, year) { return `${year}-${String(month).padStart(2, '0')}`; }
+
 function parcelaValor(d) {
   if (d.recorrencia === 'parcelar' && d.totalParcelas > 1) return d.valor / d.totalParcelas;
   return d.valor;
+}
+
+// Status de pagamento por mês (mesma regra de Dividas.jsx): "fixa"/"parcelar" guardam
+// o pagamento em d.pagamentos['YYYY-MM'], com fallback pro campo legado global.
+function statusMes(d, month, year) {
+  if (d.recorrencia === 'fixa' || d.recorrencia === 'parcelar') {
+    const key = mesKey(month, year);
+    const p = d.pagamentos && d.pagamentos[key];
+    if (p) return { pago: !!p.pago, valorPago: p.valorPago ?? null };
+    if (d.recorrencia === 'parcelar' && d.pago && d.pagamentoData) {
+      const [py, pm] = d.pagamentoData.split('-').map(Number);
+      if (py === year && pm === month) return { pago: true, valorPago: d.valorPago ?? null };
+    }
+    return { pago: false, valorPago: null };
+  }
+  return { pago: !!d.pago, valorPago: d.valorPago ?? null };
+}
+
+// Idem, para receitas (mesma regra de Receitas.jsx): r.recebimentos['YYYY-MM'].
+function statusMesReceita(r, month, year) {
+  if (r.recorrencia === 'fixa' || r.recorrencia === 'parcelar') {
+    const key = mesKey(month, year);
+    const p = r.recebimentos && r.recebimentos[key];
+    if (p) return { recebida: !!p.recebida, valorRecebido: p.valorRecebido || null };
+    if (r.recorrencia === 'parcelar' && r.recebida && r.recebimentoData) {
+      const [ry, rm] = r.recebimentoData.split('-').map(Number);
+      if (ry === year && rm === month) return { recebida: true, valorRecebido: r.valorRecebido || null };
+    }
+    return { recebida: false, valorRecebido: null };
+  }
+  return { recebida: !!r.recebida, valorRecebido: r.valorRecebido || null };
+}
+
+// Receitas parceladas guardam a data-base em r.data (não r.vencimento como despesas).
+function parcelaAbrangeMsReceita(r, month, year) {
+  if (!r.data) return false;
+  const [ry, rm] = r.data.split('-').map(Number);
+  const inicio = ry * 12 + (rm - 1);
+  const fim = inicio + ((r.totalParcelas || 1) - 1);
+  return (year * 12 + (month - 1)) >= inicio && (year * 12 + (month - 1)) <= fim;
 }
 
 function getDespesas(month, year) {
@@ -36,16 +78,22 @@ function getDespesas(month, year) {
   } catch { return []; }
 }
 
+// Nomes de campo corretos: receitas usam `data`/`recebimentoData`/`recebida`/
+// `valorRecebido` — NÃO `dataBase`/`dataRecebimento`/`recebido`/`valorConfirmado`,
+// que nunca existiram nos objetos reais e faziam o relatório sair sempre errado
+// (fixas apareciam em todo mês, únicas/parceladas nunca apareciam, status sempre
+// "A receber").
 function getReceitas(month, year) {
   try {
     const all = JSON.parse(localStorage.getItem(RECEITA_KEY) || '[]');
     return all.filter(r => {
       if (r.recorrencia === 'fixa') {
-        if (!r.dataBase) return true;
-        const [ry, rm] = r.dataBase.split('-').map(Number);
+        if (!r.data) return true;
+        const [ry, rm] = r.data.split('-').map(Number);
         return (year * 12 + month - 1) >= (ry * 12 + rm - 1);
       }
-      const ds = r.dataRecebimento || r.dataBase;
+      if (r.recorrencia === 'parcelar') return parcelaAbrangeMsReceita(r, month, year);
+      const ds = r.recebimentoData || r.data;
       if (!ds) return false;
       const [y, m] = ds.split('-').map(Number);
       return y === year && m === month;
@@ -70,33 +118,33 @@ export function exportCSV(month, year) {
       d.categoria || 'Outros',
       parcelaValor(d).toFixed(2).replace('.', ','),
       fmtDate(d.vencimento),
-      d.pago ? 'Pago' : 'Pendente',
+      statusMes(d, month, year).pago ? 'Pago' : 'Pendente',
       d.recorrencia === 'fixa' ? 'Fixa' : d.recorrencia === 'parcelar' ? 'Parcelado' : 'Única',
       d.recorrencia === 'parcelar' ? `${d.totalParcelas}x` : '',
     ]),
     [],
     [`Total despesas: ${fmt(despesas.reduce((s, d) => s + parcelaValor(d), 0))}`],
-    [`Total pago: ${fmt(despesas.filter(d => d.pago).reduce((s, d) => s + parseFloat(d.valorPago ?? parcelaValor(d)), 0))}`],
-    [`Total pendente: ${fmt(despesas.filter(d => !d.pago).reduce((s, d) => s + parcelaValor(d), 0))}`],
+    [`Total pago: ${fmt(despesas.filter(d => statusMes(d, month, year).pago).reduce((s, d) => s + parseFloat(statusMes(d, month, year).valorPago ?? parcelaValor(d)), 0))}`],
+    [`Total pendente: ${fmt(despesas.filter(d => !statusMes(d, month, year).pago).reduce((s, d) => s + parcelaValor(d), 0))}`],
     [],
     ['RECEITAS'],
     ['Nome','Categoria','Valor','Data','Status','Recorrência'],
     ...receitas.map(r => [
       r.nome,
       r.categoria || 'Outros',
-      (parseFloat(r.valorConfirmado || r.valor || 0)).toFixed(2).replace('.', ','),
-      fmtDate(r.dataRecebimento || r.dataBase),
-      r.recebido ? 'Recebido' : 'A receber',
-      r.recorrencia === 'fixa' ? 'Fixa' : 'Única',
+      (parseFloat(statusMesReceita(r, month, year).valorRecebido || parcelaValor(r) || 0)).toFixed(2).replace('.', ','),
+      fmtDate(r.recebimentoData || r.data),
+      statusMesReceita(r, month, year).recebida ? 'Recebido' : 'A receber',
+      r.recorrencia === 'fixa' ? 'Fixa' : r.recorrencia === 'parcelar' ? 'Parcelado' : 'Única',
     ]),
     [],
-    [`Total receitas: ${fmt(receitas.reduce((s, r) => s + parseFloat(r.valorConfirmado || r.valor || 0), 0))}`],
-    [`Total recebido: ${fmt(receitas.filter(r => r.recebido).reduce((s, r) => s + parseFloat(r.valorConfirmado || r.valor || 0), 0))}`],
+    [`Total receitas: ${fmt(receitas.reduce((s, r) => s + parcelaValor(r), 0))}`],
+    [`Total recebido: ${fmt(receitas.filter(r => statusMesReceita(r, month, year).recebida).reduce((s, r) => s + parseFloat(statusMesReceita(r, month, year).valorRecebido || parcelaValor(r)), 0))}`],
     [],
     ['RESUMO'],
     [`Total despesas,${fmt(despesas.reduce((s, d) => s + parcelaValor(d), 0))}`],
-    [`Total receitas,${fmt(receitas.reduce((s, r) => s + parseFloat(r.valorConfirmado || r.valor || 0), 0))}`],
-    [`Saldo previsto,${fmt(receitas.reduce((s, r) => s + parseFloat(r.valorConfirmado || r.valor || 0), 0) - despesas.reduce((s, d) => s + parcelaValor(d), 0))}`],
+    [`Total receitas,${fmt(receitas.reduce((s, r) => s + parcelaValor(r), 0))}`],
+    [`Saldo previsto,${fmt(receitas.reduce((s, r) => s + parcelaValor(r), 0) - despesas.reduce((s, d) => s + parcelaValor(d), 0))}`],
   ];
 
   const csvContent = '﻿' + rows.map(row =>
@@ -123,29 +171,35 @@ export function exportPDF(month, year) {
   const hoje     = new Date().toLocaleDateString('pt-BR');
 
   const totalDesp  = despesas.reduce((s, d) => s + parcelaValor(d), 0);
-  const totalRec   = receitas.reduce((s, r) => s + parseFloat(r.valorConfirmado || r.valor || 0), 0);
-  const pagoDesp   = despesas.filter(d => d.pago).reduce((s, d) => s + parseFloat(d.valorPago ?? parcelaValor(d)), 0);
-  const pendDesp   = despesas.filter(d => !d.pago).reduce((s, d) => s + parcelaValor(d), 0);
-  const recebRec   = receitas.filter(r => r.recebido).reduce((s, r) => s + parseFloat(r.valorConfirmado || r.valor || 0), 0);
+  const totalRec   = receitas.reduce((s, r) => s + parcelaValor(r), 0);
+  const pagoDesp   = despesas.filter(d => statusMes(d, month, year).pago).reduce((s, d) => s + parseFloat(statusMes(d, month, year).valorPago ?? parcelaValor(d)), 0);
+  const pendDesp   = despesas.filter(d => !statusMes(d, month, year).pago).reduce((s, d) => s + parcelaValor(d), 0);
+  const recebRec   = receitas.filter(r => statusMesReceita(r, month, year).recebida).reduce((s, r) => s + parseFloat(statusMesReceita(r, month, year).valorRecebido || parcelaValor(r)), 0);
   const saldo      = totalRec - totalDesp;
 
-  const rowsDesp = despesas.map(d => `
+  const rowsDesp = despesas.map(d => {
+    const pago = statusMes(d, month, year).pago;
+    return `
     <tr>
       <td>${esc(d.nome)}</td>
       <td>${esc(d.categoria || 'Outros')}</td>
       <td style="text-align:right">${esc(fmt(parcelaValor(d)))}</td>
       <td>${esc(fmtDate(d.vencimento))}</td>
-      <td><span class="${d.pago ? 'badge-green' : 'badge-red'}">${d.pago ? 'Pago' : 'Pendente'}</span></td>
-    </tr>`).join('');
+      <td><span class="${pago ? 'badge-green' : 'badge-red'}">${pago ? 'Pago' : 'Pendente'}</span></td>
+    </tr>`;
+  }).join('');
 
-  const rowsRec = receitas.map(r => `
+  const rowsRec = receitas.map(r => {
+    const recebida = statusMesReceita(r, month, year).recebida;
+    return `
     <tr>
       <td>${esc(r.nome)}</td>
       <td>${esc(r.categoria || 'Outros')}</td>
-      <td style="text-align:right">${esc(fmt(parseFloat(r.valorConfirmado || r.valor || 0)))}</td>
-      <td>${esc(fmtDate(r.dataRecebimento || r.dataBase))}</td>
-      <td><span class="${r.recebido ? 'badge-green' : 'badge-yellow'}">${r.recebido ? 'Recebido' : 'A receber'}</span></td>
-    </tr>`).join('');
+      <td style="text-align:right">${esc(fmt(parcelaValor(r)))}</td>
+      <td>${esc(fmtDate(r.recebimentoData || r.data))}</td>
+      <td><span class="${recebida ? 'badge-green' : 'badge-yellow'}">${recebida ? 'Recebido' : 'A receber'}</span></td>
+    </tr>`;
+  }).join('');
 
   const html = `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -192,7 +246,7 @@ export function exportPDF(month, year) {
 <div class="cards">
   <div class="card"><div class="label">Receitas</div><div class="value green">${fmt(totalRec)}</div><div class="sub">Recebido: ${fmt(recebRec)}</div></div>
   <div class="card"><div class="label">Despesas</div><div class="value red">${fmt(totalDesp)}</div><div class="sub">Pago: ${fmt(pagoDesp)}</div></div>
-  <div class="card"><div class="label">A Pagar</div><div class="value yellow">${fmt(pendDesp)}</div><div class="sub">${despesas.filter(d=>!d.pago).length} pendentes</div></div>
+  <div class="card"><div class="label">A Pagar</div><div class="value yellow">${fmt(pendDesp)}</div><div class="sub">${despesas.filter(d=>!statusMes(d, month, year).pago).length} pendentes</div></div>
   <div class="card"><div class="label">Saldo Previsto</div><div class="value ${saldo >= 0 ? 'green' : 'red'}">${fmt(saldo)}</div><div class="sub">Receitas - Despesas</div></div>
 </div>
 

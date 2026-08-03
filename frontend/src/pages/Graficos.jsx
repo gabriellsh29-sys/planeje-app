@@ -105,6 +105,15 @@ function loadTransacoes(month, year) {
   } catch { return []; }
 }
 
+// Receitas parceladas guardam a data-base em r.data (não r.vencimento como despesas).
+function parcelaAbrangeMsReceita(r, month, year) {
+  if (!r.data) return false;
+  const [ry, rm] = r.data.split('-').map(Number);
+  const inicio = ry * 12 + (rm - 1);
+  const fim = inicio + ((r.totalParcelas || 1) - 1);
+  return (year * 12 + (month - 1)) >= inicio && (year * 12 + (month - 1)) <= fim;
+}
+
 function loadReceitas(month, year) {
   try {
     const all = JSON.parse(localStorage.getItem(RECEITA_KEY) || '[]');
@@ -114,6 +123,7 @@ function loadReceitas(month, year) {
         const [ry, rm] = r.data.split('-').map(Number);
         return (year * 12 + (month - 1)) >= (ry * 12 + (rm - 1));
       }
+      if (r.recorrencia === 'parcelar') return parcelaAbrangeMsReceita(r, month, year);
       const dateStr = r.recebimentoData || r.data;
       if (!dateStr) return false;
       const [y, m] = dateStr.split('-').map(Number);
@@ -121,7 +131,7 @@ function loadReceitas(month, year) {
     }).map(r => {
       const mm = String(month).padStart(2, '0');
       const day = (r.data || '').split('-')[2] || '01';
-      const date = r.recorrencia === 'fixa'
+      const date = (r.recorrencia === 'fixa' || r.recorrencia === 'parcelar')
         ? `${year}-${mm}-${day}`
         : (r.recebimentoData || r.data || `${year}-${mm}-01`);
       return {
@@ -129,7 +139,7 @@ function loadReceitas(month, year) {
         type: 'income',
         description: r.nome,
         category: r.categoria || 'Outros',
-        amount: parseFloat(r.valorRecebido || r.valor || 0),
+        amount: parseFloat(r.valorRecebido || parcelaValor(r) || 0),
         date,
       };
     });

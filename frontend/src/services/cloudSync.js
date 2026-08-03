@@ -164,6 +164,17 @@ function broadcast() { try { bc?.postMessage('sync'); } catch {} }
 // Chaves modificadas localmente aguardando push — protege contra o pull sobrescrever edições no debounce de 500ms
 const dirtyKeys = new Set();
 
+// Guarda contra falso-positivo de exclusão: uma página React que ainda não recarregou
+// seu estado em memória após um applyCloudData externo (outro dispositivo/aba) pode
+// salvar um array "completo" que na verdade está desatualizado — faltando um item que
+// acabou de chegar da nuvem. Se isso disparasse a detecção de exclusão (comparação
+// prevArr × newArr), o item real seria marcado como tombstone e apagado em todo lugar.
+// Por isso, logo após aplicar dados vindos de fora, damos uma janela curta em que a
+// detecção de exclusão fica suspensa para aquela chave — a escrita ainda acontece
+// normalmente, só não vira uma exclusão propagada.
+const justSyncedAt = new Map();
+const DELETE_GUARD_MS = 3000;
+
 function getTombstones(key) {
   try {
     return new Set(JSON.parse(safeGet(key + TOMB) || '[]'));
@@ -205,16 +216,34 @@ async function archiveCurrentCloud(userId) {
   }
 }
 
+// Busca os snapshots de histórico ordenados do mais recente pro mais antigo.
+// Tenta 'saved_at' e cai para 'created_at' se a coluna não existir — as duas
+// funções abaixo (pruneHistory/getBackupHistory) já divergiam nesse nome de
+// coluna, o que fazia uma delas falhar sempre; como o SDK do Supabase não lança
+// em erro de query (só devolve { data: null, error }), o `data` ignorado fazia
+// a falha passar em silêncio (rotação de backup nunca podava, ou histórico de
+// restauração sempre vazio). Agora o erro é checado e há um fallback real.
+async function selectHistoryOrdered(userId, columns) {
+  let res = await supabase.from('user_data_history')
+    .select(columns).eq('user_id', userId).order('saved_at', { ascending: false });
+  if (res.error) {
+    res = await supabase.from('user_data_history')
+      .select(columns).eq('user_id', userId).order('created_at', { ascending: false });
+  }
+  if (res.error) throw res.error;
+  return res.data || [];
+}
+
 // Mantém no máximo `keep` snapshots por usuário (rotação de backups).
 // Só remove excedentes DO PRÓPRIO usuário e nunca lança — se algo falhar, não apaga nada.
 async function pruneHistory(userId, keep = 10) {
   try {
-    const { data } = await supabase.from('user_data_history')
-      .select('id').eq('user_id', userId).order('saved_at', { ascending: false });
-    if (!data || data.length <= keep) return;
+    const data = await selectHistoryOrdered(userId, 'id');
+    if (data.length <= keep) return;
     const toDelete = data.slice(keep).map(r => r.id);
     if (toDelete.length) {
-      await supabase.from('user_data_history').delete().in('id', toDelete);
+      const { error } = await supabase.from('user_data_history').delete().in('id', toDelete);
+      if (error) throw error;
     }
   } catch (err) {
     console.error('[cloudSync] pruneHistory falhou:', err?.message ?? err);
@@ -222,11 +251,11 @@ async function pruneHistory(userId, keep = 10) {
 }
 
 // Lista os snapshots disponíveis (mais recentes primeiro). Para uso futuro em UI de restauração.
+// Usa select('*') de propósito: pedir explicitamente 'saved_at'/'created_at' quebraria
+// a query inteira se a coluna não existir (diferente do .order(), que falha sozinho).
 export async function getBackupHistory(userId) {
   try {
-    const { data } = await supabase.from('user_data_history')
-      .select('id, created_at').eq('user_id', userId).order('created_at', { ascending: false });
-    return data || [];
+    return await selectHistoryOrdered(userId, '*');
   } catch (err) {
     console.error('[cloudSync] getBackupHistory falhou:', err?.message ?? err);
     return [];
@@ -392,8 +421,11 @@ export function applyCloudData(data) {
     try {
       const cloudVal = data[key];
       if (cloudVal === undefined) return;
-      // Chave foi modificada localmente e o push ainda não rodou — não sobrescreve
-      if (dirtyKeys.has(key)) return;
+      // Chave modificada localmente (push ainda não rodou): NÃO pulamos o merge —
+      // pular descartava por completo o lado da nuvem, e um push seguinte reenviava só
+      // o array local (possivelmente truncado), apagando na nuvem itens que só existiam
+      // lá. mergeKey já protege a edição local corretamente: itens só-locais são sempre
+      // preservados, e itens compartilhados usam updatedAt (a edição recente vence).
       const localVal = safeGet(key);
       const tombstones = getTombstones(key);
       let merged;
@@ -415,6 +447,7 @@ export function applyCloudData(data) {
       // Nunca sobrescreve dado existente com array vazio
       if (merged !== localVal && merged !== '[]') {
         safeSet(key, merged);
+        justSyncedAt.set(key, Date.now());
         changed = true;
       }
     } catch (err) {
@@ -516,20 +549,27 @@ export function startCloudSync(userId) {
   lastAppliedCloudTs = null;
   pullCompleted = false;
   dirtyKeys.clear();
+  justSyncedAt.clear();
 
   localStorage.setItem = (key, value) => {
     if (DATA_KEYS.includes(key)) {
-      // Detecta itens deletados e registra tombstones antes de escrever
-      try {
-        const prevVal = safeGet(key);
-        const prevArr = JSON.parse(prevVal || '[]');
-        const newArr  = JSON.parse(value);
-        if (Array.isArray(prevArr) && Array.isArray(newArr)) {
-          const newIds  = new Set(newArr.map(i => i.id));
-          const deleted = prevArr.filter(i => i.id && !newIds.has(i.id)).map(i => i.id);
-          if (deleted.length) addTombstones(key, deleted);
-        }
-      } catch {}
+      // Detecta itens deletados e registra tombstones antes de escrever — mas não logo
+      // após um sync externo aplicar dados nesta chave (ver DELETE_GUARD_MS acima):
+      // o array sendo escrito pode vir de um estado React que ainda não pegou o item
+      // recém-chegado da nuvem, e trataríamos ele como "deletado" por engano.
+      const recentlySynced = (Date.now() - (justSyncedAt.get(key) || 0)) < DELETE_GUARD_MS;
+      if (!recentlySynced) {
+        try {
+          const prevVal = safeGet(key);
+          const prevArr = JSON.parse(prevVal || '[]');
+          const newArr  = JSON.parse(value);
+          if (Array.isArray(prevArr) && Array.isArray(newArr)) {
+            const newIds  = new Set(newArr.map(i => i.id));
+            const deleted = prevArr.filter(i => i.id && !newIds.has(i.id)).map(i => i.id);
+            if (deleted.length) addTombstones(key, deleted);
+          }
+        } catch {}
+      }
     }
     safeSet(key, value);
     if (DATA_KEYS.includes(key) && currentUserId) {

@@ -24,8 +24,13 @@ export default async function handler(req, res) {
       }
     }
 
-    // Apaga dados financeiros e perfil
+    // Apaga dados financeiros, histórico de backup, perfil e credenciais de passkey.
+    // Sem apagar webauthn_credentials, a linha ficava órfã (user_id de uma conta que
+    // não existe mais) e, se o e-mail fosse reaproveitado por outra pessoa, permitia
+    // login na conta nova usando a passkey da conta antiga (mesmo e-mail, chave antiga).
     await supabase.from('user_data').delete().eq('user_id', user.id);
+    await supabase.from('user_data_history').delete().eq('user_id', user.id);
+    await supabase.from('webauthn_credentials').delete().eq('user_id', user.id);
     await supabase.from('perfis').delete().eq('id', user.id);
 
     // Apaga avatar do storage (LGPD — exclusão completa dos dados)
