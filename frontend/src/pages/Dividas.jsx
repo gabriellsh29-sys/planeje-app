@@ -1320,7 +1320,7 @@ export default function Dividas({ month, year }) {
       {pendingEdit && (() => {
         const original = dividas.find(x => x.id === editId);
         const tipo = original?.recorrencia === 'fixa' ? 'fixa' : 'parcelada';
-        return (
+        return createPortal(
           <div className="fixed inset-0 z-[80] flex items-center justify-center px-4">
             <div className="absolute inset-0 bg-black/70" style={{ backdropFilter: 'blur(8px)' }} />
             <div className="relative card-premium p-6 w-full max-w-sm animate-scale-in" onClick={e => e.stopPropagation()}>
@@ -1337,7 +1337,8 @@ export default function Dividas({ month, year }) {
                 </button>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         );
       })()}
 
@@ -1359,7 +1360,7 @@ export default function Dividas({ month, year }) {
         const st = d ? statusMes(d, emes, eano) : null;
         const jaPago = st?.valorPago || 0;
         const restante = Math.max(total - jaPago, 0);
-        return (
+        return createPortal(
         <div className="fixed inset-0 z-[70] flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/70" style={{ backdropFilter: 'blur(8px)' }} />
           <div className="relative card-premium p-6 w-full max-w-xs animate-scale-in" onClick={e => e.stopPropagation()}>
@@ -1405,7 +1406,8 @@ export default function Dividas({ month, year }) {
               <button onClick={confirmEfetivar} className="btn-gold flex-1 text-center">Confirmar</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
         );
       })()}
 

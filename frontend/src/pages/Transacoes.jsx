@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 const fmt = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
 const fmtFull = (d) => new Date(d + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
@@ -382,7 +383,7 @@ export default function Transacoes({ transactions, onDelete, loading, onAdd }) {
       )}
 
       {/* Efetivar date modal */}
-      {efetivandoId && (
+      {efetivandoId && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/70" style={{ backdropFilter: 'blur(8px)' }} />
           <div className="relative card-premium p-6 w-full max-w-xs animate-scale-in" onClick={e => e.stopPropagation()}>
@@ -408,7 +409,8 @@ export default function Transacoes({ transactions, onDelete, loading, onAdd }) {
               <button onClick={confirmEfetivar} className="btn-gold flex-1 text-center">Confirmar</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import * as Sentry from '@sentry/react';
@@ -260,7 +261,7 @@ function DadosTab() {
         </button>
       </div>
 
-      {showExcluirModal && (
+      {showExcluirModal && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/75" style={{ backdropFilter: 'blur(8px)' }} />
           <div className="relative card-premium p-6 w-full max-w-sm animate-scale-in" onClick={e => e.stopPropagation()}>
@@ -288,11 +289,13 @@ function DadosTab() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {cropSrc && (
-        <AvatarCropModal src={cropSrc} onCancel={fecharCrop} onConfirm={confirmarFoto} />
+      {cropSrc && createPortal(
+        <AvatarCropModal src={cropSrc} onCancel={fecharCrop} onConfirm={confirmarFoto} />,
+        document.body
       )}
     </div>
   );

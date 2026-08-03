@@ -620,13 +620,14 @@ export default function Anotacoes() {
       )}
 
       {/* ── Modal Nova/Editar Lista ──────────────────────────────── */}
-      {listModal && (
+      {listModal && createPortal(
         <ListModal modo={listModal.modo} grupoInicial={listModal.grupo}
-          onSave={saveGrupo} onClose={() => setListModal(null)} />
+          onSave={saveGrupo} onClose={() => setListModal(null)} />,
+        document.body
       )}
 
       {/* ── Modal Gerenciar Etiquetas ────────────────────────────── */}
-      {showEtiqMgr && (
+      {showEtiqMgr && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center"
           style={{ background: 'rgba(0,0,0,0.7)' }}
           onClick={() => setShowEtiqMgr(false)}>
@@ -664,7 +665,8 @@ export default function Anotacoes() {
               <button onClick={addEtiqueta} className="btn-gold w-full py-2 text-sm font-semibold rounded-xl">Criar etiqueta</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ── Undo toast ───────────────────────────────────────────── */}

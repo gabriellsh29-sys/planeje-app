@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { AreaChart, Area, ResponsiveContainer, Tooltip, XAxis, YAxis, PieChart, Pie, Cell } from 'recharts';
 import { exportCSV, exportPDF } from '../hooks/useExport';
 import { toggleHide, useHideVals } from '../lib/hideVals';
@@ -493,7 +494,7 @@ export default function Resumo({ loading, month, year }) {
       </div>
 
       {/* Modal ajustar saldo */}
-      {editSaldo && (
+      {editSaldo && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/75" style={{ backdropFilter: 'blur(10px)' }} />
           <div className="relative card-premium p-6 w-full max-w-xs animate-scale-in" onClick={e => e.stopPropagation()}>
@@ -512,7 +513,8 @@ export default function Resumo({ loading, month, year }) {
               <button onClick={saveSaldo} className="btn-gold flex-1 text-center">Salvar</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
