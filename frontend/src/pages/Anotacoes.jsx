@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { AppIcon, LIST_ICONS } from '../lib/icons';
 import { newId } from '../lib/ids';
+import { useLockBodyScroll } from '../lib/useLockBodyScroll';
 
 const TAREFAS_KEY = 'planeje_tarefas';
 const GRUPOS_KEY  = 'planeje_grupos';
@@ -46,6 +47,8 @@ export default function Anotacoes() {
   const [listModal,     setListModal]     = useState(null);
   const [showEtiqMgr,   setShowEtiqMgr]  = useState(false);
   const [novaEtiqNome,  setNovaEtiqNome]  = useState('');
+
+  useLockBodyScroll(!!listModal || showEtiqMgr);
   const [novaEtiqCor,   setNovaEtiqCor]   = useState(COR_OPTIONS[0]);
   const [draggingId,    setDraggingId]    = useState(null);
   const [dragOverId,    setDragOverId]    = useState(null);

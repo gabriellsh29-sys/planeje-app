@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import CalculatorModal from './CalculatorModal';
 import SelectDown from './SelectDown';
 
@@ -101,7 +102,7 @@ export default function TransactionForm({ onSave, onClose, defaultType }) {
 
   const isExpense = type === 'expense';
 
-  return (
+  return createPortal(
     <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div className="absolute inset-0 bg-black/75" style={{ backdropFilter: 'blur(8px)' }} />
       <div
@@ -244,6 +245,7 @@ export default function TransactionForm({ onSave, onClose, defaultType }) {
           onConfirm={(val) => { setAmount(val.toFixed(2)); setShowCalc(false); }}
         />
       )}
-    </div>
+    </div>,
+    document.body
   );
 }

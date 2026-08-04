@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { AreaChart, Area, ResponsiveContainer, Tooltip, XAxis, YAxis, PieChart, Pie, Cell } from 'recharts';
 import { exportCSV, exportPDF } from '../hooks/useExport';
 import { toggleHide, useHideVals } from '../lib/hideVals';
+import { useLockBodyScroll } from '../lib/useLockBodyScroll';
 
 const fmt = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
 const fmtShort = (v) => { if (v >= 1000) return `${(v / 1000).toFixed(0)}k`; return v.toFixed(0); };
@@ -251,6 +252,7 @@ export default function Resumo({ loading, month, year }) {
   const [editSaldo,    setEditSaldo]  = useState(false);
   const [saldoInput,   setSaldoInput] = useState('');
   const [showExport,   setShowExport] = useState(false);
+  useLockBodyScroll(editSaldo);
   const [syncVer,      setSyncVer]    = useState(0);
 
   useEffect(() => {

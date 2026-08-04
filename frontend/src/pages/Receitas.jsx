@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import CalculatorModal from '../components/CalculatorModal';
 import { newId } from '../lib/ids';
+import { useLockBodyScroll } from '../lib/useLockBodyScroll';
 
 const RECEITAS_KEY  = 'financeiro_receitas';
 const CAT_KEY       = 'financeiro_categorias_receita';
@@ -356,6 +357,8 @@ export default function Receitas({ month, year }) {
   const [filterCategorias, setFilterCategorias] = useState([]);
   const [filterDias,       setFilterDias]       = useState([]);
   const [openDropdown,     setOpenDropdown]     = useState(null);
+
+  useLockBodyScroll(showForm || showParcelas || !!efetivId || !!pendingEdit);
 
   const toggleFilter = (arr, setArr, val) => {
     setArr(prev => prev.includes(val) ? prev.filter(x => x !== val) : [...prev, val]);

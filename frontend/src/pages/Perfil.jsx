@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabaseClient';
 import * as Sentry from '@sentry/react';
 import AvatarCropModal from '../components/AvatarCropModal';
 import { startRegistration } from '@simplewebauthn/browser';
+import { useLockBodyScroll } from '../lib/useLockBodyScroll';
 
 function detectarNomeDispositivo() {
   const ua = navigator.userAgent;
@@ -73,6 +74,8 @@ function DadosTab() {
   const [excluindo, setExcluindo] = useState(false);
   const [showExcluirModal, setShowExcluirModal] = useState(false);
   const [confirmText, setConfirmText] = useState('');
+
+  useLockBodyScroll(showExcluirModal || !!cropSrc);
 
   const webauthnSuportado = typeof window !== 'undefined' && !!window.PublicKeyCredential;
   const [dispositivos, setDispositivos] = useState([]);

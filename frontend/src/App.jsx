@@ -1,6 +1,7 @@
 import React, { useState, useCallback, lazy, Suspense, Component, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { toggleHide, useHideVals } from './lib/hideVals';
+import { useLockBodyScroll } from './lib/useLockBodyScroll';
 import LoginPage from './components/LoginPage';
 import ResetPasswordPage from './components/ResetPasswordPage';
 import PaywallPage from './components/PaywallPage';
@@ -120,6 +121,8 @@ function Dashboard() {
   const [showForm, setShowForm] = useState(false);
   const [formType, setFormType] = useState('expense');
   const [refreshKey, setRefreshKey] = useState(0);
+
+  useLockBodyScroll(showForm);
   const { addTransaction } = useTransactions(month, year);
 
   const handleAddTransaction = useCallback(async (data) => {

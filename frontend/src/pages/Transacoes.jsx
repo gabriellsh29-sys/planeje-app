@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useLockBodyScroll } from '../lib/useLockBodyScroll';
 
 const fmt = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
 const fmtFull = (d) => new Date(d + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
@@ -52,6 +53,7 @@ export default function Transacoes({ transactions, onDelete, loading, onAdd }) {
   const [efetivandoId, setEfetivandoId] = useState(null);
   const [efetivDate, setEfetivDate] = useState('');
   const [efetivIsDivida, setEfetivIsDivida] = useState(false);
+  useLockBodyScroll(!!efetivandoId);
 
   const today = new Date().toISOString().split('T')[0];
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useLockBodyScroll } from '../lib/useLockBodyScroll';
 
 const KEYS = [
   ['C', '%', '⌫', '÷'],
@@ -61,6 +62,7 @@ function evaluate(expr) {
 
 export default function CalculatorModal({ initialValue, onClose, onConfirm }) {
   const [expr, setExpr] = useState(initialValue ? String(initialValue).replace('.', ',') : '');
+  useLockBodyScroll(true);
 
   const press = (k) => {
     if (k === 'C') { setExpr(''); return; }

@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import CalculatorModal from '../components/CalculatorModal';
 import { newId } from '../lib/ids';
+import { useLockBodyScroll } from '../lib/useLockBodyScroll';
 
 const CARTAO_KEY  = 'planeje_cartoes';
 const FATURA_KEY  = 'planeje_faturas';
@@ -58,6 +59,8 @@ export default function CartaoCredito({ month, year }) {
   const [editCartaoId,   setEditCartaoId]   = useState(null);
   const [showFormLanc,   setShowFormLanc]   = useState(false);
   const [showPagar,      setShowPagar]      = useState(false);
+
+  useLockBodyScroll(showFormCartao || showFormLanc || showPagar);
 
   const [formC, setFormC] = useState({ nome: '', bandeira: 'Visa', limite: '', diaFechamento: '1', diaPagamento: '10', cor: CORES_CARTAO[0] });
   const [formL, setFormL] = useState({ descricao: '', valor: '', categoria: 'Outros', parcelas: '1', data: new Date().toISOString().slice(0, 10) });

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import CalculatorModal from '../components/CalculatorModal';
 import SelectDown from '../components/SelectDown';
 import { newId } from '../lib/ids';
+import { useLockBodyScroll } from '../lib/useLockBodyScroll';
 
 const fmt = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
 const fmtDate = (d) => {
@@ -416,6 +417,8 @@ export default function Dividas({ month, year }) {
   const [editMes, setEditMes] = useState(null);
   const [editAno, setEditAno] = useState(null);
   const [pendingEdit, setPendingEdit] = useState(null);
+
+  useLockBodyScroll(showForm || showParcelas || !!efetivandoId || !!detalheId || !!pendingEdit);
 
   const updateForm = (patch) => setForm(f => ({ ...f, ...patch }));
 
