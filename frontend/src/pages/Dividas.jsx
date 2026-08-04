@@ -257,9 +257,10 @@ function DropdownSelect({ id, label, options, selected, onToggle, openDropdown, 
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [setOpenDropdown]);
+  const labelOf = (val) => options.find(o => o.val === val)?.label ?? val;
   const displayLabel = selected.length === 0 ? label
-    : selected.length === 1 ? selected[0]
-    : `${selected[0]} +${selected.length - 1}`;
+    : selected.length === 1 ? labelOf(selected[0])
+    : `${labelOf(selected[0])} +${selected.length - 1}`;
   return (
     <div ref={ref} className="relative">
       <button onClick={() => setOpenDropdown(isOpen ? null : id)}
@@ -372,17 +373,22 @@ function AcoesMenu({ onEdit, onPagamentoParcial, onDuplicar, onExcluir, vencimen
 
 export default function Dividas({ month, year }) {
   const now = new Date();
-  const [localMonth, setLocalMonth] = useState(month || (now.getMonth() + 1));
-  const [localYear,  setLocalYear]  = useState(year  || now.getFullYear());
+  // Seleção múltipla de mês/ano: array vazio = "Todos" naquele eixo. Começa com o
+  // mês/ano atual selecionado, igual ao comportamento de período único de antes.
+  const [selectedMonths, setSelectedMonths] = useState([String(month || now.getMonth() + 1)]);
+  const [selectedYears,  setSelectedYears]  = useState([String(year  || now.getFullYear())]);
 
-  // Sincroniza com o período global quando muda no sidebar
-  useEffect(() => {
-    if (month) setLocalMonth(month);
-    if (year)  setLocalYear(year);
-  }, [month, year]);
+  // Sincroniza com o período global quando muda no sidebar (as setinhas de navegação
+  // do menu lateral) — colapsa de volta pra seleção única daquele mês/ano.
+  useEffect(() => { if (month) setSelectedMonths([String(month)]); }, [month]);
+  useEffect(() => { if (year)  setSelectedYears([String(year)]);   }, [year]);
 
-  const m = localMonth;
-  const y = localYear;
+  // m/y: valor único "de referência" usado como fallback em ações que operam sobre
+  // um período específico (editar, efetivar, etc.) quando não recebem mês/ano
+  // explícitos — normalmente essas ações já recebem o mês/ano da própria linha
+  // (d._m/d._y), então isso raramente entra em jogo.
+  const m = Number(selectedMonths[0] ?? (month || now.getMonth() + 1));
+  const y = Number(selectedYears[0]  ?? (year  || now.getFullYear()));
   const [dividas, setDividas] = useState(loadDividas);
   const [categorias, setCategorias] = useState(loadCategorias);
 
@@ -629,30 +635,32 @@ export default function Dividas({ month, year }) {
     setEditId(d.id); setEditMes(mes); setEditAno(ano); setShowForm(true);
   };
 
-  // m === 0 significa "Todos" (ano todo): expande cada divida numa linha por mês
-  // em que ela aparece, cada uma marcada com seu próprio mês/ano (_m/_y) para
-  // que status de pagamento, valores e ações operem no mês correto daquela linha.
-  const dividasPeriodo = m === 0
-    ? Array.from({ length: 12 }, (_, i) => i + 1)
-        .flatMap(mm => filtrarPeriodo(dividas, mm, y).map(d => ({ ...d, _m: mm, _y: y })))
-    : filtrarPeriodo(dividas, m, y).map(d => ({ ...d, _m: m, _y: y }));
-
-  // Pago por fluxo de caixa real (mês do pagamento, não do vencimento) — usado
-  // pela aba "Pagas" e pelo card "Quitadas". Ver loadPagasNoMes.
-  const dividasPagasNoMes = m === 0
-    ? Array.from({ length: 12 }, (_, i) => i + 1).flatMap(mm => loadPagasNoMes(dividas, mm, y))
-    : loadPagasNoMes(dividas, m, y);
-
   // Anos disponíveis no seletor: baseados nos dados reais cadastrados (não numa
-  // janela flutuante ±N que "deriva" e pode deixar o ano atual inalcançável.
+  // janela flutuante ±N que "deriva" e pode deixar o ano atual inalcançável).
   const anosDisponiveis = React.useMemo(() => {
-    const anos = new Set([new Date().getFullYear(), y]);
+    const anos = new Set([new Date().getFullYear(), y, ...selectedYears.map(Number)]);
     dividas.forEach(d => {
       const dateStr = d.vencimento || d.pagamentoData;
       if (dateStr) anos.add(Number(dateStr.split('-')[0]));
     });
     return [...anos].sort((a, b) => a - b);
-  }, [dividas, y]);
+  }, [dividas, y, selectedYears]);
+
+  // Cruza os meses × anos selecionados (vazio num eixo = "todos" nesse eixo) — cada
+  // combinação gera linhas marcadas com seu próprio mês/ano (_m/_y) para que status
+  // de pagamento, valores e ações operem no período correto daquela linha.
+  const mesesParaExibir = selectedMonths.length ? selectedMonths.map(Number) : Array.from({ length: 12 }, (_, i) => i + 1);
+  const anosParaExibir  = selectedYears.length  ? selectedYears.map(Number)  : anosDisponiveis;
+
+  const dividasPeriodo = anosParaExibir.flatMap(ay =>
+    mesesParaExibir.flatMap(am => filtrarPeriodo(dividas, am, ay).map(d => ({ ...d, _m: am, _y: ay })))
+  );
+
+  // Pago por fluxo de caixa real (mês do pagamento, não do vencimento) — usado
+  // pela aba "Pagas" e pelo card "Quitadas". Ver loadPagasNoMes.
+  const dividasPagasNoMes = anosParaExibir.flatMap(ay =>
+    mesesParaExibir.flatMap(am => loadPagasNoMes(dividas, am, ay))
+  );
 
   const today = new Date().toISOString().split('T')[0];
   const in7days = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
@@ -797,18 +805,21 @@ export default function Dividas({ month, year }) {
         return (
           <div className="mb-4">
             <div className="flex flex-wrap items-center gap-2">
-              {/* Mês e Ano */}
-              <select value={localMonth} onChange={e => setLocalMonth(Number(e.target.value))}
-                className="rounded-xl px-3 py-2 text-xs font-semibold text-text-2 outline-none cursor-pointer"
-                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                <option value={0}>Todos (ano)</option>
-                {MONTHS_LABEL.map((lbl, i) => <option key={i+1} value={i+1}>{lbl}</option>)}
-              </select>
-              <select value={localYear} onChange={e => setLocalYear(Number(e.target.value))}
-                className="rounded-xl px-3 py-2 text-xs font-semibold text-text-2 outline-none cursor-pointer"
-                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                {anosDisponiveis.map(yr => <option key={yr} value={yr}>{yr}</option>)}
-              </select>
+              {/* Mês e Ano — seleção múltipla; vazio = Todos */}
+              <DropdownSelect
+                id="mes" label="Todos os meses"
+                options={MONTHS_LABEL.map((lbl, i) => ({ val: String(i + 1), label: lbl }))}
+                selected={selectedMonths}
+                onToggle={(val) => val === null ? setSelectedMonths([]) : toggleFilter(selectedMonths, setSelectedMonths, val)}
+                openDropdown={openDropdown} setOpenDropdown={setOpenDropdown}
+              />
+              <DropdownSelect
+                id="ano" label="Todos os anos"
+                options={anosDisponiveis.map(yr => ({ val: String(yr), label: String(yr) }))}
+                selected={selectedYears}
+                onToggle={(val) => val === null ? setSelectedYears([]) : toggleFilter(selectedYears, setSelectedYears, val)}
+                openDropdown={openDropdown} setOpenDropdown={setOpenDropdown}
+              />
 
               {/* Vencimento dropdown */}
               <DropdownSelect
@@ -1044,7 +1055,7 @@ export default function Dividas({ month, year }) {
                     </div>
                     {/* Ações */}
                     <div className="flex items-center gap-1">
-                      {confirmId === d.id ? (
+                      {confirmId === `${d.id}_${d._m}_${d._y}` ? (
                         <div className="flex items-center gap-1">
                           <span className="text-text-3 text-[11px]">Excluir?</span>
                           <button onClick={() => remove(d.id)} className="text-expense text-xs font-bold px-2 py-1 rounded-lg" style={{ background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.2)' }}>✓</button>
@@ -1055,7 +1066,7 @@ export default function Dividas({ month, year }) {
                           onEdit={() => openEdit(d, d._m, d._y)}
                           onPagamentoParcial={() => openEfetivar(d.id, 'parcial', d._m, d._y)}
                           onDuplicar={(dataStr) => duplicar(d, dataStr, d._m, d._y)}
-                          onExcluir={() => setConfirmId(d.id)}
+                          onExcluir={() => setConfirmId(`${d.id}_${d._m}_${d._y}`)}
                           vencimentoAtual={vencAjustado}
                           openUp={idx >= filteredSorted.length - 2}
                         />

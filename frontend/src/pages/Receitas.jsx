@@ -198,9 +198,10 @@ function DropdownSelect({ id, label, options, selected, onToggle, openDropdown, 
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [setOpenDropdown]);
+  const labelOf = (val) => options.find(o => o.val === val)?.label ?? val;
   const displayLabel = selected.length === 0 ? label
-    : selected.length === 1 ? selected[0]
-    : `${selected[0]} +${selected.length - 1}`;
+    : selected.length === 1 ? labelOf(selected[0])
+    : `${labelOf(selected[0])} +${selected.length - 1}`;
   return (
     <div ref={ref} className="relative">
       <button onClick={() => setOpenDropdown(isOpen ? null : id)}
@@ -313,11 +314,19 @@ function AcoesMenu({ onEdit, onPagamentoParcial, onDuplicar, onExcluir, vencimen
 
 export default function Receitas({ month, year }) {
   const now = new Date();
-  const [lm, setLm] = useState(month || now.getMonth() + 1);
-  const [ly, setLy] = useState(year  || now.getFullYear());
+  // Seleção múltipla de mês/ano: array vazio = "Todos" naquele eixo.
+  const [selectedMonths, setSelectedMonths] = useState([String(month || now.getMonth() + 1)]);
+  const [selectedYears,  setSelectedYears]  = useState([String(year  || now.getFullYear())]);
 
-  useEffect(() => { if (month) setLm(month); }, [month]);
-  useEffect(() => { if (year)  setLy(year);  }, [year]);
+  // Sincroniza com o período global (setinhas do menu lateral) — colapsa de volta
+  // pra seleção única daquele mês/ano.
+  useEffect(() => { if (month) setSelectedMonths([String(month)]); }, [month]);
+  useEffect(() => { if (year)  setSelectedYears([String(year)]);   }, [year]);
+
+  // lm/ly: valor único "de referência", usado como fallback em ações que não
+  // recebem mês/ano explícitos (a maioria já recebe o mês/ano da própria linha).
+  const lm = Number(selectedMonths[0] ?? (month || now.getMonth() + 1));
+  const ly = Number(selectedYears[0]  ?? (year  || now.getFullYear()));
 
   const [receitas,    setReceitas]    = useState(loadReceitas);
   const [categorias,  setCategorias]  = useState(loadCats);
@@ -331,19 +340,21 @@ export default function Receitas({ month, year }) {
   // Anos disponíveis no seletor: baseados nos dados reais cadastrados (não numa
   // janela flutuante ±N que "deriva" e pode deixar o ano atual inalcançável.
   const anosDisponiveis = React.useMemo(() => {
-    const anos = new Set([new Date().getFullYear(), ly]);
+    const anos = new Set([new Date().getFullYear(), ly, ...selectedYears.map(Number)]);
     receitas.forEach(r => {
       const dateStr = r.data || r.recebimentoData;
       if (dateStr) anos.add(Number(dateStr.split('-')[0]));
     });
     return [...anos].sort((a, b) => a - b);
-  }, [receitas, ly]);
+  }, [receitas, ly, selectedYears]);
   const [showForm,    setShowForm]    = useState(false);
   const [form,        setForm]        = useState(emptyForm());
   const [editId,      setEditId]      = useState(null);
   const [filter,      setFilter]      = useState('todas');
   const [confirmId,   setConfirmId]   = useState(null);
   const [efetivId,    setEfetivId]    = useState(null);
+  const [efetivandoMes, setEfetivandoMes] = useState(null);
+  const [efetivandoAno, setEfetivandoAno] = useState(null);
   const [efDate,      setEfDate]      = useState('');
   const [efValor,     setEfValor]     = useState('');
   const [novaCateg,   setNovaCateg]   = useState('');
@@ -480,39 +491,40 @@ export default function Receitas({ month, year }) {
     setShowForm(false); setForm(emptyForm()); setEditId(null); setEditMes(null); setEditAno(null); setPendingEdit(null);
   };
 
-  const openEfetivar = (id) => {
+  const openEfetivar = (id, mes = lm, ano = ly) => {
     const r = receitas.find(x => x.id === id);
-    const st = statusMesReceita(r, lm, ly);
+    const st = statusMesReceita(r, mes, ano);
     setEfDate(st.data || new Date().toISOString().slice(0,10));
     const fmtBRL = v => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    setEfValor(st.valorRecebido ? fmtBRL(st.valorRecebido) : (r ? fmtBRL(parcelaValorMesReceita(r, lm, ly)) : ''));
-    setEfetivId(id);
+    setEfValor(st.valorRecebido ? fmtBRL(st.valorRecebido) : (r ? fmtBRL(parcelaValorMesReceita(r, mes, ano)) : ''));
+    setEfetivId(id); setEfetivandoMes(mes); setEfetivandoAno(ano);
   };
 
   const confirmarEfetivar = () => {
+    const mes = efetivandoMes ?? lm, ano = efetivandoAno ?? ly;
     const updated = receitas.map(r => {
       if (r.id !== efetivId) return r;
       if (r.recorrencia === 'fixa' || r.recorrencia === 'parcelar') {
-        const key = mesKey(lm, ly);
+        const key = mesKey(mes, ano);
         return {
           ...r,
           recebimentos: {
             ...(r.recebimentos || {}),
-            [key]: { recebida: true, data: efDate, valorRecebido: parseFloat(String(efValor).replace(/\./g,'').replace(',','.')) || parcelaValorMesReceita(r, lm, ly) },
+            [key]: { recebida: true, data: efDate, valorRecebido: parseFloat(String(efValor).replace(/\./g,'').replace(',','.')) || parcelaValorMesReceita(r, mes, ano) },
           },
           updatedAt: new Date().toISOString(),
         };
       }
       return { ...r, recebida: true, recebimentoData: efDate, valorRecebido: parseFloat(String(efValor).replace(/\./g,'').replace(',','.')) || parcelaValor(r), updatedAt: new Date().toISOString() };
     });
-    setReceitas(updated); saveReceitas(updated); setEfetivId(null);
+    setReceitas(updated); saveReceitas(updated); setEfetivId(null); setEfetivandoMes(null); setEfetivandoAno(null);
   };
 
-  const desfazer = (id) => {
+  const desfazer = (id, mes = lm, ano = ly) => {
     const updated = receitas.map(r => {
       if (r.id !== id) return r;
       if (r.recorrencia === 'fixa' || r.recorrencia === 'parcelar') {
-        const key = mesKey(lm, ly);
+        const key = mesKey(mes, ano);
         const recebimentos = { ...(r.recebimentos || {}) };
         delete recebimentos[key];
         const patch = { ...r, recebimentos, updatedAt: new Date().toISOString() };
@@ -530,11 +542,11 @@ export default function Receitas({ month, year }) {
 
   const remover = (id) => { const u = receitas.filter(r => r.id !== id); setReceitas(u); saveReceitas(u); setConfirmId(null); };
 
-  const duplicar = (r, dataStr) => {
-    const campos = getCamposMesReceita(r, lm, ly);
+  const duplicar = (r, dataStr, mes = lm, ano = ly) => {
+    const campos = getCamposMesReceita(r, mes, ano);
     const novo = {
       id: newId(),
-      nome: campos.nome, categoria: campos.categoria, valor: parcelaValorMesReceita(r, lm, ly), data: dataStr,
+      nome: campos.nome, categoria: campos.categoria, valor: parcelaValorMesReceita(r, mes, ano), data: dataStr,
       recorrencia: 'nao', periodicidade: 'Mensal', observacao: campos.observacao || '',
       recebida: false, recebimentoData: null, recebimentos: {},
       updatedAt: new Date().toISOString(),
@@ -566,29 +578,37 @@ export default function Receitas({ month, year }) {
     setNovaCateg(''); setShowCateg(false);
   };
 
-  const periodo = filtrar(receitas, lm, ly);
+  // Cruza os meses × anos selecionados (vazio num eixo = "todos" nesse eixo) — cada
+  // combinação gera linhas marcadas com seu próprio mês/ano (_m/_y), igual a Dividas.jsx.
+  const mesesParaExibir = selectedMonths.length ? selectedMonths.map(Number) : Array.from({ length: 12 }, (_, i) => i + 1);
+  const anosParaExibir  = selectedYears.length  ? selectedYears.map(Number)  : anosDisponiveis;
+
+  const periodo = anosParaExibir.flatMap(ay =>
+    mesesParaExibir.flatMap(am => filtrar(receitas, am, ay).map(r => ({ ...r, _m: am, _y: ay })))
+  );
+
   const filtered = periodo.filter(r => {
-    const st = statusMesReceita(r, lm, ly);
+    const st = statusMesReceita(r, r._m, r._y);
     if (filter === 'pendentes') return !st.recebida;
     if (filter === 'recebidas') return st.recebida;
     if (search.trim() && !r.nome.toLowerCase().includes(search.trim().toLowerCase())) return false;
     if (filterCategorias.length > 0 && !filterCategorias.includes(r.categoria)) return false;
     if (filterDias.length > 0) {
-      const de = dataEfetivaMes(r, lm, ly);
+      const de = dataEfetivaMes(r, r._m, r._y);
       const dia = de ? String(Number(de.split('-')[2])) : null;
       if (!dia || !filterDias.includes(dia)) return false;
     }
     return true;
   });
 
-  const totalPendente = periodo.filter(r => !statusMesReceita(r, lm, ly).recebida).reduce((s, r) => s + parcelaValorMesReceita(r, lm, ly), 0);
-  const totalRecebido = periodo.filter(r => statusMesReceita(r, lm, ly).recebida).reduce((s, r) => {
-    const st = statusMesReceita(r, lm, ly);
-    return s + (st.valorRecebido || parcelaValorMesReceita(r, lm, ly));
+  const totalPendente = periodo.filter(r => !statusMesReceita(r, r._m, r._y).recebida).reduce((s, r) => s + parcelaValorMesReceita(r, r._m, r._y), 0);
+  const totalRecebido = periodo.filter(r => statusMesReceita(r, r._m, r._y).recebida).reduce((s, r) => {
+    const st = statusMesReceita(r, r._m, r._y);
+    return s + (st.valorRecebido || parcelaValorMesReceita(r, r._m, r._y));
   }, 0);
 
   // Total/quantidade do resultado filtrado (busca + status + categoria + dia).
-  const totalFiltrado = filtered.reduce((s, r) => s + parcelaValorMesReceita(r, lm, ly), 0);
+  const totalFiltrado = filtered.reduce((s, r) => s + parcelaValorMesReceita(r, r._m, r._y), 0);
   const qtdFiltrado = filtered.length;
   const temFiltroAtivo = filter !== 'todas' || search.trim() !== '' || filterCategorias.length > 0 || filterDias.length > 0;
   const activeCount = filterCategorias.length + filterDias.length;
@@ -614,7 +634,7 @@ export default function Receitas({ month, year }) {
             <p className="text-white/70 text-xs">A receber</p>
           </div>
           <p className="hv text-income font-bold text-lg">{fmt(totalPendente)}</p>
-          <p className="text-white/50 text-[10px] mt-0.5">{periodo.filter(r => !statusMesReceita(r, lm, ly).recebida).length} pendentes</p>
+          <p className="text-white/50 text-[10px] mt-0.5">{periodo.filter(r => !statusMesReceita(r, r._m, r._y).recebida).length} pendentes</p>
         </div>
         <div className="card-premium p-4">
           <div className="flex items-center gap-2 mb-1">
@@ -622,7 +642,7 @@ export default function Receitas({ month, year }) {
             <p className="text-white/70 text-xs">Recebidas</p>
           </div>
           <p className="hv text-income font-bold text-lg">{fmt(totalRecebido)}</p>
-          <p className="text-white/50 text-[10px] mt-0.5">{periodo.filter(r => statusMesReceita(r, lm, ly).recebida).length} confirmadas</p>
+          <p className="text-white/50 text-[10px] mt-0.5">{periodo.filter(r => statusMesReceita(r, r._m, r._y).recebida).length} confirmadas</p>
         </div>
       </div>
 
@@ -653,18 +673,22 @@ export default function Receitas({ month, year }) {
         ))}
       </div>
 
-      {/* Período */}
+      {/* Período — seleção múltipla; vazio = Todos */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
-        <select value={lm} onChange={e => setLm(Number(e.target.value))}
-          className="rounded-xl px-3 py-2 text-xs font-semibold text-white outline-none cursor-pointer [color-scheme:dark]"
-          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
-          {MONTHS_LABEL.map((l, i) => <option key={i+1} value={i+1}>{l}</option>)}
-        </select>
-        <select value={ly} onChange={e => setLy(Number(e.target.value))}
-          className="rounded-xl px-3 py-2 text-xs font-semibold text-white outline-none cursor-pointer [color-scheme:dark]"
-          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
-          {anosDisponiveis.map(yr => <option key={yr} value={yr}>{yr}</option>)}
-        </select>
+        <DropdownSelect
+          id="mes" label="Todos os meses"
+          options={MONTHS_LABEL.map((l, i) => ({ val: String(i + 1), label: l }))}
+          selected={selectedMonths}
+          onToggle={(val) => val === null ? setSelectedMonths([]) : toggleFilter(selectedMonths, setSelectedMonths, val)}
+          openDropdown={openDropdown} setOpenDropdown={setOpenDropdown}
+        />
+        <DropdownSelect
+          id="ano" label="Todos os anos"
+          options={anosDisponiveis.map(yr => ({ val: String(yr), label: String(yr) }))}
+          selected={selectedYears}
+          onToggle={(val) => val === null ? setSelectedYears([]) : toggleFilter(selectedYears, setSelectedYears, val)}
+          openDropdown={openDropdown} setOpenDropdown={setOpenDropdown}
+        />
 
         <DropdownSelect
           id="cat" label="Categoria"
@@ -716,12 +740,12 @@ export default function Receitas({ month, year }) {
       ) : (
         <div className="space-y-2">
           {filtered.map((r, idx) => {
-            const st = statusMesReceita(r, lm, ly);
-            const pi = parcelaInfo(r, lm, ly);
-            const campos = getCamposMesReceita(r, lm, ly);
-            const valorMes = parcelaValorMesReceita(r, lm, ly);
+            const st = statusMesReceita(r, r._m, r._y);
+            const pi = parcelaInfo(r, r._m, r._y);
+            const campos = getCamposMesReceita(r, r._m, r._y);
+            const valorMes = parcelaValorMesReceita(r, r._m, r._y);
             return (
-              <div key={r.id} className="card-premium transition-all active:scale-[0.99]">
+              <div key={`${r.id}-${r._m}-${r._y}`} className="card-premium transition-all active:scale-[0.99]">
                 <div className="px-4 pt-3.5 pb-3">
                   {/* Linha 1: ícone + nome + valor */}
                   <div className="flex items-start gap-3">
@@ -783,20 +807,20 @@ export default function Receitas({ month, year }) {
                   <div className="flex items-center justify-between mt-3 ml-12" onClick={e => e.stopPropagation()}>
                     <div>
                       {!st.recebida ? (
-                        <button onClick={() => openEfetivar(r.id)}
+                        <button onClick={() => openEfetivar(r.id, r._m, r._y)}
                           className="text-xs font-semibold px-3 py-1 rounded-lg transition-all"
                           style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.2)' }}>
                           Confirmar recebimento
                         </button>
                       ) : (
-                        <button onClick={() => desfazer(r.id)}
+                        <button onClick={() => desfazer(r.id, r._m, r._y)}
                           className="text-xs text-white/40 hover:text-white/70 transition">
                           ↩ Desfazer
                         </button>
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      {confirmId === r.id ? (
+                      {confirmId === `${r.id}_${r._m}_${r._y}` ? (
                         <div className="flex items-center gap-1">
                           <span className="text-text-3 text-[11px]">Excluir?</span>
                           <button onClick={() => remover(r.id)} className="text-expense text-xs font-bold px-2 py-1 rounded-lg" style={{ background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.2)' }}>✓</button>
@@ -804,10 +828,10 @@ export default function Receitas({ month, year }) {
                         </div>
                       ) : (
                         <AcoesMenu
-                          onEdit={() => openEdit(r, lm, ly)}
-                          onPagamentoParcial={() => openEfetivar(r.id)}
-                          onDuplicar={(dataStr) => duplicar(r, dataStr)}
-                          onExcluir={() => setConfirmId(r.id)}
+                          onEdit={() => openEdit(r, r._m, r._y)}
+                          onPagamentoParcial={() => openEfetivar(r.id, r._m, r._y)}
+                          onDuplicar={(dataStr) => duplicar(r, dataStr, r._m, r._y)}
+                          onExcluir={() => setConfirmId(`${r.id}_${r._m}_${r._y}`)}
                           vencimentoAtual={r.data}
                           openUp={idx >= filtered.length - 2}
                         />
