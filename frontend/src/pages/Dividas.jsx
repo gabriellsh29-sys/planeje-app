@@ -521,9 +521,19 @@ export default function Dividas({ month, year }) {
         };
         const novoDia = novosCampos.vencimento ? novosCampos.vencimento.split('-')[2] : camposAntigos.vencimentoDia;
         const [oy, om] = (original.vencimento || `${ea}-${String(em).padStart(2, '0')}-01`).split('-');
+        // "Deste mês em diante" precisa valer de fato a partir daqui — sem isso, um
+        // override de "apenas este mês" criado antes (numa tentativa anterior, por
+        // exemplo) continuava "vencendo" o novo valor base pra aquele mês específico,
+        // porque getCamposMes checa overrides antes do valor base. Limpa overrides
+        // do mês editado em diante; mantém os de meses anteriores (já preservados
+        // no histórico de qualquer forma).
+        const overridesRestantes = Object.fromEntries(
+          Object.entries(original.overrides || {}).filter(([k]) => k < mesKey(em, ea))
+        );
         item = {
           ...baseUpdate, ...novosCampos,
           vencimento: `${oy}-${om}-${novoDia}`,
+          overrides: overridesRestantes,
           historico: [...(original.historico || []), histEntry],
         };
       }
