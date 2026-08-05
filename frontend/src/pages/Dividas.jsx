@@ -522,19 +522,22 @@ export default function Dividas({ month, year }) {
         const novoDia = novosCampos.vencimento ? novosCampos.vencimento.split('-')[2] : camposAntigos.vencimentoDia;
         const [oy, om] = (original.vencimento || `${ea}-${String(em).padStart(2, '0')}-01`).split('-');
         // "Deste mês em diante" precisa valer de fato a partir daqui — sem isso, um
-        // override de "apenas este mês" criado antes (numa tentativa anterior, por
-        // exemplo) continuava "vencendo" o novo valor base pra aquele mês específico,
-        // porque getCamposMes checa overrides antes do valor base. Limpa overrides
-        // do mês editado em diante; mantém os de meses anteriores (já preservados
-        // no histórico de qualquer forma).
+        // override de "apenas este mês" ou uma entrada de histórico de uma edição
+        // anterior (ex: uma "deste mês em diante" que por engano tinha sido aplicada
+        // a partir de um mês seguinte, deixando uma entrada de histórico com "ate"
+        // cobrindo o mês atual) continuava "vencendo" o novo valor base — porque
+        // getCamposMes checa overrides e depois histórico ANTES do valor base novo.
+        // Limpa overrides e entradas de histórico que cobrem o mês editado em diante;
+        // mantém só o que é de fato anterior a ele.
         const overridesRestantes = Object.fromEntries(
           Object.entries(original.overrides || {}).filter(([k]) => k < mesKey(em, ea))
         );
+        const historicoRestante = (original.historico || []).filter(h => h.ate < mesKey(em, ea));
         item = {
           ...baseUpdate, ...novosCampos,
           vencimento: `${oy}-${om}-${novoDia}`,
           overrides: overridesRestantes,
-          historico: [...(original.historico || []), histEntry],
+          historico: [...historicoRestante, histEntry],
         };
       }
     } else {

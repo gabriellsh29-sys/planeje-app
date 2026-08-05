@@ -454,17 +454,18 @@ export default function Receitas({ month, year }) {
         const novoDia = form.data ? form.data.split('-')[2] : camposAntigos.dia;
         const [oy, om] = (original.data || `${ea}-${String(em).padStart(2, '0')}-01`).split('-');
         // "Deste mês em diante" precisa valer de fato a partir daqui — limpa overrides
-        // do mês editado em diante (de uma tentativa anterior "só este mês", por
-        // exemplo), senão eles continuam vencendo o novo valor base via
-        // getCamposMesReceita (override tem prioridade sobre o valor base).
+        // E entradas de histórico que cubram o mês editado em diante (de uma tentativa
+        // anterior, por exemplo), senão elas continuam vencendo o novo valor base via
+        // getCamposMesReceita (override e histórico têm prioridade sobre o valor base).
         const overridesRestantes = Object.fromEntries(
           Object.entries(original.overrides || {}).filter(([k]) => k < mesKey(em, ea))
         );
+        const historicoRestante = (original.historico || []).filter(h => h.ate < mesKey(em, ea));
         item = {
           ...baseUpdate, ...novosCampos,
           data: `${oy}-${om}-${novoDia}`,
           overrides: overridesRestantes,
-          historico: [...(original.historico || []), histEntry],
+          historico: [...historicoRestante, histEntry],
         };
       }
     } else {
