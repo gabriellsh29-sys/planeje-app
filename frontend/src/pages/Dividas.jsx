@@ -417,6 +417,7 @@ export default function Dividas({ month, year }) {
   const [efetivandoAno, setEfetivandoAno] = useState(null);
   const [efetivDate, setEfetivDate] = useState('');
   const [efetivValor, setEfetivValor] = useState('');
+  const [efetivQuitar, setEfetivQuitar] = useState(false);
   const [detalheId, setDetalheId] = useState(null);
   const [detalheMes, setDetalheMes] = useState(null);
   const [detalheAno, setDetalheAno] = useState(null);
@@ -564,6 +565,7 @@ export default function Dividas({ month, year }) {
     setEfetivDate(st?.pagamentoData || new Date().toISOString().split('T')[0]);
     const fmtBRL = v => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     setEfetivValor(modo === 'parcial' ? '' : (restante ? fmtBRL(restante) : ''));
+    setEfetivQuitar(false);
     setEfetivandoId(id);
     setEfetivandoMes(mes); setEfetivandoAno(ano);
   };
@@ -577,11 +579,14 @@ export default function Dividas({ month, year }) {
       const total = parcelaValorMes(d, mes, ano);
       const st = statusMes(d, mes, ano);
       const novoValorPago = (st.valorPago || 0) + valorDigitado;
-      const pago = novoValorPago >= total - 0.005;
+      // efetivQuitar força a quitação mesmo com valor menor que o previsto (ex:
+      // desconto por pagamento antecipado) — sem isso, pagar menos que o valor
+      // agendado sempre ficava marcado como "falta pagar a diferença".
+      const pago = efetivQuitar || novoValorPago >= total - 0.005;
       return aplicarStatusMes(d, mes, ano, { pago, pagamentoData: efetivDate, valorPago: novoValorPago });
     });
     setDividas(updated); saveDividas(updated);
-    setEfetivandoId(null); setEfetivandoMes(null); setEfetivandoAno(null);
+    setEfetivandoId(null); setEfetivandoMes(null); setEfetivandoAno(null); setEfetivQuitar(false);
   };
 
   const desfazerEfetivar = (id, mes = m, ano = y) => {
@@ -1489,8 +1494,15 @@ export default function Dividas({ month, year }) {
                 />
               </div>
             </div>
+            <label className="flex items-start gap-2 mb-4 cursor-pointer">
+              <input type="checkbox" checked={efetivQuitar} onChange={e => setEfetivQuitar(e.target.checked)}
+                className="mt-0.5" style={{ accentColor: '#22c55e' }} />
+              <span className="text-text-3 text-[11px] leading-snug">
+                Quitar mesmo que o valor seja diferente do previsto <span className="text-text-3/70">(ex: desconto por pagamento antecipado, negociação)</span>
+              </span>
+            </label>
             <div className="flex gap-2">
-              <button onClick={() => { setEfetivandoId(null); setEfetivandoMes(null); setEfetivandoAno(null); }} className="btn-ghost flex-1">Cancelar</button>
+              <button onClick={() => { setEfetivandoId(null); setEfetivandoMes(null); setEfetivandoAno(null); setEfetivQuitar(false); }} className="btn-ghost flex-1">Cancelar</button>
               <button onClick={confirmEfetivar} className="btn-gold flex-1 text-center">Confirmar</button>
             </div>
           </div>

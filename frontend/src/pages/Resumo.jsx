@@ -144,26 +144,28 @@ function loadDespesas(month, year) {
   } catch { return []; }
 }
 
-// Contas "fixa" que tinham vencimento em meses anteriores mas foram pagas
-// somente neste mês (pagamentoData). Não mexe em parcelar/não-recorrente
-// nem em cartão/fatura — apenas soma esses pagamentos extras às transações
-// e ao saldo do mês em que o pagamento foi efetivado de fato.
+// Contas "fixa"/"parcelar" que tinham vencimento em meses anteriores mas
+// receberam algum pagamento (total ou PARCIAL) neste mês. Conta pelo valor
+// realmente pago (p.valorPago), não pelo status "quitada" — dinheiro que já
+// saiu da conta via pagamento parcial precisa abater o saldo mesmo antes de
+// a conta ficar 100% paga. Não mexe em não-recorrente nem em cartão/fatura —
+// apenas soma esses pagamentos extras às transações e ao saldo do mês em que
+// o pagamento foi efetivado de fato.
 function loadPagamentosAtrasadosNoMes(month, year) {
   try {
     const all = JSON.parse(localStorage.getItem(DIVIDA_KEY) || '[]');
     const currentKey = `${year}-${String(month).padStart(2, '0')}`;
     const out = [];
     all.forEach(d => {
-      if (d.recorrencia !== 'fixa' || !d.pagamentos) return;
+      if ((d.recorrencia !== 'fixa' && d.recorrencia !== 'parcelar') || !d.pagamentos) return;
       Object.entries(d.pagamentos).forEach(([key, p]) => {
         if (key === currentKey) return; // já contabilizado no fluxo normal do mês
-        if (!p || !p.pago || !p.pagamentoData) return;
+        if (!p || !(p.valorPago > 0) || !p.pagamentoData) return;
         const [py, pm] = p.pagamentoData.split('-').map(Number);
         if (py !== year || pm !== month) return;
-        const valor = p.valorPago ?? d.valor;
         out.push({
           id: `pagatraso_${d.id}_${key}`, type: 'expense', description: d.nome, category: d.categoria || 'Outros',
-          amount: valor, valorPago: valor, date: p.pagamentoData, pago: true, pagamentoData: p.pagamentoData,
+          amount: p.valorPago, valorPago: p.valorPago, date: p.pagamentoData, pago: !!p.pago, pagamentoData: p.pagamentoData,
         });
       });
     });
@@ -268,10 +270,14 @@ export default function Resumo({ loading, month, year }) {
 
   const totalExpense   = despesas.reduce((s, t) => s + parseFloat(t.amount || 0), 0);
   const totalIncome    = receitas.reduce((s, t) => s + parseFloat(t.amount || 0), 0);
-  const pagoExpense    = despesas.filter(t => t.pago && t.pagamentoData).reduce((s, t) => s + parseFloat(t.valorPago ?? t.amount ?? 0), 0)
+  // Conta pelo que foi REALMENTE pago (valorPago), mesmo em pagamento parcial —
+  // dinheiro parcial já saiu da conta e precisa abater o saldo antes de a conta
+  // ficar 100% quitada, não só quando o status vira "pago".
+  const pagoExpense    = despesas.filter(t => t.valorPago > 0 && t.pagamentoData).reduce((s, t) => s + parseFloat(t.valorPago), 0)
                        + pagamentosAtrasados.reduce((s, t) => s + parseFloat(t.valorPago ?? t.amount ?? 0), 0);
   const pagoIncome     = receitas.filter(t => t.pago && t.pagamentoData).reduce((s, t) => s + parseFloat(t.amount || 0), 0);
-  const pendingExpense = despesas.filter(t => !t.pago).reduce((s, t) => s + parseFloat(t.amount || 0), 0);
+  // "A pagar" desconta o que já foi pago parcialmente do valor total agendado.
+  const pendingExpense = despesas.filter(t => !t.pago).reduce((s, t) => s + Math.max(parseFloat(t.amount || 0) - parseFloat(t.valorPago || 0), 0), 0);
   const pendingCount   = despesas.filter(t => !t.pago).length;
 
   // Saldo em conta é acumulado (como saldo bancário real): soma tudo que já foi
@@ -293,7 +299,7 @@ export default function Resumo({ loading, month, year }) {
       // de vencimento pra achar o status) — sem esse filtro, ela entraria aqui pelo
       // mês de vencimento E de novo em "atrasados" pelo mês real do pagamento,
       // contando o mesmo valor duas vezes na soma acumulada.
-      expense += desp.filter(t => t.pago && t.pagamentoData && t.pagamentoData.slice(0, 7) === keyAtual).reduce((s, t) => s + parseFloat(t.valorPago ?? t.amount ?? 0), 0)
+      expense += desp.filter(t => t.valorPago > 0 && t.pagamentoData && t.pagamentoData.slice(0, 7) === keyAtual).reduce((s, t) => s + parseFloat(t.valorPago), 0)
                + atrasados.reduce((s, t) => s + parseFloat(t.valorPago ?? t.amount ?? 0), 0);
       income  += rec.filter(t => t.pago && t.pagamentoData).reduce((s, t) => s + parseFloat(t.amount || 0), 0);
     }
