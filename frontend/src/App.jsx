@@ -70,6 +70,17 @@ const PAGE_TITLES = {
   perfil: 'Perfil',
 };
 
+const LAST_PAGE_KEY = 'planeje_last_page';
+
+function getInitialPage() {
+  try {
+    const saved = localStorage.getItem(LAST_PAGE_KEY);
+    return saved && PAGE_TITLES[saved] ? saved : 'resumo';
+  } catch {
+    return 'resumo';
+  }
+}
+
 function TransacoesWrapper({ month, year }) {
   const [tab, setTab] = useState('despesas');
   const TABS = [
@@ -117,13 +128,17 @@ function Dashboard() {
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year,  setYear]  = useState(now.getFullYear());
-  const [page,  setPage]  = useState('resumo');
+  const [page,  setPage]  = useState(getInitialPage);
   const [showForm, setShowForm] = useState(false);
   const [formType, setFormType] = useState('expense');
   const [refreshKey, setRefreshKey] = useState(0);
 
   useLockBodyScroll(showForm);
   const { addTransaction } = useTransactions(month, year);
+
+  useEffect(() => {
+    try { localStorage.setItem(LAST_PAGE_KEY, page); } catch {}
+  }, [page]);
 
   const handleAddTransaction = useCallback(async (data) => {
     await addTransaction(data);
