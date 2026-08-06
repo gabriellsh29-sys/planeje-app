@@ -59,8 +59,16 @@ export default function CartaoCredito({ month, year }) {
   const [editCartaoId,   setEditCartaoId]   = useState(null);
   const [showFormLanc,   setShowFormLanc]   = useState(false);
   const [showPagar,      setShowPagar]      = useState(false);
+  const [confirmRemoverCartao, setConfirmRemoverCartao] = useState(false);
+  const [syncVer, setSyncVer] = useState(0);
 
-  useLockBodyScroll(showFormCartao || showFormLanc || showPagar);
+  useEffect(() => {
+    const reload = () => setSyncVer(v => v + 1);
+    window.addEventListener('planeje-sync', reload);
+    return () => window.removeEventListener('planeje-sync', reload);
+  }, []);
+
+  useLockBodyScroll(showFormCartao || showFormLanc || showPagar || confirmRemoverCartao);
 
   const [formC, setFormC] = useState({ nome: '', bandeira: 'Visa', limite: '', diaFechamento: '1', diaPagamento: '10', cor: CORES_CARTAO[0] });
   const [formL, setFormL] = useState({ descricao: '', valor: '', categoria: 'Outros', parcelas: '1', data: new Date().toISOString().slice(0, 10) });
@@ -73,7 +81,7 @@ export default function CartaoCredito({ month, year }) {
   const cartaoSelecionado = cartoes.find(c => c.id === cartaoAtivo) || cartoes[0] || null;
   const lancamentos = useMemo(() =>
     cartaoSelecionado ? getLancamentos(cartaoSelecionado.id, month, year) : [],
-    [cartaoSelecionado?.id, month, year, showFormLanc, showPagar]);
+    [cartaoSelecionado?.id, month, year, showFormLanc, showPagar, syncVer]);
 
   const totalFatura = lancamentos.reduce((s, l) => s + (l.valor / (l.parcelas || 1)), 0);
   const lancamentosFiltrados = useMemo(() =>
@@ -101,7 +109,13 @@ export default function CartaoCredito({ month, year }) {
 
   const removerCartao = (id) => {
     const updated = cartoes.filter(c => c.id !== id); setCartoes(updated); save(CARTAO_KEY, updated);
+    // Sem isso, os lançamentos daquele cartão ficam órfãos em planeje_faturas pra
+    // sempre — nunca aparecem em lugar nenhum, mas continuam ocupando espaço e
+    // sincronizando com a nuvem.
+    const lancsRestantes = load(FATURA_KEY, []).filter(l => l.cartaoId !== id);
+    save(FATURA_KEY, lancsRestantes);
     if (cartaoAtivo === id) setCartaoAtivo(updated[0]?.id || null);
+    setConfirmRemoverCartao(false);
   };
 
   const openEditCartao = (c) => {
@@ -113,16 +127,22 @@ export default function CartaoCredito({ month, year }) {
     if (!formL.descricao.trim() || !formL.valor || !cartaoSelecionado) return;
     const valor = parseFloat(formL.valor.replace(',','.')) || 0;
     const parcelas = parseInt(formL.parcelas) || 1;
+    const [baseAno, baseMes, baseDia] = formL.data.split('-').map(Number);
     for (let p = 0; p < parcelas; p++) {
-      const d = new Date(formL.data + 'T00:00:00');
-      d.setMonth(d.getMonth() + p);
+      // Soma meses calculando ano/mês diretamente, em vez de Date.setMonth — uma
+      // compra no dia 29/30/31 com Date.setMonth() "estoura" pro mês seguinte em
+      // meses mais curtos (ex: 31/01 + 1 mês vira 03/03, não fevereiro), jogando a
+      // parcela pro mês errado. Aqui o dia é limitado ao último dia do mês alvo.
+      const totalMeses = baseAno * 12 + (baseMes - 1) + p;
+      const anoAlvo = Math.floor(totalMeses / 12);
+      const mesAlvo = (totalMeses % 12) + 1;
       addLancamento({
         id: newId(),
         cartaoId: cartaoSelecionado.id,
         descricao: `${formL.descricao.trim()}${parcelas > 1 ? ` (${p+1}/${parcelas})` : ''}`,
         valor, categoria: formL.categoria, parcelas,
         parcelaAtual: p + 1,
-        mes: d.getMonth() + 1, ano: d.getFullYear(),
+        mes: mesAlvo, ano: anoAlvo,
         data: formL.data,
         updatedAt: new Date().toISOString(),
       });
@@ -197,7 +217,7 @@ export default function CartaoCredito({ month, year }) {
                   <button onClick={() => openEditCartao(cartaoSelecionado)} className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 transition flex items-center justify-center">
                     <svg viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5 text-white"><path d="M12.854.146a.5.5 0 00-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 000-.708l-3-3zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 01.5.5v.5h.5a.5.5 0 01.5.5v.5h.5a.5.5 0 01.5.5v.5h.5a.5.5 0 01.5.5v.207l6.5-6.5zm-7.468 7.468A.5.5 0 016 13.5V13h-.5a.5.5 0 01-.5-.5V12h-.5a.5.5 0 01-.5-.5V11h-.5a.5.5 0 01-.5-.5V10h-.5a.499.499 0 01-.175-.032l-.179.178a.5.5 0 00-.11.168l-2 5a.5.5 0 00.65.65l5-2a.5.5 0 00.168-.11l.178-.178z"/></svg>
                   </button>
-                  <button onClick={() => removerCartao(cartaoSelecionado.id)} className="w-8 h-8 rounded-lg bg-white/10 hover:bg-red-400/30 transition flex items-center justify-center">
+                  <button onClick={() => setConfirmRemoverCartao(true)} className="w-8 h-8 rounded-lg bg-white/10 hover:bg-red-400/30 transition flex items-center justify-center">
                     <svg viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5 text-white"><path d="M5.5 5.5A.5.5 0 016 6v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm2.5 0a.5.5 0 01.5.5v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm3 .5a.5.5 0 00-1 0v6a.5.5 0 001 0V6z"/><path fillRule="evenodd" d="M14.5 3a1 1 0 01-1 1H13v9a2 2 0 01-2 2H5a2 2 0 01-2-2V4h-.5a1 1 0 01-1-1V2a1 1 0 011-1H6a1 1 0 011-1h2a1 1 0 011 1h3.5a1 1 0 011 1v1zM4.118 4L4 4.059V13a1 1 0 001 1h6a1 1 0 001-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" clipRule="evenodd"/></svg>
                   </button>
                 </div>
@@ -437,6 +457,27 @@ export default function CartaoCredito({ month, year }) {
               <button onClick={marcarFaturaPaga} className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all"
                 style={{ background: faturaPaga ? 'rgba(244,63,94,0.15)' : 'rgba(34,197,94,0.15)', color: faturaPaga ? '#f43f5e' : '#22c55e', border: `1px solid ${faturaPaga ? 'rgba(244,63,94,0.3)' : 'rgba(34,197,94,0.3)'}` }}>
                 {faturaPaga ? 'Desmarcar' : 'Confirmar'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ── Modal: Confirmar remoção do cartão ── */}
+      {confirmRemoverCartao && cartaoSelecionado && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/75" style={{ backdropFilter: 'blur(10px)' }} />
+          <div className="relative card-premium p-6 w-full max-w-xs animate-scale-in" onClick={e => e.stopPropagation()}>
+            <p className="text-white font-semibold text-center mb-1">Remover cartão?</p>
+            <p className="text-white/50 text-xs text-center mb-5">
+              "{cartaoSelecionado.nome}" e todos os lançamentos associados a ele serão excluídos permanentemente. Essa ação não pode ser desfeita.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmRemoverCartao(false)} className="btn-ghost flex-1">Cancelar</button>
+              <button onClick={() => removerCartao(cartaoSelecionado.id)} className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all"
+                style={{ background: 'rgba(244,63,94,0.15)', color: '#f43f5e', border: '1px solid rgba(244,63,94,0.3)' }}>
+                Remover
               </button>
             </div>
           </div>

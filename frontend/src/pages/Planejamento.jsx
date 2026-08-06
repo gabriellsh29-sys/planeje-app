@@ -93,13 +93,14 @@ function Orcamento({ month, year }) {
   const [novaCategoria, setNovaCategoria] = useState('');
   const [categoriasExtra, setCategoriasExtra] = useState(() => load(CATEGORIAS_KEY, []));
 
+  const [syncVer, setSyncVer] = useState(0);
   useEffect(() => {
-    const reload = () => { setOrcamentos(load(ORCAMENTO_KEY, [])); setCategoriasExtra(load(CATEGORIAS_KEY, [])); };
+    const reload = () => { setOrcamentos(load(ORCAMENTO_KEY, [])); setCategoriasExtra(load(CATEGORIAS_KEY, [])); setSyncVer(v => v + 1); };
     window.addEventListener('planeje-sync', reload);
     return () => window.removeEventListener('planeje-sync', reload);
   }, []);
 
-  const categoriasDividas = useMemo(getCategoriasDividas, []);
+  const categoriasDividas = useMemo(getCategoriasDividas, [syncVer]);
 
   const salvar = () => {
     let categoria = formCateg;
