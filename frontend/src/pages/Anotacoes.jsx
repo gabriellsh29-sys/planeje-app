@@ -33,8 +33,10 @@ export default function Anotacoes() {
   const [etiquetas,     setEtiquetas]     = useState(() => load(ETIQUETAS_KEY, []));
   const [grupoAtivo,    setGrupoAtivo]    = useState(() => { const gs = loadGrupos(); return gs[0]?.id || null; });
   const [tarefaDetalhe, setTarefaDetalhe] = useState(null);
-  const [secoesColl,    setSecoesColl]    = useState({});
-  const [conclColl,     setConclColl]     = useState({});
+  // secoesOpen/conclOpen guardam quem foi ABERTO explicitamente — o padrão (chave
+  // ausente) é sempre recolhido, tanto para seções quanto para o grupo "Concluído".
+  const [secoesOpen,    setSecoesOpen]    = useState({});
+  const [conclOpen,     setConclOpen]     = useState({});
   const [secaoMenu,     setSecaoMenu]     = useState(null);
   const [addingIn,      setAddingIn]      = useState(null);
   const [novaTexto,     setNovaTexto]     = useState('');
@@ -278,16 +280,16 @@ export default function Anotacoes() {
   );
 
   const renderSecao = (secao, index) => {
-    const collapsed  = !!secoesColl[secao.id];
+    const collapsed  = !secoesOpen[secao.id];
     const concl      = conclSecao(secao.id);
-    const conclHide  = !!conclColl[secao.id];
+    const conclHide  = !conclOpen[secao.id];
     const tasks      = daSecao(secao.id);
 
     return (
       <div key={secao.id} className="mt-5">
         {/* TickTick-style section header: NAME ─────── count [actions] */}
         <div className="flex items-center gap-2 group/sec mb-1">
-          <button onClick={() => setSecoesColl(p => ({ ...p, [secao.id]: !p[secao.id] }))}
+          <button onClick={() => setSecoesOpen(p => ({ ...p, [secao.id]: !p[secao.id] }))}
             className="flex-shrink-0 text-white/30 hover:text-white/60 transition">
             <svg viewBox="0 0 20 20" fill="currentColor"
               className={`w-3 h-3 transition-transform ${collapsed ? '-rotate-90' : ''}`}>
@@ -332,7 +334,7 @@ export default function Anotacoes() {
             ))}
             {concl.length > 0 && (
               <div className="mt-0.5">
-                <button onClick={() => setConclColl(p => ({ ...p, [secao.id]: !p[secao.id] }))}
+                <button onClick={() => setConclOpen(p => ({ ...p, [secao.id]: !p[secao.id] }))}
                   className="flex items-center gap-1.5 text-white/25 hover:text-white/45 transition text-xs py-1 font-medium">
                   <svg viewBox="0 0 20 20" fill="currentColor" className={`w-3 h-3 transition-transform ${conclHide ? '-rotate-90' : ''}`}>
                     <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd"/>
@@ -354,7 +356,7 @@ export default function Anotacoes() {
 
   const rootTasks  = daSecao(null);
   const rootConcl  = conclSecao(null);
-  const rootConclH = !!conclColl['root'];
+  const rootConclH = !conclOpen['root'];
 
   return (
     <div className="flex flex-col md:flex-row h-[calc(100vh-112px)] md:h-[calc(100vh-0px)] overflow-hidden animate-fade-in">
@@ -531,7 +533,7 @@ export default function Anotacoes() {
 
                   {rootConcl.length > 0 && (
                     <div className="mt-1">
-                      <button onClick={() => setConclColl(p => ({ ...p, root: !p.root }))}
+                      <button onClick={() => setConclOpen(p => ({ ...p, root: !p.root }))}
                         className="flex items-center gap-1.5 text-white/25 hover:text-white/45 transition text-xs py-1 font-medium">
                         <svg viewBox="0 0 20 20" fill="currentColor" className={`w-3 h-3 transition-transform ${rootConclH ? '-rotate-90' : ''}`}>
                           <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd"/>
