@@ -312,7 +312,11 @@ export default function Resumo({ loading, month, year }) {
   const saveSaldo = () => { const val = parseFloat(saldoInput.replace(',', '.')) || 0; setSaldo(val); setSaldoInicial(val); setEditSaldo(false); };
 
   const allTransacoes = [...despesas, ...pagamentosAtrasados, ...receitas];
-  const recent = [...allTransacoes].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
+  // Ordena por quando o dinheiro de fato mudou de mão (pagamentoData), não pelo
+  // vencimento — itens ainda não pagos caem pro vencimento como fallback.
+  const recent = [...allTransacoes]
+    .sort((a, b) => (b.pagamentoData || b.date).localeCompare(a.pagamentoData || a.date))
+    .slice(0, 4);
 
   const chartData = useMemo(() => {
     const byDay = {};
@@ -494,7 +498,7 @@ export default function Resumo({ loading, month, year }) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-white text-xs font-semibold truncate">{tx.description}</p>
-                    <p className="text-[10px] mt-0.5 text-white">{fmtDate(tx.date)}</p>
+                    <p className="text-[10px] mt-0.5 text-white">{fmtDate(tx.pagamentoData || tx.date)}</p>
                   </div>
                   <span className="hv text-xs font-bold flex-shrink-0"
                     style={{ color: tx.type === 'income' ? '#22c55e' : '#f43f5e' }}>
