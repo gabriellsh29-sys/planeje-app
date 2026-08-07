@@ -696,14 +696,14 @@ export default function Receitas({ month, year }) {
           id="mes" label="Todos os meses"
           options={MONTHS_LABEL.map((l, i) => ({ val: String(i + 1), label: l }))}
           selected={selectedMonths}
-          onToggle={(val) => val === null ? setSelectedMonths([]) : toggleFilter(selectedMonths, setSelectedMonths, val)}
+          onToggle={(val) => val === null ? setSelectedMonths([String(month || now.getMonth() + 1)]) : toggleFilter(selectedMonths, setSelectedMonths, val)}
           openDropdown={openDropdown} setOpenDropdown={setOpenDropdown}
         />
         <DropdownSelect
           id="ano" label="Todos os anos"
           options={anosDisponiveis.map(yr => ({ val: String(yr), label: String(yr) }))}
           selected={selectedYears}
-          onToggle={(val) => val === null ? setSelectedYears([]) : toggleFilter(selectedYears, setSelectedYears, val)}
+          onToggle={(val) => val === null ? setSelectedYears([String(year || now.getFullYear())]) : toggleFilter(selectedYears, setSelectedYears, val)}
           openDropdown={openDropdown} setOpenDropdown={setOpenDropdown}
         />
 
