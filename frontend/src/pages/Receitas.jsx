@@ -609,6 +609,14 @@ export default function Receitas({ month, year }) {
     }
     return true;
   });
+  // Aba "Recebidas": mais recente primeiro, pela data real do recebimento.
+  if (filter === 'recebidas') {
+    filtered.sort((a, b) => {
+      const da = statusMesReceita(a, a._m, a._y).data || '';
+      const db = statusMesReceita(b, b._m, b._y).data || '';
+      return db.localeCompare(da);
+    });
+  }
 
   const totalPendente = periodo.filter(r => !statusMesReceita(r, r._m, r._y).recebida).reduce((s, r) => s + parcelaValorMesReceita(r, r._m, r._y), 0);
   const totalRecebido = periodo.filter(r => statusMesReceita(r, r._m, r._y).recebida).reduce((s, r) => {

@@ -728,6 +728,14 @@ export default function Dividas({ month, year }) {
     }
     return true;
   });
+  // Aba "Pagas": mais recente primeiro, pela data real do pagamento.
+  if (filter === 'pagas') {
+    filtered.sort((a, b) => {
+      const da = statusMes(a, a._m, a._y).pagamentoData || '';
+      const db = statusMes(b, b._m, b._y).pagamentoData || '';
+      return db.localeCompare(da);
+    });
+  }
 
   // Valor real de uma linha: se já paga com valor diferente do previsto (ex: juros
   // por atraso), usa o que REALMENTE saiu da conta — não o valor previsto/agendado.
