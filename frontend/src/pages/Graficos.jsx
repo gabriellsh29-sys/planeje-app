@@ -150,6 +150,23 @@ function parcelaAbrangeMsReceita(r, month, year) {
   return (year * 12 + (month - 1)) >= inicio && (year * 12 + (month - 1)) <= fim;
 }
 
+// Receitas fixas/parceladas guardam status por mês em r.recebimentos['YYYY-MM'];
+// não-fixas usam os campos legados recebida/recebimentoData — mesmo mecanismo de
+// Receitas.jsx/Resumo.jsx.
+function statusMesReceita(r, month, year) {
+  if (r.recorrencia === 'fixa' || r.recorrencia === 'parcelar') {
+    const key = mesKey(month, year);
+    const p = r.recebimentos && r.recebimentos[key];
+    if (p) return { pago: !!p.recebida };
+    if (r.recorrencia === 'parcelar' && r.recebida && r.recebimentoData) {
+      const [ry, rm] = r.recebimentoData.split('-').map(Number);
+      if (ry === year && rm === month) return { pago: true };
+    }
+    return { pago: false };
+  }
+  return { pago: !!r.recebida };
+}
+
 function loadReceitas(month, year) {
   try {
     const all = JSON.parse(localStorage.getItem(RECEITA_KEY) || '[]');
@@ -178,6 +195,7 @@ function loadReceitas(month, year) {
         category: campos.categoria || 'Outros',
         amount: parseFloat(r.valorRecebido || parcelaValorMesReceita(r, month, year) || 0),
         date,
+        pago: statusMesReceita(r, month, year).pago,
       };
     });
   } catch { return []; }
@@ -202,6 +220,7 @@ function loadFaturas(month, year) {
         category: 'Cartão de Crédito',
         amount: total,
         date: `${year}-${mm}-${dia}`,
+        pago: c.faturasPagas?.[`${year}-${month}`] || false,
       };
     }).filter(Boolean);
   } catch { return []; }
@@ -215,13 +234,21 @@ const tooltipStyle = {
 
 export default function Graficos({ month, year }) {
   const [syncVer, setSyncVer] = useState(0);
+  const [viewMode, setViewMode] = useState('previsto'); // 'pagos' | 'previsto'
   useEffect(() => {
     const reload = () => setSyncVer(v => v + 1);
     window.addEventListener('planeje-sync', reload);
     return () => window.removeEventListener('planeje-sync', reload);
   }, []);
 
-  const transactions = useMemo(() => [...loadTransacoes(month, year), ...loadReceitas(month, year), ...loadFaturas(month, year)], [month, year, syncVer]);
+  const allTransactions = useMemo(() => [...loadTransacoes(month, year), ...loadReceitas(month, year), ...loadFaturas(month, year)], [month, year, syncVer]);
+  // "Pagos": só o que já foi efetivado no mês. "Previsto": tudo que está
+  // lançado pro mês, pago ou a vencer (comportamento anterior, mantido como padrão).
+  const transactions = useMemo(() => {
+    if (viewMode === 'pagos') return allTransactions.filter(t => t.pago);
+    return allTransactions;
+  }, [allTransactions, viewMode]);
+
   const expenseByCategory = useMemo(() => {
     const bycat = {};
     transactions.filter(t => t.type === 'expense').forEach(tx => {
@@ -244,21 +271,44 @@ export default function Graficos({ month, year }) {
   const totalIncome = incomeByCategory.reduce((s, d) => s + d.value, 0);
   const hasData = expenseByCategory.length > 0 || incomeByCategory.length > 0;
 
+  const viewToggle = (
+    <div className="flex p-1 rounded-xl gap-1" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+      {[
+        { key: 'pagos', label: 'Pagos' },
+        { key: 'previsto', label: 'Previsto mês' },
+      ].map(opt => (
+        <button
+          key={opt.key}
+          onClick={() => setViewMode(opt.key)}
+          className={`flex-1 text-xs font-semibold py-2 rounded-lg transition-all ${
+            viewMode === opt.key ? 'bg-gold text-white shadow-glow-gold' : 'text-text-3 hover:text-text-1'
+          }`}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  );
+
   if (!hasData) {
     return (
-      <div className="p-6 flex flex-col items-center justify-center py-28 text-text-3 animate-fade-in">
-        <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
-          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-8 h-8"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      <div className="p-4 md:p-6 pb-safe-nav space-y-4 animate-fade-in">
+        {viewToggle}
+        <div className="p-6 flex flex-col items-center justify-center py-28 text-text-3">
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
+            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-8 h-8"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+          </div>
+          <p className="font-medium text-text-2">Nenhum dado para exibir</p>
+          <p className="text-sm mt-1">{viewMode === 'pagos' ? 'Nenhuma transação paga neste mês ainda' : 'Adicione transações para ver os gráficos'}</p>
         </div>
-        <p className="font-medium text-text-2">Nenhum dado para exibir</p>
-        <p className="text-sm mt-1">Adicione transações para ver os gráficos</p>
       </div>
     );
   }
 
   return (
     <div className="p-4 md:p-6 pb-safe-nav space-y-4 animate-fade-in">
+      {viewToggle}
       {/* Summary */}
       <div className="grid grid-cols-2 gap-3">
         <div className="card-premium p-4">
