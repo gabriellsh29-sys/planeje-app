@@ -312,10 +312,12 @@ export default function Resumo({ loading, month, year }) {
   const saveSaldo = () => { const val = parseFloat(saldoInput.replace(',', '.')) || 0; setSaldo(val); setSaldoInicial(val); setEditSaldo(false); };
 
   const allTransacoes = [...despesas, ...pagamentosAtrasados, ...receitas];
-  // Ordena por quando o dinheiro de fato mudou de mão (pagamentoData), não pelo
-  // vencimento — itens ainda não pagos caem pro vencimento como fallback.
+  // Só entram itens com dinheiro de fato movimentado (pagamentoData preenchido) —
+  // sem fallback pro vencimento, senão contas ainda a pagar/receber apareciam
+  // aqui como se já tivessem sido efetivadas.
   const recent = [...allTransacoes]
-    .sort((a, b) => (b.pagamentoData || b.date).localeCompare(a.pagamentoData || a.date))
+    .filter(t => t.pagamentoData)
+    .sort((a, b) => b.pagamentoData.localeCompare(a.pagamentoData))
     .slice(0, 4);
 
   const chartData = useMemo(() => {
