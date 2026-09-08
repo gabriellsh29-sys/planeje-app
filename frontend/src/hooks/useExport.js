@@ -73,14 +73,27 @@ function statusMes(d, month, year) {
   if (d.recorrencia === 'fixa' || d.recorrencia === 'parcelar') {
     const key = mesKey(month, year);
     const p = d.pagamentos && d.pagamentos[key];
-    if (p) return { pago: !!p.pago, valorPago: p.valorPago ?? null };
+    if (p) return { pago: !!p.pago, valorPago: p.valorPago ?? null, pagamentoData: p.pagamentoData || null };
     if (d.recorrencia === 'parcelar' && d.pago && d.pagamentoData) {
       const [py, pm] = d.pagamentoData.split('-').map(Number);
-      if (py === year && pm === month) return { pago: true, valorPago: d.valorPago ?? null };
+      if (py === year && pm === month) return { pago: true, valorPago: d.valorPago ?? null, pagamentoData: d.pagamentoData };
     }
-    return { pago: false, valorPago: null };
+    return { pago: false, valorPago: null, pagamentoData: null };
   }
-  return { pago: !!d.pago, valorPago: d.valorPago ?? null };
+  return { pago: !!d.pago, valorPago: d.valorPago ?? null, pagamentoData: d.pagamentoData || null };
+}
+
+// Para "fixa"/"parcelar", d.vencimento guarda a data-BASE (de quando a conta foi
+// criada) — só o DIA é fixo mês a mês, mês/ano precisam ser os do período
+// consultado (mesmo mecanismo de loadTransacoes em Graficos.jsx). Sem isso, uma
+// parcela em atraso ou pendente aparecia com a data de criação, não a do
+// vencimento real daquele mês.
+function vencimentoMes(d, month, year) {
+  if ((d.recorrencia === 'fixa' || d.recorrencia === 'parcelar') && d.vencimento) {
+    const day = d.vencimento.split('-')[2];
+    return `${year}-${String(month).padStart(2, '0')}-${day}`;
+  }
+  return d.vencimento;
 }
 
 // Idem, para receitas (mesma regra de Receitas.jsx): r.recebimentos['YYYY-MM'].
@@ -88,14 +101,24 @@ function statusMesReceita(r, month, year) {
   if (r.recorrencia === 'fixa' || r.recorrencia === 'parcelar') {
     const key = mesKey(month, year);
     const p = r.recebimentos && r.recebimentos[key];
-    if (p) return { recebida: !!p.recebida, valorRecebido: p.valorRecebido || null };
+    if (p) return { recebida: !!p.recebida, valorRecebido: p.valorRecebido || null, data: p.data || null };
     if (r.recorrencia === 'parcelar' && r.recebida && r.recebimentoData) {
       const [ry, rm] = r.recebimentoData.split('-').map(Number);
-      if (ry === year && rm === month) return { recebida: true, valorRecebido: r.valorRecebido || null };
+      if (ry === year && rm === month) return { recebida: true, valorRecebido: r.valorRecebido || null, data: r.recebimentoData };
     }
-    return { recebida: false, valorRecebido: null };
+    return { recebida: false, valorRecebido: null, data: null };
   }
-  return { recebida: !!r.recebida, valorRecebido: r.valorRecebido || null };
+  return { recebida: !!r.recebida, valorRecebido: r.valorRecebido || null, data: r.recebimentoData || null };
+}
+
+// Idem, para receitas: r.data é a data-base pra fixa/parcelar (não r.vencimento
+// como despesas), mas a mesma reconstrução por dia se aplica.
+function dataMesReceita(r, month, year) {
+  if ((r.recorrencia === 'fixa' || r.recorrencia === 'parcelar') && r.data) {
+    const day = r.data.split('-')[2];
+    return `${year}-${String(month).padStart(2, '0')}-${day}`;
+  }
+  return r.data;
 }
 
 // Idem, para receitas.
@@ -213,7 +236,8 @@ export function exportGraficosPDF(month, year, viewMode) {
     return {
       type: 'expense', description: campos.nome, category: campos.categoria || 'Outros',
       amount: st.pago && st.valorPago != null ? st.valorPago : parcelaValorMes(d, month, year),
-      date: d.pagamentoData && st.pago ? d.pagamentoData : d.vencimento, pago: st.pago,
+      date: st.pago && st.pagamentoData ? st.pagamentoData : vencimentoMes(d, month, year),
+      pago: st.pago,
     };
   });
   const receitasNorm = getReceitas(month, year).map(r => {
@@ -222,7 +246,8 @@ export function exportGraficosPDF(month, year, viewMode) {
     return {
       type: 'income', description: campos.nome, category: campos.categoria || 'Outros',
       amount: st.recebida && st.valorRecebido != null ? parseFloat(st.valorRecebido) : parcelaValorMesReceita(r, month, year),
-      date: r.recebimentoData || r.data, pago: st.recebida,
+      date: st.recebida && st.data ? st.data : dataMesReceita(r, month, year),
+      pago: st.recebida,
     };
   });
   const faturasNorm = getFaturas(month, year);
