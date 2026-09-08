@@ -8,6 +8,39 @@ const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','A
 // — mantém a identidade visual do app também no PDF exportado.
 const CATEGORICAL_COLORS = ['#3987e5','#d95926','#199e70','#c98500','#d55181','#008300','#9085e9','#e66767'];
 
+// Logo oficial do Planeje, embutida como SVG inline (não como <img src> pra um
+// domínio externo) — garante que a marca sempre renderize no PDF/impressão,
+// mesmo offline ou sem acesso à rede no momento de imprimir.
+const LOGO_HORIZONTAL_WHITE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="88 0 1112 360" height="96" style="display:block">
+  <g transform="translate(60 34) scale(0.57)">
+    <g fill="none" stroke="#FFFFFF" stroke-width="28" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M118 407 C75 407 58 377 58 336 L58 139 C58 92 92 58 139 58 L344 58 C391 58 424 92 424 139 L424 158"/>
+      <path d="M126 298 C207 280 286 225 366 128"/>
+      <path d="M326 128 L366 128 L366 168"/>
+    </g>
+    <g fill="#FFFFFF">
+      <rect x="119" y="321" width="54" height="105" rx="23"/>
+      <rect x="222" y="276" width="54" height="150" rx="23"/>
+      <rect x="325" y="211" width="54" height="215" rx="23"/>
+    </g>
+  </g>
+  <text x="375" y="190" font-family="Poppins, Arial, sans-serif" font-size="124" font-weight="600" letter-spacing="1" fill="#FFFFFF">planeje</text>
+  <text x="382" y="253" font-family="Poppins, Arial, sans-serif" font-size="32" font-weight="700" letter-spacing="8" fill="#FFFFFF">SUAS FINANÇAS, SEU FUTURO.</text>
+</svg>`;
+
+const LOGO_ICON_GREEN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" height="16" style="display:block">
+  <g fill="none" stroke="#22C55E" stroke-width="28" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M118 407 C75 407 58 377 58 336 L58 139 C58 92 92 58 139 58 L344 58 C391 58 424 92 424 139 L424 158"/>
+    <path d="M126 298 C207 280 286 225 366 128"/>
+    <path d="M326 128 L366 128 L366 168"/>
+  </g>
+  <g fill="#22C55E">
+    <rect x="119" y="321" width="54" height="105" rx="23"/>
+    <rect x="222" y="276" width="54" height="150" rx="23"/>
+    <rect x="325" y="211" width="54" height="215" rx="23"/>
+  </g>
+</svg>`;
+
 function fmt(v) { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0); }
 function fmtDate(d) { try { return new Date(d + 'T00:00:00').toLocaleDateString('pt-BR'); } catch { return d || ''; } }
 function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
@@ -197,8 +230,9 @@ export function exportGraficosPDF(month, year, viewMode) {
   const allTx = [...despesasNorm, ...faturasNorm, ...receitasNorm];
   const filtered = viewMode === 'pagos' ? allTx.filter(t => t.pago) : allTx;
 
-  const despesasList = filtered.filter(t => t.type === 'expense').sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-  const receitasList = filtered.filter(t => t.type === 'income').sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  // Do mais antigo pro mais novo — leitura cronológica do mês, como um extrato.
+  const despesasList = filtered.filter(t => t.type === 'expense').sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  const receitasList = filtered.filter(t => t.type === 'income').sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
   const despesaRanking = bycatRanking(despesasList);
   const receitaRanking = bycatRanking(receitasList);
@@ -212,6 +246,7 @@ export function exportGraficosPDF(month, year, viewMode) {
     const color = CATEGORICAL_COLORS[i % CATEGORICAL_COLORS.length];
     return `
     <div class="rank-row">
+      <div class="rank-num">${i + 1}º</div>
       <div class="rank-label">${esc(c.name)}</div>
       <div class="rank-bar-track">
         <div class="rank-bar" style="width:${Math.max(pct, 3)}%; background:${color}"></div>
@@ -229,81 +264,200 @@ export function exportGraficosPDF(month, year, viewMode) {
       <td><span class="${t.pago ? 'badge-green' : 'badge-yellow'}">${t.pago ? statusLabels[0] : statusLabels[1]}</span></td>
     </tr>`).join('');
 
+  // Linha-resumo ao final de cada tabela: quantidade + total de cada status,
+  // pra saber de bate-pronto quanto já saiu/entrou de fato e quanto falta.
+  const txSummaryBar = (list, doneLabel, pendingLabel) => {
+    const done = list.filter(t => t.pago);
+    const pending = list.filter(t => !t.pago);
+    const doneTotal = done.reduce((s, t) => s + parseFloat(t.amount || 0), 0);
+    const pendingTotal = pending.reduce((s, t) => s + parseFloat(t.amount || 0), 0);
+    return `
+    <div class="tx-summary">
+      <div class="tx-summary-item"><span class="dot green"></span>${doneLabel}: <strong>${done.length}</strong> · Total <span class="amt green">${esc(fmt(doneTotal))}</span></div>
+      <div class="tx-summary-item"><span class="dot yellow"></span>${pendingLabel}: <strong>${pending.length}</strong> · Total <span class="amt yellow">${esc(fmt(pendingTotal))}</span></div>
+    </div>`;
+  };
+
   const html = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Planeje — Gráficos — ${mesAno}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', Arial, sans-serif; background: #fff; color: #1a1a2e; font-size: 12px; padding: 32px; }
-  .header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 3px solid #22c55e; }
-  .header-title { flex: 1; }
-  .header-title h1 { font-size: 22px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px; }
-  .header-title p { font-size: 11px; color: #6b7280; margin-top: 2px; }
-  .logo { font-size: 28px; font-weight: 900; color: #22c55e; }
-  .badge-mode { display: inline-block; margin-top: 6px; padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; background: rgba(34,197,94,0.12); color: #16a34a; }
-  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 24px; }
-  .card { border-radius: 12px; padding: 14px 16px; border: 1px solid #e5e7eb; }
-  .card.expense { background: #fef2f2; border-color: #fecaca; }
-  .card.income  { background: #f0fdf4; border-color: #bbf7d0; }
-  .card .label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #6b7280; margin-bottom: 4px; }
-  .card .value { font-size: 20px; font-weight: 800; }
-  .card .sub { font-size: 10px; color: #9ca3af; margin-top: 2px; }
-  .green { color: #16a34a; } .red { color: #dc2626; }
-  h2 { font-size: 14px; font-weight: 700; color: #0f172a; margin: 22px 0 12px; padding-bottom: 6px; border-bottom: 1px solid #e5e7eb; }
-  .rank-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-  .rank-label { width: 110px; font-size: 10px; font-weight: 600; color: #374151; flex-shrink: 0; }
-  .rank-bar-track { flex: 1; height: 16px; background: #f3f4f6; border-radius: 6px; overflow: hidden; }
+  html, body { background: #f4f6f9; }
+  body { font-family: 'Poppins', 'Segoe UI', Arial, sans-serif; color: #1e293b; font-size: 12px; }
+
+  /* ── Capa / cabeçalho de marca ── */
+  .hero {
+    background: linear-gradient(135deg, #0f172a 0%, #12331f 55%, #15803d 130%);
+    padding: 30px 36px 26px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::after {
+    content: ''; position: absolute; right: -60px; top: -80px; width: 260px; height: 260px;
+    border-radius: 50%; background: radial-gradient(circle, rgba(34,197,94,0.35) 0%, transparent 70%);
+  }
+  .hero-top { display: flex; align-items: center; justify-content: space-between; position: relative; z-index: 1; }
+  .hero-logo { height: 96px; }
+  .hero-badge { display: inline-block; padding: 5px 14px; border-radius: 20px; font-size: 10px; font-weight: 700; letter-spacing: 0.3px; background: rgba(255,255,255,0.14); color: #ffffff; border: 1px solid rgba(255,255,255,0.25); }
+  .hero-title { margin-top: 20px; position: relative; z-index: 1; }
+  .hero-title h1 { font-size: 24px; font-weight: 800; color: #ffffff; letter-spacing: -0.3px; }
+  .hero-title p { font-size: 11.5px; color: rgba(255,255,255,0.65); margin-top: 4px; }
+
+  .content { padding: 26px 36px 20px; }
+
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 26px; }
+  .card { border-radius: 16px; padding: 16px 18px; position: relative; overflow: hidden; }
+  .card.expense { background: linear-gradient(145deg, #fff5f5 0%, #ffffff 100%); border: 1px solid #fecdd3; }
+  .card.income  { background: linear-gradient(145deg, #f0fdf4 0%, #ffffff 100%); border: 1px solid #bbf7d0; }
+  .card-top { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .dot.red { background: #f43f5e; } .dot.green { background: #22c55e; } .dot.yellow { background: #f59e0b; }
+  .card .label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #64748b; }
+  .card .value { font-size: 24px; font-weight: 800; margin-top: 2px; }
+  .card .sub { font-size: 10.5px; color: #94a3b8; margin-top: 3px; }
+  .green { color: #16a34a; } .red { color: #e11d48; } .yellow { color: #b45309; }
+
+  .section { margin-bottom: 26px; }
+  .section-head { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+  .section-head .bar { width: 4px; height: 16px; border-radius: 4px; }
+  .section-head .bar.red { background: #f43f5e; } .section-head .bar.green { background: #22c55e; }
+  .section-head h2 { font-size: 14px; font-weight: 700; color: #0f172a; }
+
+  .rank-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 16px 18px; }
+  .rank-row { display: flex; align-items: center; gap: 10px; padding: 5px 0; }
+  .rank-num { width: 16px; font-size: 9px; font-weight: 800; color: #94a3b8; flex-shrink: 0; }
+  .rank-label { width: 108px; font-size: 10.5px; font-weight: 600; color: #334155; flex-shrink: 0; }
+  .rank-bar-track { flex: 1; height: 15px; background: #f1f5f9; border-radius: 6px; overflow: hidden; }
   .rank-bar { height: 100%; border-radius: 6px; }
-  .rank-value { width: 140px; font-size: 10px; font-weight: 700; color: #374151; text-align: right; flex-shrink: 0; }
-  table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 4px; }
-  th { background: #f3f4f6; padding: 8px 10px; text-align: left; font-weight: 700; color: #374151; border-bottom: 1px solid #d1d5db; }
-  td { padding: 7px 10px; border-bottom: 1px solid #f3f4f6; color: #374151; }
-  .badge-green { background: #dcfce7; color: #16a34a; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 600; }
-  .badge-yellow { background: #fef3c7; color: #d97706; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 600; }
-  .footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid #e5e7eb; font-size: 10px; color: #9ca3af; text-align: center; }
-  @media print { body { padding: 16px; } h2 { break-after: avoid; } tr { break-inside: avoid; } }
+  .rank-value { width: 148px; font-size: 10.5px; font-weight: 700; color: #334155; text-align: right; flex-shrink: 0; }
+
+  .tx-card { border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden; }
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { width: 100%; min-width: 480px; border-collapse: collapse; font-size: 11px; }
+  thead tr.th-expense th { background: linear-gradient(135deg, #e11d48, #be123c); }
+  thead tr.th-income  th { background: linear-gradient(135deg, #16a34a, #15803d); }
+  th { padding: 9px 12px; text-align: left; font-weight: 700; color: #ffffff; letter-spacing: 0.2px; }
+  tbody tr:nth-child(even) td { background: #f8fafc; }
+  td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; color: #334155; background: #ffffff; }
+  .badge-green { background: #dcfce7; color: #15803d; padding: 3px 10px; border-radius: 20px; font-size: 9.5px; font-weight: 700; }
+  .badge-yellow { background: #fef3c7; color: #b45309; padding: 3px 10px; border-radius: 20px; font-size: 9.5px; font-weight: 700; }
+  .empty { color: #94a3b8; padding: 14px 0; font-size: 11px; }
+
+  .tx-summary { display: flex; flex-wrap: wrap; gap: 8px 22px; padding: 11px 16px; background: #f8fafc; border-top: 1px solid #e2e8f0; }
+  .tx-summary-item { font-size: 10.5px; font-weight: 600; color: #64748b; display: flex; align-items: center; gap: 6px; }
+  .tx-summary-item strong { color: #334155; font-weight: 800; }
+  .tx-summary-item .amt { font-weight: 800; }
+  .tx-summary-item .amt.green { color: #16a34a; } .tx-summary-item .amt.yellow { color: #b45309; }
+
+  .footer { display: flex; align-items: center; justify-content: space-between; padding: 16px 36px; border-top: 1px solid #e2e8f0; background: #ffffff; }
+  .footer-brand { display: flex; align-items: center; gap: 8px; }
+  .footer-brand img { height: 16px; }
+  .footer-brand span { font-size: 10.5px; font-weight: 700; color: #16a34a; }
+  .footer-meta { font-size: 9.5px; color: #94a3b8; }
+
+  /* ── Mobile: telas estreitas abrindo o relatório antes de imprimir/salvar ── */
+  @media (max-width: 560px) {
+    .hero { padding: 22px 18px 20px; }
+    .hero-logo { height: 52px; }
+    .hero-badge { font-size: 9px; padding: 4px 10px; }
+    .hero-title h1 { font-size: 19px; }
+    .hero-title p { font-size: 10.5px; }
+    .content { padding: 18px 14px 14px; }
+    .cards { grid-template-columns: 1fr; gap: 10px; }
+    .card .value { font-size: 20px; }
+    .rank-card { padding: 12px 14px; }
+    .rank-row { flex-wrap: wrap; row-gap: 4px; }
+    .rank-label { width: auto; flex: 1 1 auto; }
+    .rank-bar-track { flex-basis: 100%; order: 3; }
+    .rank-value { width: auto; text-align: right; }
+    .footer { flex-direction: column; gap: 8px; padding: 14px 18px; text-align: center; }
+  }
+
+  @media print {
+    body { background: #fff; }
+    .hero { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    thead th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .section, .rank-card, table { break-inside: avoid; }
+    tr { break-inside: avoid; }
+  }
 </style>
 </head>
 <body>
-<div class="header">
-  <div class="logo">P</div>
-  <div class="header-title">
+
+<div class="hero">
+  <div class="hero-top">
+    <div class="hero-logo">${LOGO_HORIZONTAL_WHITE_SVG}</div>
+    <span class="hero-badge">${modoLabel}</span>
+  </div>
+  <div class="hero-title">
     <h1>Relatório de Gráficos</h1>
-    <p>Período: ${mesAno} · Gerado em: ${hoje}</p>
-    <span class="badge-mode">${modoLabel}</span>
+    <p>Período: ${mesAno} · Gerado em ${hoje}</p>
   </div>
 </div>
 
-<div class="cards">
-  <div class="card expense"><div class="label">Total Despesas</div><div class="value red">${fmt(totalDespesas)}</div><div class="sub">${despesaRanking.length} categorias</div></div>
-  <div class="card income"><div class="label">Total Receitas</div><div class="value green">${fmt(totalReceitas)}</div><div class="sub">${receitaRanking.length} categorias</div></div>
+<div class="content">
+
+  <div class="cards">
+    <div class="card expense">
+      <div class="card-top"><span class="dot red"></span><span class="label">Total Despesas</span></div>
+      <div class="value red">${fmt(totalDespesas)}</div>
+      <div class="sub">${despesaRanking.length} categorias · ${despesasList.length} lançamentos</div>
+    </div>
+    <div class="card income">
+      <div class="card-top"><span class="dot green"></span><span class="label">Total Receitas</span></div>
+      <div class="value green">${fmt(totalReceitas)}</div>
+      <div class="sub">${receitaRanking.length} categorias · ${receitasList.length} lançamentos</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head"><span class="bar red"></span><h2>Ranking de Despesas por Categoria</h2></div>
+    ${despesaRanking.length > 0 ? `<div class="rank-card">${rankingRows(despesaRanking, totalDespesas)}</div>` : '<p class="empty">Nenhuma despesa neste filtro.</p>'}
+  </div>
+
+  <div class="section">
+    <div class="section-head"><span class="bar green"></span><h2>Ranking de Receitas por Categoria</h2></div>
+    ${receitaRanking.length > 0 ? `<div class="rank-card">${rankingRows(receitaRanking, totalReceitas)}</div>` : '<p class="empty">Nenhuma receita neste filtro.</p>'}
+  </div>
+
+  <div class="section">
+    <div class="section-head"><span class="bar red"></span><h2>Despesas — detalhado (${despesasList.length})</h2></div>
+    ${despesasList.length > 0 ? `
+    <div class="tx-card">
+      <div class="table-scroll"><table>
+        <thead><tr class="th-expense"><th>Descrição</th><th>Categoria</th><th style="text-align:right">Valor</th><th>Data</th><th>Status</th></tr></thead>
+        <tbody>${txRows(despesasList, ['Pago', 'Pendente'])}</tbody>
+      </table></div>
+      ${txSummaryBar(despesasList, 'Pagas', 'Pendentes')}
+    </div>` : '<p class="empty">Nenhuma despesa neste filtro.</p>'}
+  </div>
+
+  <div class="section">
+    <div class="section-head"><span class="bar green"></span><h2>Receitas — detalhado (${receitasList.length})</h2></div>
+    ${receitasList.length > 0 ? `
+    <div class="tx-card">
+      <div class="table-scroll"><table>
+        <thead><tr class="th-income"><th>Descrição</th><th>Categoria</th><th style="text-align:right">Valor</th><th>Data</th><th>Status</th></tr></thead>
+        <tbody>${txRows(receitasList, ['Recebido', 'A receber'])}</tbody>
+      </table></div>
+      ${txSummaryBar(receitasList, 'Recebidas', 'A receber')}
+    </div>` : '<p class="empty">Nenhuma receita neste filtro.</p>'}
+  </div>
+
 </div>
 
-<h2>Ranking de Despesas por Categoria</h2>
-${despesaRanking.length > 0 ? rankingRows(despesaRanking, totalDespesas) : '<p style="color:#9ca3af;padding:8px 0">Nenhuma despesa neste filtro.</p>'}
+<div class="footer">
+  <div class="footer-brand">${LOGO_ICON_GREEN_SVG}<span>planeje</span></div>
+  <div class="footer-meta">planejeapp.com.br · Gerado em ${hoje}</div>
+</div>
 
-<h2>Ranking de Receitas por Categoria</h2>
-${receitaRanking.length > 0 ? rankingRows(receitaRanking, totalReceitas) : '<p style="color:#9ca3af;padding:8px 0">Nenhuma receita neste filtro.</p>'}
-
-<h2>Despesas — detalhado (${despesasList.length})</h2>
-${despesasList.length > 0 ? `
-<table>
-  <thead><tr><th>Descrição</th><th>Categoria</th><th style="text-align:right">Valor</th><th>Data</th><th>Status</th></tr></thead>
-  <tbody>${txRows(despesasList, ['Pago', 'Pendente'])}</tbody>
-</table>` : '<p style="color:#9ca3af;padding:8px 0">Nenhuma despesa neste filtro.</p>'}
-
-<h2>Receitas — detalhado (${receitasList.length})</h2>
-${receitasList.length > 0 ? `
-<table>
-  <thead><tr><th>Descrição</th><th>Categoria</th><th style="text-align:right">Valor</th><th>Data</th><th>Status</th></tr></thead>
-  <tbody>${txRows(receitasList, ['Recebido', 'A receber'])}</tbody>
-</table>` : '<p style="color:#9ca3af;padding:8px 0">Nenhuma receita neste filtro.</p>'}
-
-<div class="footer">Gerado pelo Planeje · ${hoje}</div>
-
-<script>window.onload = () => { window.print(); }<\/script>
+<script>window.onload = () => { setTimeout(() => window.print(), 150); }<\/script>
 </body>
 </html>`;
 
