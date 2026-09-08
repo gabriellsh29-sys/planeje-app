@@ -380,10 +380,15 @@ export function exportGraficosPDF(month, year, viewMode) {
   }
 
   @media print {
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
     body { background: #fff; }
-    .hero { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    thead th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .section, .rank-card, table { break-inside: avoid; }
+    /* Forçar "não quebrar" na tabela inteira (38+ linhas) empurrava o bloco
+       todo pra próxima página, deixando a página anterior quase em branco.
+       Só a linha precisa ficar inteira — a tabela pode (e deve) continuar
+       na página seguinte, com o cabeçalho se repetindo (padrão de <thead>). */
+    .rank-card { break-inside: avoid; }
+    .section-head { break-after: avoid; }
+    thead { display: table-header-group; }
     tr { break-inside: avoid; }
   }
 </style>
