@@ -1,6 +1,12 @@
 const DIVIDA_KEY  = 'financeiro_dividas';
 const RECEITA_KEY = 'financeiro_receitas';
+const CARTAO_KEY  = 'planeje_cartoes';
+const FATURA_KEY  = 'planeje_faturas';
 const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+// Mesma paleta categórica usada nos rankings da tela de Gráficos (Graficos.jsx)
+// — mantém a identidade visual do app também no PDF exportado.
+const CATEGORICAL_COLORS = ['#3987e5','#d95926','#199e70','#c98500','#d55181','#008300','#9085e9','#e66767'];
 
 function fmt(v) { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0); }
 function fmtDate(d) { try { return new Date(d + 'T00:00:00').toLocaleDateString('pt-BR'); } catch { return d || ''; } }
@@ -132,6 +138,184 @@ function getReceitas(month, year) {
       return y === year && m === month;
     });
   } catch { return []; }
+}
+
+// Fatura do cartão de crédito do mês — mesmo critério de Resumo.jsx/Graficos.jsx,
+// pra que "Cartão de Crédito" entre no relatório igual aparece na tela de Gráficos.
+function getFaturas(month, year) {
+  try {
+    const cartoes = JSON.parse(localStorage.getItem(CARTAO_KEY) || '[]');
+    const lancs   = JSON.parse(localStorage.getItem(FATURA_KEY) || '[]');
+    return cartoes.map(c => {
+      const total = lancs.filter(l => l.cartaoId === c.id && l.mes === month && l.ano === year)
+        .reduce((s, l) => s + (l.valor / (l.parcelas || 1)), 0);
+      if (total <= 0) return null;
+      const pago = c.faturasPagas?.[`${year}-${month}`] || false;
+      const mm  = String(month).padStart(2, '0');
+      const dia = String(c.diaPagamento || 10).padStart(2, '0');
+      return {
+        type: 'expense', description: `Fatura ${c.nome}`, category: 'Cartão de Crédito',
+        amount: total, date: `${year}-${mm}-${dia}`, pago,
+      };
+    }).filter(Boolean);
+  } catch { return []; }
+}
+
+function bycatRanking(list) {
+  const bycat = {};
+  list.forEach(t => { const c = t.category || 'Outros'; bycat[c] = (bycat[c] || 0) + parseFloat(t.amount || 0); });
+  return Object.entries(bycat).sort(([, a], [, b]) => b - a).map(([name, value]) => ({ name, value }));
+}
+
+// Relatório em PDF da tela de Gráficos: descrição gasto-a-gasto + ranking por
+// categoria, respeitando o mesmo filtro Pagos/Previsto mês e o período
+// selecionado na tela.
+export function exportGraficosPDF(month, year, viewMode) {
+  const mesAno = `${MONTHS[month - 1]} ${year}`;
+  const hoje   = new Date().toLocaleDateString('pt-BR');
+
+  const despesasNorm = getDespesas(month, year).map(d => {
+    const st = statusMes(d, month, year);
+    const campos = getCamposMes(d, month, year);
+    return {
+      type: 'expense', description: campos.nome, category: campos.categoria || 'Outros',
+      amount: st.pago && st.valorPago != null ? st.valorPago : parcelaValorMes(d, month, year),
+      date: d.pagamentoData && st.pago ? d.pagamentoData : d.vencimento, pago: st.pago,
+    };
+  });
+  const receitasNorm = getReceitas(month, year).map(r => {
+    const st = statusMesReceita(r, month, year);
+    const campos = getCamposMesReceita(r, month, year);
+    return {
+      type: 'income', description: campos.nome, category: campos.categoria || 'Outros',
+      amount: st.recebida && st.valorRecebido != null ? parseFloat(st.valorRecebido) : parcelaValorMesReceita(r, month, year),
+      date: r.recebimentoData || r.data, pago: st.recebida,
+    };
+  });
+  const faturasNorm = getFaturas(month, year);
+
+  const allTx = [...despesasNorm, ...faturasNorm, ...receitasNorm];
+  const filtered = viewMode === 'pagos' ? allTx.filter(t => t.pago) : allTx;
+
+  const despesasList = filtered.filter(t => t.type === 'expense').sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  const receitasList = filtered.filter(t => t.type === 'income').sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+
+  const despesaRanking = bycatRanking(despesasList);
+  const receitaRanking = bycatRanking(receitasList);
+  const totalDespesas  = despesaRanking.reduce((s, d) => s + d.value, 0);
+  const totalReceitas  = receitaRanking.reduce((s, d) => s + d.value, 0);
+
+  const modoLabel = viewMode === 'pagos' ? 'Pagos' : 'Previsto mês';
+
+  const rankingRows = (ranking, total) => ranking.map((c, i) => {
+    const pct = total > 0 ? Math.round(c.value / total * 100) : 0;
+    const color = CATEGORICAL_COLORS[i % CATEGORICAL_COLORS.length];
+    return `
+    <div class="rank-row">
+      <div class="rank-label">${esc(c.name)}</div>
+      <div class="rank-bar-track">
+        <div class="rank-bar" style="width:${Math.max(pct, 3)}%; background:${color}"></div>
+      </div>
+      <div class="rank-value">${esc(fmt(c.value))} · ${pct}%</div>
+    </div>`;
+  }).join('');
+
+  const txRows = (list, statusLabels) => list.map(t => `
+    <tr>
+      <td>${esc(t.description)}</td>
+      <td>${esc(t.category)}</td>
+      <td style="text-align:right">${esc(fmt(t.amount))}</td>
+      <td>${esc(fmtDate(t.date))}</td>
+      <td><span class="${t.pago ? 'badge-green' : 'badge-yellow'}">${t.pago ? statusLabels[0] : statusLabels[1]}</span></td>
+    </tr>`).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<title>Planeje — Gráficos — ${mesAno}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #fff; color: #1a1a2e; font-size: 12px; padding: 32px; }
+  .header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 3px solid #22c55e; }
+  .header-title { flex: 1; }
+  .header-title h1 { font-size: 22px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px; }
+  .header-title p { font-size: 11px; color: #6b7280; margin-top: 2px; }
+  .logo { font-size: 28px; font-weight: 900; color: #22c55e; }
+  .badge-mode { display: inline-block; margin-top: 6px; padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; background: rgba(34,197,94,0.12); color: #16a34a; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 24px; }
+  .card { border-radius: 12px; padding: 14px 16px; border: 1px solid #e5e7eb; }
+  .card.expense { background: #fef2f2; border-color: #fecaca; }
+  .card.income  { background: #f0fdf4; border-color: #bbf7d0; }
+  .card .label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #6b7280; margin-bottom: 4px; }
+  .card .value { font-size: 20px; font-weight: 800; }
+  .card .sub { font-size: 10px; color: #9ca3af; margin-top: 2px; }
+  .green { color: #16a34a; } .red { color: #dc2626; }
+  h2 { font-size: 14px; font-weight: 700; color: #0f172a; margin: 22px 0 12px; padding-bottom: 6px; border-bottom: 1px solid #e5e7eb; }
+  .rank-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .rank-label { width: 110px; font-size: 10px; font-weight: 600; color: #374151; flex-shrink: 0; }
+  .rank-bar-track { flex: 1; height: 16px; background: #f3f4f6; border-radius: 6px; overflow: hidden; }
+  .rank-bar { height: 100%; border-radius: 6px; }
+  .rank-value { width: 140px; font-size: 10px; font-weight: 700; color: #374151; text-align: right; flex-shrink: 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 4px; }
+  th { background: #f3f4f6; padding: 8px 10px; text-align: left; font-weight: 700; color: #374151; border-bottom: 1px solid #d1d5db; }
+  td { padding: 7px 10px; border-bottom: 1px solid #f3f4f6; color: #374151; }
+  .badge-green { background: #dcfce7; color: #16a34a; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 600; }
+  .badge-yellow { background: #fef3c7; color: #d97706; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 600; }
+  .footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid #e5e7eb; font-size: 10px; color: #9ca3af; text-align: center; }
+  @media print { body { padding: 16px; } h2 { break-after: avoid; } tr { break-inside: avoid; } }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="logo">P</div>
+  <div class="header-title">
+    <h1>Relatório de Gráficos</h1>
+    <p>Período: ${mesAno} · Gerado em: ${hoje}</p>
+    <span class="badge-mode">${modoLabel}</span>
+  </div>
+</div>
+
+<div class="cards">
+  <div class="card expense"><div class="label">Total Despesas</div><div class="value red">${fmt(totalDespesas)}</div><div class="sub">${despesaRanking.length} categorias</div></div>
+  <div class="card income"><div class="label">Total Receitas</div><div class="value green">${fmt(totalReceitas)}</div><div class="sub">${receitaRanking.length} categorias</div></div>
+</div>
+
+<h2>Ranking de Despesas por Categoria</h2>
+${despesaRanking.length > 0 ? rankingRows(despesaRanking, totalDespesas) : '<p style="color:#9ca3af;padding:8px 0">Nenhuma despesa neste filtro.</p>'}
+
+<h2>Ranking de Receitas por Categoria</h2>
+${receitaRanking.length > 0 ? rankingRows(receitaRanking, totalReceitas) : '<p style="color:#9ca3af;padding:8px 0">Nenhuma receita neste filtro.</p>'}
+
+<h2>Despesas — detalhado (${despesasList.length})</h2>
+${despesasList.length > 0 ? `
+<table>
+  <thead><tr><th>Descrição</th><th>Categoria</th><th style="text-align:right">Valor</th><th>Data</th><th>Status</th></tr></thead>
+  <tbody>${txRows(despesasList, ['Pago', 'Pendente'])}</tbody>
+</table>` : '<p style="color:#9ca3af;padding:8px 0">Nenhuma despesa neste filtro.</p>'}
+
+<h2>Receitas — detalhado (${receitasList.length})</h2>
+${receitasList.length > 0 ? `
+<table>
+  <thead><tr><th>Descrição</th><th>Categoria</th><th style="text-align:right">Valor</th><th>Data</th><th>Status</th></tr></thead>
+  <tbody>${txRows(receitasList, ['Recebido', 'A receber'])}</tbody>
+</table>` : '<p style="color:#9ca3af;padding:8px 0">Nenhuma receita neste filtro.</p>'}
+
+<div class="footer">Gerado pelo Planeje · ${hoje}</div>
+
+<script>window.onload = () => { window.print(); }<\/script>
+</body>
+</html>`;
+
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const w    = window.open(url, '_blank');
+  if (!w) {
+    const a = document.createElement('a');
+    a.href  = url; a.download = `planeje-graficos-${MONTHS[month-1].toLowerCase()}-${year}.html`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
 
 export function exportCSV(month, year) {

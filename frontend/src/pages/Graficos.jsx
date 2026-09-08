@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts';
+import { exportGraficosPDF } from '../hooks/useExport';
 
 const fmt = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
 
@@ -271,29 +272,41 @@ export default function Graficos({ month, year }) {
   const totalIncome = incomeByCategory.reduce((s, d) => s + d.value, 0);
   const hasData = expenseByCategory.length > 0 || incomeByCategory.length > 0;
 
-  const viewToggle = (
-    <div className="flex p-1 rounded-xl gap-1" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
-      {[
-        { key: 'pagos', label: 'Pagos' },
-        { key: 'previsto', label: 'Previsto mês' },
-      ].map(opt => (
-        <button
-          key={opt.key}
-          onClick={() => setViewMode(opt.key)}
-          className={`flex-1 text-xs font-semibold py-2 rounded-lg transition-all ${
-            viewMode === opt.key ? 'bg-gold text-white shadow-glow-gold' : 'text-text-3 hover:text-text-1'
-          }`}
-        >
-          {opt.label}
-        </button>
-      ))}
+  const toolbar = (
+    <div className="flex items-center gap-2">
+      <div className="flex flex-1 p-1 rounded-xl gap-1" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+        {[
+          { key: 'pagos', label: 'Pagos' },
+          { key: 'previsto', label: 'Previsto mês' },
+        ].map(opt => (
+          <button
+            key={opt.key}
+            onClick={() => setViewMode(opt.key)}
+            className={`flex-1 text-xs font-semibold py-2 rounded-lg transition-all ${
+              viewMode === opt.key ? 'bg-gold text-white shadow-glow-gold' : 'text-text-3 hover:text-text-1'
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+      <button
+        onClick={() => exportGraficosPDF(month, year, viewMode)}
+        className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2.5 rounded-xl transition-all flex-shrink-0"
+        style={{ background: 'rgba(201,168,76,0.1)', color: '#c9a84c', border: '1px solid rgba(201,168,76,0.2)' }}
+      >
+        <svg viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+          <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd"/>
+        </svg>
+        Exportar
+      </button>
     </div>
   );
 
   if (!hasData) {
     return (
       <div className="p-4 md:p-6 pb-safe-nav space-y-4 animate-fade-in">
-        {viewToggle}
+        {toolbar}
         <div className="p-6 flex flex-col items-center justify-center py-28 text-text-3">
           <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
             style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
@@ -308,7 +321,7 @@ export default function Graficos({ month, year }) {
 
   return (
     <div className="p-4 md:p-6 pb-safe-nav space-y-4 animate-fade-in">
-      {viewToggle}
+      {toolbar}
       {/* Summary */}
       <div className="grid grid-cols-2 gap-3">
         <div className="card-premium p-4">
