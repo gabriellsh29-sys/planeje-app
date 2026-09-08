@@ -197,3 +197,12 @@
   transition: filter 0.2s;
 }
 .hv { transition: filter 0.2s; }
+
+/* Recharts deixa um contorno de foco (quadrado azul) nos graficos ao clicar
+   em uma barra/fatia, por acessibilidade padrao do navegador - sem uso real
+   aqui (nao ha navegacao por teclado nos graficos), entao removemos. */
+.recharts-wrapper,
+.recharts-wrapper *,
+.recharts-surface {
+  outline: none !important;
+}
