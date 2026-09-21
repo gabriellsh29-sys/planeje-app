@@ -6,8 +6,15 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+function esc(s) {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 function isValidCronSecret(token) {
   const expected = process.env.CRON_SECRET || '';
+  // Fail-closed: sem CRON_SECRET configurado (ou fraco), "" === "" passava na
+  // comparação e qualquer chamada anônima executava o cron.
+  if (expected.length < 16) return false;
   const a = Buffer.from(token);
   const b = Buffer.from(expected);
   if (a.length !== b.length) return false;
@@ -32,7 +39,7 @@ export default async function handler(req, res) {
     }
 
     const lista = rows
-      .map(r => `• ${r.nome || r.user_id} — ${r.chars} chars — ${new Date(r.updated_at).toLocaleDateString('pt-BR')}`)
+      .map(r => `• ${esc(r.nome || r.user_id)} — ${Number(r.chars) || 0} chars — ${new Date(r.updated_at).toLocaleDateString('pt-BR')}`)
       .join('\n');
 
     await fetch('https://api.resend.com/emails', {
