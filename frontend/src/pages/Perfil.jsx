@@ -116,8 +116,10 @@ function DadosTab() {
       setFaceIdMsg('Face ID / Touch ID ativado neste dispositivo!');
       await carregarDispositivos();
     } catch (err) {
-      if (err.name !== 'NotAllowedError') Sentry.captureException(err);
-      setFaceIdMsg(err.name === 'NotAllowedError' ? 'Cadastro cancelado.' : 'Erro: ' + err.message);
+      if (err.name !== 'NotAllowedError' && err.name !== 'InvalidStateError') Sentry.captureException(err);
+      if (err.name === 'NotAllowedError') setFaceIdMsg('Cadastro cancelado.');
+      else if (err.name === 'InvalidStateError') setFaceIdMsg('Este aparelho já está com o Face ID / Touch ID ativado. Na tela de login, toque em "Entrar com Face ID". Se não funcionar, toque em Remover acima e ative de novo.');
+      else setFaceIdMsg('Erro: ' + err.message);
     }
     setAtivandoFaceId(false);
   };
@@ -405,7 +407,7 @@ function SenhaTab() {
 
   const salvar = async () => {
     setMsg('');
-    if (senha.length < 6) { setMsg('A senha deve ter pelo menos 6 caracteres.'); return; }
+    if (senha.length < 8) { setMsg('A senha deve ter pelo menos 8 caracteres.'); return; }
     if (senha !== confirmar) { setMsg('As senhas não coincidem.'); return; }
     setSalvando(true);
     const { error } = await supabase.auth.updateUser({ password: senha });

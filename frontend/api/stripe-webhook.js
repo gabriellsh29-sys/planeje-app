@@ -27,7 +27,7 @@ async function notificarErro(assunto, detalhes) {
         from: 'Planeje App <onboarding@resend.dev>',
         to: 'gabriellsh29@gmail.com',
         subject: `[Planeje] Erro no webhook: ${assunto}`,
-        html: `<p><strong>Erro no webhook do Stripe:</strong></p><pre>${detalhes}</pre>`,
+        html: `<p><strong>Erro no webhook do Stripe:</strong></p><pre>${String(detalhes).replace(/&/g, "&amp;").replace(/</g, "&lt;")}</pre>`,
       }),
     });
   } catch (e) {

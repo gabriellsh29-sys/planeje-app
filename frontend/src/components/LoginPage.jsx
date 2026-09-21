@@ -43,7 +43,10 @@ export default function LoginPage() {
       const { error: err } = await loginWithToken(verifyData.token);
       if (err) throw err;
     } catch (err) {
-      setError(err.name === 'NotAllowedError' ? 'Cancelado.' : 'Não foi possível entrar com Face ID.');
+      if (err.name === 'NotAllowedError') setError('Cancelado.');
+      else if (err.name === 'InvalidStateError' || err.name === 'NotSupportedError' || err.name === 'SecurityError') setError('Face ID indisponível neste aparelho/navegador. Entre com e-mail e senha e reative em Perfil.');
+      else if (err instanceof SyntaxError) setError('Servidor indisponível no momento. Tente de novo em instantes.');
+      else setError('Não foi possível entrar com Face ID' + (err.message ? ': ' + err.message : '.'));
     }
     setFaceIdLoading(false);
   };
@@ -75,6 +78,7 @@ export default function LoginPage() {
     if (!email || !password || (mode === 'cadastro' && !nome)) {
       setError('Preencha todos os campos'); return;
     }
+    if (mode !== 'login' && password.length < 8) { setError('A senha deve ter pelo menos 8 caracteres'); return; }
     setLoading(true);
     if (mode === 'login') {
       const { error: err } = await signInWithPassword(email.trim(), password);
