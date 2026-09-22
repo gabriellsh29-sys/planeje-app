@@ -28,17 +28,22 @@
  *  16. Webhook Stripe — sem header stripe-signature → 400 (rejeitado antes de tocar o banco)
  *  17. Webhook Stripe — assinatura inválida (constructEvent lança) → 400, banco nunca é chamado
  *  18. Webhook Stripe — checkout.session.completed grava plano/assinatura/ids do Stripe
- *  19. Webhook Stripe — reprocessar o MESMO event.id é ignorado (idempotência por dedup,
- *      não só por acaso o UPDATE ser idempotente) — segunda entrega não toca em 'perfis'
+ *  19. Webhook Stripe — evento já processado com sucesso (event.id repetido) é ignorado:
+ *      responde 200 duplicate, NÃO toca 'perfis' de novo
  *  20. Webhook Stripe — evento desatualizado (fora de ordem) NÃO reativa assinatura já
  *      cancelada (guarda por timestamp, stripe_last_event_at)
  *  21. Webhook Stripe — dois eventos legítimos com o MESMO timestamp (empate) — o
  *      segundo não é descartado indevidamente (guarda usa <=, não <)
  *  22. Webhook Stripe — consulta o estado ATUAL da assinatura na API da Stripe em vez
- *      de confiar cegamente no snapshot do payload do evento (resolve ambiguidade de
- *      eventos concorrentes que a guarda de timestamp sozinha não resolveria)
- *  23. Webhook Stripe — se a consulta à Stripe falhar, cai para o status do próprio
- *      evento como melhor esforço (não trava o webhook inteiro)
+ *      de confiar cegamente no snapshot do payload do evento
+ *  23. Webhook Stripe — [3ª rodada] se a consulta à Stripe falhar, NÃO usa o status do
+ *      payload como melhor esforço — devolve erro retryable (503) e desfaz a
+ *      reivindicação do evento, sem alterar 'perfis'
+ *  24. Webhook Stripe — [3ª rodada] duas entregas SIMULTÂNEAS do mesmo event.id: a
+ *      reivindicação via INSERT (chave primária) garante que só uma processa; a
+ *      outra recebe 409 (retry), e 'perfis' é tocado exatamente uma vez
+ *  25. Webhook Stripe — [3ª rodada] uma reivindicação "processing" travada (tentativa
+ *      anterior que morreu no meio) é retomada depois de CLAIM_STALE_MS e processada
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -332,24 +337,22 @@ describe('webauthn-login-verify.js — credencial órfã (conta excluída/e-mail
 // ===========================================================================
 describe('stripe-webhook.js', () => {
   // Mock único e compartilhado das duas tabelas que o handler toca:
-  //  - perfis: .eq('id', ...) sozinho (branch checkout) e .eq('stripe_subscription_id', ...).or(...)
-  //    (branch de assinatura, com a guarda de ordenação simulada de verdade — não só a
-  //    "forma" da query).
-  //  - stripe_processed_events: dedup por event.id (item 4 da validação de 22/09/2026).
-  //
-  // `ordering: true` liga a simulação real do filtro .or('col.is.null,col.lte.<ts>')
-  // contra um estado em memória por stripe_subscription_id; sem isso, todo update
-  // simplesmente "acontece" (suficiente pros testes que não são sobre ordenação).
+  //  - perfis: .eq('id', ...) sozinho (branch checkout) e
+  //    .eq('stripe_subscription_id', ...).or(...) (branch de assinatura, com
+  //    simulação real do filtro de ordenação).
+  //  - stripe_processed_events: reivindicação atômica por event.id — o
+  //    insert() simula o comportamento real do Postgres com PRIMARY KEY
+  //    (conflito de chave = erro 23505), o que permite testar concorrência
+  //    de verdade, não só a "forma" da query.
   function fakeSupabase({ ordering = false } = {}) {
-    const rows = new Map(); // stripe_subscription_id -> row simulada (só relevante com ordering:true)
-    const calls = [];       // updates em 'perfis'
-    const processedEvents = new Set();
+    const rows = new Map();            // stripe_subscription_id -> row simulada (perfis)
+    const calls = [];                  // updates em 'perfis'
+    const processedEvents = new Map(); // event_id -> { type, status, processed_at }
 
     function perfisUpdate(payload) {
       return {
         eq: (col, val) => {
           if (col !== 'stripe_subscription_id') {
-            // branch checkout.session.completed: .update({...}).eq('id', userId), sem .or()
             calls.push({ table: 'perfis', payload });
             return { then: (resolve) => resolve({ error: null }) };
           }
@@ -371,25 +374,55 @@ describe('stripe-webhook.js', () => {
       };
     }
 
+    function processedEventsTable() {
+      return {
+        insert: (row) => {
+          if (processedEvents.has(row.event_id)) {
+            return Promise.resolve({ error: { code: '23505', message: 'duplicate key value violates unique constraint' } });
+          }
+          processedEvents.set(row.event_id, { type: row.type, status: row.status, processed_at: new Date().toISOString() });
+          return Promise.resolve({ error: null });
+        },
+        select: () => ({
+          eq: (_col, eventId) => ({
+            maybeSingle: () => {
+              const row = processedEvents.get(eventId);
+              return Promise.resolve({ data: row ? { status: row.status, processed_at: row.processed_at } : null, error: null });
+            },
+          }),
+        }),
+        update: (payload) => {
+          const filters = {};
+          const builder = {
+            eq: (col, val) => { filters[col] = val; return builder; },
+            select: () => {
+              const row = processedEvents.get(filters.event_id);
+              if (!row) return Promise.resolve({ data: [], error: null });
+              if ('status' in filters && row.status !== filters.status) return Promise.resolve({ data: [], error: null });
+              Object.assign(row, payload);
+              return Promise.resolve({ data: [{ event_id: filters.event_id }], error: null });
+            },
+            then: (resolve) => {
+              const row = processedEvents.get(filters.event_id);
+              if (row) Object.assign(row, payload);
+              resolve({ error: null });
+            },
+          };
+          return builder;
+        },
+        delete: () => ({
+          eq: (_col, eventId) => {
+            processedEvents.delete(eventId);
+            return Promise.resolve({ error: null });
+          },
+        }),
+      };
+    }
+
     const client = {
       from: (table) => {
         if (table === 'perfis') return { update: perfisUpdate };
-        if (table === 'stripe_processed_events') {
-          return {
-            select: () => ({
-              eq: (_col, eventId) => ({
-                maybeSingle: () => Promise.resolve({
-                  data: processedEvents.has(eventId) ? { event_id: eventId } : null,
-                  error: null,
-                }),
-              }),
-            }),
-            insert: ({ event_id }) => {
-              processedEvents.add(event_id);
-              return Promise.resolve({ error: null });
-            },
-          };
-        }
+        if (table === 'stripe_processed_events') return processedEventsTable();
         return {};
       },
     };
@@ -406,9 +439,9 @@ describe('stripe-webhook.js', () => {
   }
 
   // Por padrão, stripe.subscriptions.retrieve() espelha o status já embutido
-  // no payload do evento — assim os testes que não são especificamente SOBRE
-  // a consulta à Stripe continuam comparáveis ao comportamento anterior.
-  // O teste 22 sobrescreve isto de propósito para simular um valor diferente.
+  // no payload do evento — assim os testes que não são especificamente sobre
+  // a consulta à Stripe continuam comparáveis entre si. O teste 22 e 23
+  // sobrescrevem isto de propósito.
   function stripeComEvento(event, { subscriptionsRetrieve } = {}) {
     return {
       webhooks: { constructEvent: vi.fn(() => event) },
@@ -466,8 +499,8 @@ describe('stripe-webhook.js', () => {
     expect(calls[0].payload.plano).toBe('pago');
   });
 
-  it('19. Reprocessar o mesmo event.id é ignorado (dedup) — segunda entrega não toca em perfis', async () => {
-    const { client, calls } = fakeSupabase();
+  it('19. Evento já processado com sucesso (event.id repetido) é ignorado', async () => {
+    const { client, calls, processedEvents } = fakeSupabase();
     supabaseState.impl = () => client;
     const event = {
       id: 'evt_19_repetido',
@@ -480,19 +513,18 @@ describe('stripe-webhook.js', () => {
 
     const res1 = makeRes();
     await handler(reqComBody('{}'), res1);
+    expect(res1.statusCode).toBe(200);
+    expect(processedEvents.get('evt_19_repetido').status).toBe('completed');
+
     const res2 = makeRes();
     await handler(reqComBody('{}'), res2);
 
     expect(calls).toHaveLength(1); // só a PRIMEIRA entrega tocou o banco
-    expect(res1.statusCode).toBe(200);
     expect(res2.statusCode).toBe(200);
     expect(res2.body).toMatchObject({ duplicate: true });
   });
 
   it('20. Evento desatualizado (fora de ordem) NÃO reativa assinatura já cancelada', async () => {
-    // Cenário: Stripe entrega "canceled" primeiro (processado), depois entrega
-    // (atrasado/reentregue) o "active" de ANTES do cancelamento — EVENTOS
-    // DIFERENTES (event.id distintos), não uma redelivery do mesmo evento.
     const { client, rows } = fakeSupabase({ ordering: true });
     supabaseState.impl = () => client;
     const { default: handler } = await import('../../api/stripe-webhook.js');
@@ -521,11 +553,6 @@ describe('stripe-webhook.js', () => {
   });
 
   it('21. Dois eventos legítimos com o MESMO timestamp (empate) — o segundo NÃO é descartado', async () => {
-    // A resolução do "created" da Stripe é de 1 segundo. Dois eventos
-    // distintos podem legitimamente empatar nesse segundo. A guarda de
-    // ordenação não pode tratar isso como "evento antigo" e descartar um
-    // update válido — só deve bloquear quando o evento é ESTRITAMENTE mais
-    // antigo que o já aplicado.
     const { client, rows } = fakeSupabase({ ordering: true });
     supabaseState.impl = () => client;
     const { default: handler } = await import('../../api/stripe-webhook.js');
@@ -534,12 +561,12 @@ describe('stripe-webhook.js', () => {
       id: 'evt_21_a',
       type: 'customer.subscription.updated',
       created: 5000,
-      data: { object: { id: 'sub_2', status: 'past_due' } }, // status "não ativo"
+      data: { object: { id: 'sub_2', status: 'past_due' } },
     };
     const segundoEventoMesmoSegundo = {
       id: 'evt_21_b',
       type: 'customer.subscription.updated',
-      created: 5000, // EMPATE proposital com o evento anterior
+      created: 5000, // EMPATE proposital
       data: { object: { id: 'sub_2', status: 'active' } },
     };
 
@@ -553,10 +580,6 @@ describe('stripe-webhook.js', () => {
   });
 
   it('22. Consulta o estado ATUAL da assinatura na Stripe — não confia só no payload do evento', async () => {
-    // Simula exatamente a ambiguidade que timestamp sozinho não resolve: o
-    // EVENTO diz "active" (era verdade quando foi gerado), mas ATÉ o momento
-    // em que processamos, um evento concorrente/mais novo já cancelou a
-    // assinatura na Stripe de verdade. A consulta direta à API deve prevalecer.
     const { client, rows } = fakeSupabase({ ordering: true });
     supabaseState.impl = () => client;
     const { default: handler } = await import('../../api/stripe-webhook.js');
@@ -568,17 +591,16 @@ describe('stripe-webhook.js', () => {
       data: { object: { id: 'sub_3', status: 'active' } }, // payload diz "active"
     };
     stripeState.impl = () => stripeComEvento(eventoDesatualizadoNoPayload, {
-      // ...mas a Stripe, consultada agora, diz que já foi cancelada
-      subscriptionsRetrieve: vi.fn(async () => ({ status: 'canceled' })),
+      subscriptionsRetrieve: vi.fn(async () => ({ status: 'canceled' })), // Stripe, agora, diz cancelada
     });
 
     await handler(reqComBody('{}'), makeRes());
 
-    expect(rows.get('sub_3').assinatura_status).toBe('inativa'); // venceu o estado ATUAL, não o do payload
+    expect(rows.get('sub_3').assinatura_status).toBe('inativa');
   });
 
-  it('23. Se a consulta à Stripe falhar, cai para o status do próprio evento (melhor esforço)', async () => {
-    const { client, rows } = fakeSupabase({ ordering: true });
+  it('23. Consulta à Stripe falha → NÃO usa o payload como melhor esforço; devolve erro retryable e desfaz a reivindicação', async () => {
+    const { client, rows, calls, processedEvents } = fakeSupabase({ ordering: true });
     supabaseState.impl = () => client;
     const { default: handler } = await import('../../api/stripe-webhook.js');
 
@@ -595,7 +617,66 @@ describe('stripe-webhook.js', () => {
     const res = makeRes();
     await handler(reqComBody('{}'), res);
 
-    expect(res.statusCode).toBe(200); // não trava o webhook inteiro por causa disso
-    expect(rows.get('sub_4').assinatura_status).toBe('ativa'); // melhor esforço: usa o payload
+    expect(res.statusCode).toBe(503); // erro retryable — Stripe reentrega mais tarde
+    expect(calls).toHaveLength(0);    // 'perfis' NUNCA foi tocado
+    expect(rows.has('sub_4')).toBe(false);
+    // a reivindicação foi desfeita — uma reentrega real deve conseguir reprocessar:
+    expect(processedEvents.has('evt_23')).toBe(false);
+  });
+
+  it('24. Duas entregas SIMULTÂNEAS do mesmo event.id — só uma processa, a outra pede retry (sem duplicar o efeito)', async () => {
+    const { client, calls } = fakeSupabase({ ordering: true });
+    supabaseState.impl = () => client;
+    const { default: handler } = await import('../../api/stripe-webhook.js');
+
+    const event = {
+      id: 'evt_24_concorrente',
+      type: 'customer.subscription.updated',
+      created: 6000,
+      data: { object: { id: 'sub_5', status: 'active' } },
+    };
+    stripeState.impl = () => stripeComEvento(event);
+
+    const res1 = makeRes();
+    const res2 = makeRes();
+    await Promise.all([
+      handler(reqComBody('{}'), res1),
+      handler(reqComBody('{}'), res2),
+    ]);
+
+    const statusCodes = [res1.statusCode, res2.statusCode].sort((a, b) => a - b);
+    expect(statusCodes).toEqual([200, 409]); // uma processa (200), a outra pede retry (409)
+    expect(calls).toHaveLength(1); // 'perfis' tocado exatamente UMA vez, não duas
+  });
+
+  it('25. Reivindicação "processing" travada (tentativa anterior morta) é retomada após CLAIM_STALE_MS', async () => {
+    const { client, rows, calls, processedEvents } = fakeSupabase({ ordering: true });
+    supabaseState.impl = () => client;
+    const { default: handler } = await import('../../api/stripe-webhook.js');
+
+    // Simula uma tentativa anterior que reivindicou o evento e travou (processo
+    // morto/timeout) sem nunca chamar finishEvent — a linha fica "processing"
+    // com processed_at bem antigo.
+    processedEvents.set('evt_25_travado', {
+      type: 'customer.subscription.updated',
+      status: 'processing',
+      processed_at: new Date(Date.now() - 10 * 60 * 1000).toISOString(), // 10 min atrás
+    });
+
+    const event = {
+      id: 'evt_25_travado',
+      type: 'customer.subscription.updated',
+      created: 7000,
+      data: { object: { id: 'sub_6', status: 'active' } },
+    };
+    stripeState.impl = () => stripeComEvento(event);
+
+    const res = makeRes();
+    await handler(reqComBody('{}'), res);
+
+    expect(res.statusCode).toBe(200);
+    expect(calls).toHaveLength(1); // desta vez processou de verdade
+    expect(rows.get('sub_6').assinatura_status).toBe('ativa');
+    expect(processedEvents.get('evt_25_travado').status).toBe('completed');
   });
 });
