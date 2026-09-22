@@ -44,6 +44,14 @@
  *      outra recebe 409 (retry), e 'perfis' é tocado exatamente uma vez
  *  25. Webhook Stripe — [3ª rodada] uma reivindicação "processing" travada (tentativa
  *      anterior que morreu no meio) é retomada depois de CLAIM_STALE_MS e processada
+ *
+ *  [4ª rodada — revisão do fencing token entre tentativas de claimEvent()]
+ *  26. Tentativa A atrasada (não morta) NÃO sobrescreve o "completed" já gravado por B
+ *  27. Falha de A depois que B assumiu NÃO apaga a reivindicação de B
+ *  28. Duas retomadas SIMULTÂNEAS da mesma reivindicação travada — só uma vence
+ *  29. Execuções sobrepostas (A conclui E falha, nesta ordem, depois de B) não corrompem
+ *      o registro final de B
+ *  30. Diferencia "já concluído" (duplicata) de "ainda em processamento" (concorrente)
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -374,20 +382,38 @@ describe('stripe-webhook.js', () => {
       };
     }
 
+    // Confere TODOS os filtros .eq() acumulados (exceto event_id, que é a
+    // chave de busca) contra a linha atual — simula um WHERE col=val AND
+    // col2=val2 real do Postgres, inclusive pro fencing token (attempt_id).
+    function linhaBateComFiltros(row, filters) {
+      if (!row) return false;
+      for (const [key, val] of Object.entries(filters)) {
+        if (key === 'event_id') continue;
+        if (row[key] !== val) return false;
+      }
+      return true;
+    }
+
     function processedEventsTable() {
       return {
         insert: (row) => {
           if (processedEvents.has(row.event_id)) {
             return Promise.resolve({ error: { code: '23505', message: 'duplicate key value violates unique constraint' } });
           }
-          processedEvents.set(row.event_id, { type: row.type, status: row.status, processed_at: new Date().toISOString() });
+          processedEvents.set(row.event_id, {
+            type: row.type, status: row.status, attempt_id: row.attempt_id,
+            processed_at: new Date().toISOString(),
+          });
           return Promise.resolve({ error: null });
         },
         select: () => ({
           eq: (_col, eventId) => ({
             maybeSingle: () => {
               const row = processedEvents.get(eventId);
-              return Promise.resolve({ data: row ? { status: row.status, processed_at: row.processed_at } : null, error: null });
+              return Promise.resolve({
+                data: row ? { status: row.status, processed_at: row.processed_at, attempt_id: row.attempt_id } : null,
+                error: null,
+              });
             },
           }),
         }),
@@ -397,25 +423,30 @@ describe('stripe-webhook.js', () => {
             eq: (col, val) => { filters[col] = val; return builder; },
             select: () => {
               const row = processedEvents.get(filters.event_id);
-              if (!row) return Promise.resolve({ data: [], error: null });
-              if ('status' in filters && row.status !== filters.status) return Promise.resolve({ data: [], error: null });
+              if (!linhaBateComFiltros(row, filters)) return Promise.resolve({ data: [], error: null });
               Object.assign(row, payload);
               return Promise.resolve({ data: [{ event_id: filters.event_id }], error: null });
             },
             then: (resolve) => {
               const row = processedEvents.get(filters.event_id);
-              if (row) Object.assign(row, payload);
+              if (linhaBateComFiltros(row, filters)) Object.assign(row, payload);
               resolve({ error: null });
             },
           };
           return builder;
         },
-        delete: () => ({
-          eq: (_col, eventId) => {
-            processedEvents.delete(eventId);
-            return Promise.resolve({ error: null });
-          },
-        }),
+        delete: () => {
+          const filters = {};
+          const builder = {
+            eq: (col, val) => { filters[col] = val; return builder; },
+            then: (resolve) => {
+              const row = processedEvents.get(filters.event_id);
+              if (linhaBateComFiltros(row, filters)) processedEvents.delete(filters.event_id);
+              resolve({ error: null });
+            },
+          };
+          return builder;
+        },
       };
     }
 
@@ -678,5 +709,125 @@ describe('stripe-webhook.js', () => {
     expect(calls).toHaveLength(1); // desta vez processou de verdade
     expect(rows.get('sub_6').assinatura_status).toBe('ativa');
     expect(processedEvents.get('evt_25_travado').status).toBe('completed');
+  });
+
+  // =========================================================================
+  // Revisão final do mecanismo de claimEvent()/finishEvent() (fencing token)
+  // Testes diretos das funções internas (exportadas só pra teste) — mais
+  // precisos que orquestrar timing via handler(), porque as perguntas são
+  // sobre o comportamento EXATO da reivindicação/retomada, não sobre o
+  // fluxo HTTP em volta delas.
+  // =========================================================================
+  describe('claimEvent()/finishEvent() — fencing token entre tentativas', () => {
+    it('26. [Pergunta 1] Tentativa A atrasada NÃO sobrescreve o "completed" já gravado por B', async () => {
+      const { client, processedEvents } = fakeSupabase();
+      supabaseState.impl = () => client;
+      const { claimEvent, finishEvent } = await import('../../api/stripe-webhook.js');
+      const event = { id: 'evt_q1', type: 'customer.subscription.updated' };
+
+      const claimA = await claimEvent(event); // A reivindica primeiro
+      expect(claimA.ok).toBe(true);
+
+      // Simula A "travada" há mais tempo que o limite de retomada.
+      processedEvents.get('evt_q1').processed_at = new Date(Date.now() - 3 * 60 * 1000).toISOString();
+
+      const claimB = await claimEvent(event); // B retoma
+      expect(claimB.ok).toBe(true);
+      expect(claimB.attemptId).not.toBe(claimA.attemptId);
+
+      await finishEvent(event, true, claimB.attemptId); // B termina primeiro
+      expect(processedEvents.get('evt_q1').status).toBe('completed');
+      expect(processedEvents.get('evt_q1').attempt_id).toBe(claimB.attemptId);
+
+      // A finalmente "acorda" (era só lenta, não morta) e tenta concluir
+      // usando o token ANTIGO — isto NÃO PODE ter efeito.
+      await finishEvent(event, true, claimA.attemptId);
+
+      expect(processedEvents.get('evt_q1').status).toBe('completed');
+      expect(processedEvents.get('evt_q1').attempt_id).toBe(claimB.attemptId); // continua sendo o de B
+    });
+
+    it('27. [Pergunta 2] Falha de A DEPOIS que B assumiu NÃO apaga a reivindicação de B', async () => {
+      const { client, processedEvents } = fakeSupabase();
+      supabaseState.impl = () => client;
+      const { claimEvent, finishEvent } = await import('../../api/stripe-webhook.js');
+      const event = { id: 'evt_q2', type: 'customer.subscription.updated' };
+
+      const claimA = await claimEvent(event);
+      processedEvents.get('evt_q2').processed_at = new Date(Date.now() - 3 * 60 * 1000).toISOString();
+      const claimB = await claimEvent(event);
+      expect(claimB.ok).toBe(true); // B assumiu; ainda está "processing" (não terminou)
+
+      // A finalmente falha e tenta limpar a PRÓPRIA reivindicação — que já
+      // não é mais dela.
+      await finishEvent(event, false, claimA.attemptId);
+
+      expect(processedEvents.has('evt_q2')).toBe(true); // a linha de B continua existindo
+      expect(processedEvents.get('evt_q2').attempt_id).toBe(claimB.attemptId);
+      expect(processedEvents.get('evt_q2').status).toBe('processing');
+    });
+
+    it('28. [Pergunta 3] Duas retomadas SIMULTÂNEAS da mesma reivindicação travada — só uma vence (atomicidade real)', async () => {
+      const { client, processedEvents } = fakeSupabase();
+      supabaseState.impl = () => client;
+      const { claimEvent } = await import('../../api/stripe-webhook.js');
+      const event = { id: 'evt_q3', type: 'customer.subscription.updated' };
+
+      await claimEvent(event); // reivindicação original
+      processedEvents.get('evt_q3').processed_at = new Date(Date.now() - 3 * 60 * 1000).toISOString();
+
+      const [reclaim1, reclaim2] = await Promise.all([claimEvent(event), claimEvent(event)]);
+
+      const vencedores = [reclaim1, reclaim2].filter(r => r.ok);
+      expect(vencedores).toHaveLength(1); // exatamente UMA retomada vence
+      expect(processedEvents.get('evt_q3').attempt_id).toBe(vencedores[0].attemptId);
+    });
+
+    it('29. [Pergunta 4] Execuções sobrepostas durante a retomada não deixam a linha de dedup em estado inconsistente', async () => {
+      // Cobre o cenário combinado: A trava, B retoma e conclui, A (que não
+      // estava realmente morta) tenta concluir e depois falhar em sequência
+      // — em nenhum momento o registro final deixa de refletir o trabalho
+      // de B com precisão.
+      const { client, processedEvents } = fakeSupabase();
+      supabaseState.impl = () => client;
+      const { claimEvent, finishEvent } = await import('../../api/stripe-webhook.js');
+      const event = { id: 'evt_q4', type: 'customer.subscription.updated' };
+
+      const claimA = await claimEvent(event);
+      processedEvents.get('evt_q4').processed_at = new Date(Date.now() - 3 * 60 * 1000).toISOString();
+      const claimB = await claimEvent(event);
+      await finishEvent(event, true, claimB.attemptId);
+
+      // A tenta concluir E falhar depois, nesta ordem — nenhum dos dois pode
+      // mexer no que já pertence a B.
+      await finishEvent(event, true, claimA.attemptId);
+      await finishEvent(event, false, claimA.attemptId);
+
+      expect(processedEvents.get('evt_q4').status).toBe('completed');
+      expect(processedEvents.get('evt_q4').attempt_id).toBe(claimB.attemptId);
+    });
+
+    it('30. [Pergunta 5] Diferencia corretamente "já concluído" (duplicata) de "ainda em processamento" (concorrente)', async () => {
+      const { client, processedEvents } = fakeSupabase();
+      supabaseState.impl = () => client;
+      const { claimEvent } = await import('../../api/stripe-webhook.js');
+
+      // Caso 1: evento já 'completed' → duplicata legítima.
+      const eventoConcluido = { id: 'evt_q5_completo', type: 'customer.subscription.updated' };
+      const claim1 = await claimEvent(eventoConcluido);
+      // marca como concluído diretamente (simula processamento anterior bem-sucedido)
+      processedEvents.get('evt_q5_completo').status = 'completed';
+      const tentativaDuplicata = await claimEvent(eventoConcluido);
+      expect(tentativaDuplicata).toEqual({ ok: false, reason: 'duplicate' });
+
+      // Caso 2: evento ainda 'processing' e RECENTE → concorrência real, não duplicata.
+      const eventoEmAndamento = { id: 'evt_q5_processando', type: 'customer.subscription.updated' };
+      await claimEvent(eventoEmAndamento); // fica 'processing', processed_at = agora
+      const tentativaConcorrente = await claimEvent(eventoEmAndamento);
+      expect(tentativaConcorrente).toEqual({ ok: false, reason: 'concurrent' });
+
+      // Os dois motivos são distintos — o código não trata "em andamento" como duplicata.
+      expect(tentativaDuplicata.reason).not.toBe(tentativaConcorrente.reason);
+    });
   });
 });
