@@ -72,9 +72,17 @@ export default async function handler(req, res) {
   if (event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted') {
     const sub = event.data.object;
     const status = sub.status === 'active' || sub.status === 'trialing' ? 'ativa' : 'inativa';
-
-    const { error } = await supabase.from('perfis').update({ assinatura_status: status })
-      .eq('stripe_subscription_id', sub.id);
+    // A Stripe não garante ordem de entrega dos webhooks (retries/rede podem
+    // reentregar um evento antigo depois de um mais novo já processado). Sem
+    // comparar o timestamp do evento, um "active" atrasado reativaria uma
+    // assinatura já cancelada por um "canceled" mais recente. A condição
+    // .or(...) só aplica a atualização se este evento for mais novo que o
+    // último já aplicado a esta linha (ou se nunca houve um antes).
+    const eventTs = new Date(event.created * 1000).toISOString();
+    const { error } = await supabase.from('perfis')
+      .update({ assinatura_status: status, stripe_last_event_at: eventTs })
+      .eq('stripe_subscription_id', sub.id)
+      .or(`stripe_last_event_at.is.null,stripe_last_event_at.lt.${eventTs}`);
 
     if (error) {
       console.error('[webhook] erro ao atualizar assinatura:', error.message);

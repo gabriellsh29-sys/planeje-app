@@ -5,7 +5,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:security": "vitest run src/__tests__/api-security.test.js src/__tests__/client-write-guard.test.js src/__tests__/headers-config.test.js",
+    "test:bundle-secrets": "node scripts/scan-bundle-secrets.mjs"
   },
   "dependencies": {
     "@sentry/react": "^10.58.0",
