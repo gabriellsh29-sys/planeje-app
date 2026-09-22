@@ -28,11 +28,17 @@
  *  16. Webhook Stripe — sem header stripe-signature → 400 (rejeitado antes de tocar o banco)
  *  17. Webhook Stripe — assinatura inválida (constructEvent lança) → 400, banco nunca é chamado
  *  18. Webhook Stripe — checkout.session.completed grava plano/assinatura/ids do Stripe
- *  19. Webhook Stripe — reprocessar o MESMO evento não gera efeito colateral adicional
- *      (idempotência natural do UPDATE — mesmo payload, mesmo resultado final)
- *  20. Webhook Stripe — [FALHA CONFIRMADA] evento desatualizado (fora de ordem) reativa
- *      uma assinatura já cancelada por um evento mais recente. Ver relatório da
- *      auditoria para a correção proposta (guarda por timestamp do evento).
+ *  19. Webhook Stripe — reprocessar o MESMO event.id é ignorado (idempotência por dedup,
+ *      não só por acaso o UPDATE ser idempotente) — segunda entrega não toca em 'perfis'
+ *  20. Webhook Stripe — evento desatualizado (fora de ordem) NÃO reativa assinatura já
+ *      cancelada (guarda por timestamp, stripe_last_event_at)
+ *  21. Webhook Stripe — dois eventos legítimos com o MESMO timestamp (empate) — o
+ *      segundo não é descartado indevidamente (guarda usa <=, não <)
+ *  22. Webhook Stripe — consulta o estado ATUAL da assinatura na API da Stripe em vez
+ *      de confiar cegamente no snapshot do payload do evento (resolve ambiguidade de
+ *      eventos concorrentes que a guarda de timestamp sozinha não resolveria)
+ *  23. Webhook Stripe — se a consulta à Stripe falhar, cai para o status do próprio
+ *      evento como melhor esforço (não trava o webhook inteiro)
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -50,11 +56,13 @@ vi.mock('@supabase/supabase-js', () => ({
 const stripeState = { impl: null };
 vi.mock('stripe', () => ({
   default: class {
-    // `webhooks` é um getter (não um campo fixado no construtor) para que
-    // testes que trocam stripeState.impl NO MEIO do teste (simulando dois
-    // eventos chegando em sequência) afetem também chamadas feitas com a
-    // MESMA instância de `stripe` já construída no módulo (module-level).
+    // `webhooks`/`subscriptions` são getters (não campos fixados no
+    // construtor) para que testes que trocam stripeState.impl NO MEIO do
+    // teste (simulando dois eventos chegando em sequência) afetem também
+    // chamadas feitas com a MESMA instância de `stripe` já construída no
+    // módulo (module-level).
     get webhooks() { return stripeState.impl().webhooks; }
+    get subscriptions() { return stripeState.impl().subscriptions; }
   },
 }));
 
@@ -323,55 +331,70 @@ describe('webauthn-login-verify.js — credencial órfã (conta excluída/e-mail
 // stripe-webhook.js — validação de assinatura, gravação e (falta de) ordenação
 // ===========================================================================
 describe('stripe-webhook.js', () => {
-  // .eq(...) sozinho (branch checkout.session.completed) e .eq(...).or(...)
-  // (branch de assinatura, com a guarda de ordenação) precisam funcionar —
-  // por isso o builder é ao mesmo tempo "then-ável" e tem um método .or().
-  function supabaseCapturaUpdates() {
-    const calls = [];
-    return {
-      client: {
-        from: (table) => ({
-          update: (payload) => {
-            calls.push({ table, payload });
-            return {
-              eq: () => ({
-                or: () => Promise.resolve({ error: null }),
-                then: (resolve) => resolve({ error: null }),
-              }),
-            };
-          },
-        }),
-      },
-      calls,
-    };
-  }
+  // Mock único e compartilhado das duas tabelas que o handler toca:
+  //  - perfis: .eq('id', ...) sozinho (branch checkout) e .eq('stripe_subscription_id', ...).or(...)
+  //    (branch de assinatura, com a guarda de ordenação simulada de verdade — não só a
+  //    "forma" da query).
+  //  - stripe_processed_events: dedup por event.id (item 4 da validação de 22/09/2026).
+  //
+  // `ordering: true` liga a simulação real do filtro .or('col.is.null,col.lte.<ts>')
+  // contra um estado em memória por stripe_subscription_id; sem isso, todo update
+  // simplesmente "acontece" (suficiente pros testes que não são sobre ordenação).
+  function fakeSupabase({ ordering = false } = {}) {
+    const rows = new Map(); // stripe_subscription_id -> row simulada (só relevante com ordering:true)
+    const calls = [];       // updates em 'perfis'
+    const processedEvents = new Set();
 
-  // Simula, só pra coluna stripe_last_event_at, o comportamento real do
-  // Postgres com o filtro .or('col.is.null,col.lt.<ts>') — permite testar a
-  // guarda de ordenação de verdade (não só a "forma" da query).
-  function supabaseComGuardaDeOrdenacao() {
-    const rows = new Map(); // stripe_subscription_id -> { assinatura_status, stripe_last_event_at }
-    const calls = [];
-    return {
-      client: {
-        from: () => ({
-          update: (payload) => ({
-            eq: (_col, subId) => ({
-              or: (filterStr) => {
-                const row = rows.get(subId) || { stripe_last_event_at: null };
-                const limiar = filterStr.match(/stripe_last_event_at\.lte\.([^,]+)/)?.[1] ?? null;
-                const passa = row.stripe_last_event_at == null || (limiar !== null && row.stripe_last_event_at <= limiar);
-                if (passa) rows.set(subId, { ...row, ...payload });
-                calls.push({ subId, payload, aplicado: passa });
+    function perfisUpdate(payload) {
+      return {
+        eq: (col, val) => {
+          if (col !== 'stripe_subscription_id') {
+            // branch checkout.session.completed: .update({...}).eq('id', userId), sem .or()
+            calls.push({ table: 'perfis', payload });
+            return { then: (resolve) => resolve({ error: null }) };
+          }
+          return {
+            or: (filterStr) => {
+              if (!ordering) {
+                calls.push({ table: 'perfis', payload });
                 return Promise.resolve({ error: null });
-              },
+              }
+              const row = rows.get(val) || { stripe_last_event_at: null };
+              const limiar = filterStr.match(/stripe_last_event_at\.lte\.([^,]+)/)?.[1] ?? null;
+              const passa = row.stripe_last_event_at == null || (limiar !== null && row.stripe_last_event_at <= limiar);
+              if (passa) rows.set(val, { ...row, ...payload });
+              calls.push({ subId: val, payload, aplicado: passa });
+              return Promise.resolve({ error: null });
+            },
+          };
+        },
+      };
+    }
+
+    const client = {
+      from: (table) => {
+        if (table === 'perfis') return { update: perfisUpdate };
+        if (table === 'stripe_processed_events') {
+          return {
+            select: () => ({
+              eq: (_col, eventId) => ({
+                maybeSingle: () => Promise.resolve({
+                  data: processedEvents.has(eventId) ? { event_id: eventId } : null,
+                  error: null,
+                }),
+              }),
             }),
-          }),
-        }),
+            insert: ({ event_id }) => {
+              processedEvents.add(event_id);
+              return Promise.resolve({ error: null });
+            },
+          };
+        }
+        return {};
       },
-      rows,
-      calls,
     };
+
+    return { client, calls, rows, processedEvents };
   }
 
   function reqComBody(bodyStr) {
@@ -382,9 +405,22 @@ describe('stripe-webhook.js', () => {
     return r;
   }
 
+  // Por padrão, stripe.subscriptions.retrieve() espelha o status já embutido
+  // no payload do evento — assim os testes que não são especificamente SOBRE
+  // a consulta à Stripe continuam comparáveis ao comportamento anterior.
+  // O teste 22 sobrescreve isto de propósito para simular um valor diferente.
+  function stripeComEvento(event, { subscriptionsRetrieve } = {}) {
+    return {
+      webhooks: { constructEvent: vi.fn(() => event) },
+      subscriptions: {
+        retrieve: subscriptionsRetrieve || vi.fn(async () => ({ status: event.data?.object?.status })),
+      },
+    };
+  }
+
   it('16. Sem header stripe-signature → 400, banco nunca é consultado', async () => {
     stripeState.impl = () => ({ webhooks: { constructEvent: vi.fn() } });
-    const { client } = supabaseCapturaUpdates();
+    const { client } = fakeSupabase();
     supabaseState.impl = () => client;
     const { default: handler } = await import('../../api/stripe-webhook.js');
     const res = makeRes();
@@ -395,7 +431,7 @@ describe('stripe-webhook.js', () => {
   });
 
   it('17. Assinatura inválida (constructEvent lança) → 400, banco nunca é tocado', async () => {
-    const { client, calls } = supabaseCapturaUpdates();
+    const { client, calls } = fakeSupabase();
     supabaseState.impl = () => client;
     stripeState.impl = () => ({
       webhooks: { constructEvent: vi.fn(() => { throw new Error('assinatura inválida'); }) },
@@ -408,13 +444,15 @@ describe('stripe-webhook.js', () => {
   });
 
   it('18. checkout.session.completed grava plano/assinatura/ids — nenhum outro campo', async () => {
-    const { client, calls } = supabaseCapturaUpdates();
+    const { client, calls } = fakeSupabase();
     supabaseState.impl = () => client;
     const event = {
+      id: 'evt_18',
       type: 'checkout.session.completed',
+      created: 1000,
       data: { object: { client_reference_id: 'user-123', customer: 'cus_1', subscription: 'sub_1' } },
     };
-    stripeState.impl = () => ({ webhooks: { constructEvent: vi.fn(() => event) } });
+    stripeState.impl = () => stripeComEvento(event);
     const { default: handler } = await import('../../api/stripe-webhook.js');
     const res = makeRes();
     await handler(reqComBody('{}'), res);
@@ -428,52 +466,55 @@ describe('stripe-webhook.js', () => {
     expect(calls[0].payload.plano).toBe('pago');
   });
 
-  it('19. Reprocessar o mesmo evento não altera o resultado final (idempotente)', async () => {
-    const { client, calls } = supabaseCapturaUpdates();
+  it('19. Reprocessar o mesmo event.id é ignorado (dedup) — segunda entrega não toca em perfis', async () => {
+    const { client, calls } = fakeSupabase();
     supabaseState.impl = () => client;
     const event = {
+      id: 'evt_19_repetido',
       type: 'customer.subscription.updated',
       created: 1000,
       data: { object: { id: 'sub_1', status: 'active' } },
     };
-    stripeState.impl = () => ({ webhooks: { constructEvent: vi.fn(() => event) } });
+    stripeState.impl = () => stripeComEvento(event);
     const { default: handler } = await import('../../api/stripe-webhook.js');
 
-    await handler(reqComBody('{}'), makeRes());
-    await handler(reqComBody('{}'), makeRes());
+    const res1 = makeRes();
+    await handler(reqComBody('{}'), res1);
+    const res2 = makeRes();
+    await handler(reqComBody('{}'), res2);
 
-    expect(calls).toHaveLength(2);
-    expect(calls[0].payload).toEqual(calls[1].payload); // mesmo efeito, sem duplicar linhas
+    expect(calls).toHaveLength(1); // só a PRIMEIRA entrega tocou o banco
+    expect(res1.statusCode).toBe(200);
+    expect(res2.statusCode).toBe(200);
+    expect(res2.body).toMatchObject({ duplicate: true });
   });
 
   it('20. Evento desatualizado (fora de ordem) NÃO reativa assinatura já cancelada', async () => {
     // Cenário: Stripe entrega "canceled" primeiro (processado), depois entrega
-    // (atrasado/reentregue) o "active" de ANTES do cancelamento. A guarda por
-    // stripe_last_event_at (frontend/supabase/webhook_ordering_guard.sql +
-    // api/stripe-webhook.js) deve ignorar o evento antigo.
-    //
-    // ANTES da correção, este teste falhava (a asserção final batia 'ativa').
-    // Ver histórico do commit para o comportamento inseguro documentado.
-    const { client, rows } = supabaseComGuardaDeOrdenacao();
+    // (atrasado/reentregue) o "active" de ANTES do cancelamento — EVENTOS
+    // DIFERENTES (event.id distintos), não uma redelivery do mesmo evento.
+    const { client, rows } = fakeSupabase({ ordering: true });
     supabaseState.impl = () => client;
     const { default: handler } = await import('../../api/stripe-webhook.js');
 
     const eventoCancelamento = {
+      id: 'evt_20_cancel',
       type: 'customer.subscription.deleted',
       created: 2000,
       data: { object: { id: 'sub_1', status: 'canceled' } },
     };
     const eventoAntigoAtrasado = {
+      id: 'evt_20_atrasado',
       type: 'customer.subscription.updated',
       created: 1000, // MAIS ANTIGO que o cancelamento, mas chega DEPOIS
       data: { object: { id: 'sub_1', status: 'active' } },
     };
 
-    stripeState.impl = () => ({ webhooks: { constructEvent: vi.fn(() => eventoCancelamento) } });
+    stripeState.impl = () => stripeComEvento(eventoCancelamento);
     await handler(reqComBody('{}'), makeRes());
     expect(rows.get('sub_1').assinatura_status).toBe('inativa');
 
-    stripeState.impl = () => ({ webhooks: { constructEvent: vi.fn(() => eventoAntigoAtrasado) } });
+    stripeState.impl = () => stripeComEvento(eventoAntigoAtrasado);
     await handler(reqComBody('{}'), makeRes());
 
     expect(rows.get('sub_1').assinatura_status).toBe('inativa');
@@ -485,27 +526,76 @@ describe('stripe-webhook.js', () => {
     // ordenação não pode tratar isso como "evento antigo" e descartar um
     // update válido — só deve bloquear quando o evento é ESTRITAMENTE mais
     // antigo que o já aplicado.
-    const { client, rows } = supabaseComGuardaDeOrdenacao();
+    const { client, rows } = fakeSupabase({ ordering: true });
     supabaseState.impl = () => client;
     const { default: handler } = await import('../../api/stripe-webhook.js');
 
     const primeiroEvento = {
+      id: 'evt_21_a',
       type: 'customer.subscription.updated',
       created: 5000,
       data: { object: { id: 'sub_2', status: 'past_due' } }, // status "não ativo"
     };
     const segundoEventoMesmoSegundo = {
+      id: 'evt_21_b',
       type: 'customer.subscription.updated',
       created: 5000, // EMPATE proposital com o evento anterior
       data: { object: { id: 'sub_2', status: 'active' } },
     };
 
-    stripeState.impl = () => ({ webhooks: { constructEvent: vi.fn(() => primeiroEvento) } });
+    stripeState.impl = () => stripeComEvento(primeiroEvento);
     await handler(reqComBody('{}'), makeRes());
     expect(rows.get('sub_2').assinatura_status).toBe('inativa');
 
-    stripeState.impl = () => ({ webhooks: { constructEvent: vi.fn(() => segundoEventoMesmoSegundo) } });
+    stripeState.impl = () => stripeComEvento(segundoEventoMesmoSegundo);
     await handler(reqComBody('{}'), makeRes());
     expect(rows.get('sub_2').assinatura_status).toBe('ativa');
+  });
+
+  it('22. Consulta o estado ATUAL da assinatura na Stripe — não confia só no payload do evento', async () => {
+    // Simula exatamente a ambiguidade que timestamp sozinho não resolve: o
+    // EVENTO diz "active" (era verdade quando foi gerado), mas ATÉ o momento
+    // em que processamos, um evento concorrente/mais novo já cancelou a
+    // assinatura na Stripe de verdade. A consulta direta à API deve prevalecer.
+    const { client, rows } = fakeSupabase({ ordering: true });
+    supabaseState.impl = () => client;
+    const { default: handler } = await import('../../api/stripe-webhook.js');
+
+    const eventoDesatualizadoNoPayload = {
+      id: 'evt_22',
+      type: 'customer.subscription.updated',
+      created: 9000,
+      data: { object: { id: 'sub_3', status: 'active' } }, // payload diz "active"
+    };
+    stripeState.impl = () => stripeComEvento(eventoDesatualizadoNoPayload, {
+      // ...mas a Stripe, consultada agora, diz que já foi cancelada
+      subscriptionsRetrieve: vi.fn(async () => ({ status: 'canceled' })),
+    });
+
+    await handler(reqComBody('{}'), makeRes());
+
+    expect(rows.get('sub_3').assinatura_status).toBe('inativa'); // venceu o estado ATUAL, não o do payload
+  });
+
+  it('23. Se a consulta à Stripe falhar, cai para o status do próprio evento (melhor esforço)', async () => {
+    const { client, rows } = fakeSupabase({ ordering: true });
+    supabaseState.impl = () => client;
+    const { default: handler } = await import('../../api/stripe-webhook.js');
+
+    const event = {
+      id: 'evt_23',
+      type: 'customer.subscription.updated',
+      created: 9500,
+      data: { object: { id: 'sub_4', status: 'active' } },
+    };
+    stripeState.impl = () => stripeComEvento(event, {
+      subscriptionsRetrieve: vi.fn(async () => { throw new Error('Stripe indisponível'); }),
+    });
+
+    const res = makeRes();
+    await handler(reqComBody('{}'), res);
+
+    expect(res.statusCode).toBe(200); // não trava o webhook inteiro por causa disso
+    expect(rows.get('sub_4').assinatura_status).toBe('ativa'); // melhor esforço: usa o payload
   });
 });

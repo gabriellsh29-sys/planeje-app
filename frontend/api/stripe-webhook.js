@@ -50,6 +50,29 @@ export default async function handler(req, res) {
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
+  // Idempotência por event.id: a Stripe reentrega o MESMO evento em retries
+  // (timeout, 5xx nosso, rede). Sem isto, qualquer efeito futuro que não seja
+  // um simples UPDATE idempotente (ex.: enviar e-mail, incrementar contador)
+  // rodaria de novo a cada reentrega. Se já processamos este event.id com
+  // sucesso, respondemos 200 sem refazer nada.
+  const { data: jaProcessado, error: dedupCheckError } = await supabase
+    .from('stripe_processed_events')
+    .select('event_id')
+    .eq('event_id', event.id)
+    .maybeSingle();
+
+  if (dedupCheckError) {
+    // Se a checagem de duplicata falhar (ex.: tabela indisponível), preferimos
+    // seguir e processar o evento (fail-open aqui) a nunca aplicar uma
+    // assinatura paga por causa de um erro transitório nesta tabela auxiliar —
+    // o pior caso é reprocessar um evento já visto, que já é idempotente na
+    // prática (ver notas abaixo).
+    console.error('[webhook] falha ao checar deduplicação de evento (seguindo mesmo assim):', dedupCheckError.message);
+  } else if (jaProcessado) {
+    console.log('[webhook] evento já processado anteriormente, ignorando duplicata:', event.id);
+    return res.status(200).json({ received: true, duplicate: true });
+  }
+
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object;
     const userId = session.client_reference_id;
@@ -71,13 +94,30 @@ export default async function handler(req, res) {
 
   if (event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted') {
     const sub = event.data.object;
-    const status = sub.status === 'active' || sub.status === 'trialing' ? 'ativa' : 'inativa';
+
+    // O payload do evento é uma FOTO do momento em que o evento foi gerado —
+    // com eventos concorrentes/fora de ordem, confiar cegamente nele é
+    // ambíguo mesmo com a guarda de timestamp abaixo (ela só decide "aplica
+    // ou não", não corrige o VALOR se dois eventos diferentes chegam quase
+    // juntos). Consultamos a Stripe pelo estado ATUAL da assinatura — a
+    // fonte da verdade — e gravamos esse valor, não o do snapshot do evento.
+    // Se a consulta falhar (rede, assinatura removida etc.), caímos pro
+    // status do próprio evento como melhor esforço.
+    let statusStripe = sub.status;
+    try {
+      const assinaturaAtual = await stripe.subscriptions.retrieve(sub.id);
+      statusStripe = assinaturaAtual.status;
+    } catch (fetchErr) {
+      console.error('[webhook] falha ao consultar estado atual da assinatura na Stripe, usando snapshot do evento:', fetchErr.message);
+    }
+    const status = statusStripe === 'active' || statusStripe === 'trialing' ? 'ativa' : 'inativa';
+
     // A Stripe não garante ordem de entrega dos webhooks (retries/rede podem
-    // reentregar um evento antigo depois de um mais novo já processado). Sem
-    // comparar o timestamp do evento, um "active" atrasado reativaria uma
-    // assinatura já cancelada por um "canceled" mais recente. A condição
-    // .or(...) só aplica a atualização se este evento for mais novo que o
-    // último já aplicado a esta linha (ou se nunca houve um antes).
+    // reentregar um evento antigo depois de um mais novo já processado). Esta
+    // guarda por timestamp é uma segunda camada de defesa (além da consulta
+    // acima): só aplica a atualização se este evento for mais novo ou empatar
+    // com o último já aplicado a esta linha (ou se nunca houve um antes) —
+    // eventos estritamente mais antigos são ignorados.
     const eventTs = new Date(event.created * 1000).toISOString();
     const { error } = await supabase.from('perfis')
       .update({ assinatura_status: status, stripe_last_event_at: eventTs })
@@ -89,6 +129,17 @@ export default async function handler(req, res) {
       await notificarErro(event.type, `subscription_id: ${sub.id}\nStatus: ${status}\nErro: ${error.message}`);
       return res.status(500).json({ error: error.message });
     }
+  }
+
+  // Só marca o evento como processado DEPOIS de todo o trabalho ter sido
+  // concluído sem erro — se algo acima falhou, já retornamos 500 antes de
+  // chegar aqui, e a Stripe vai reentregar (o dedup acima não vai encontrar
+  // este event_id, então o retry processa de verdade).
+  const { error: dedupInsertError } = await supabase
+    .from('stripe_processed_events')
+    .insert({ event_id: event.id, type: event.type });
+  if (dedupInsertError && dedupInsertError.code !== '23505') { // 23505 = já existe (corrida entre retries) — ok ignorar
+    console.error('[webhook] falha ao registrar evento como processado (não bloqueante):', dedupInsertError.message);
   }
 
   res.status(200).json({ received: true });
