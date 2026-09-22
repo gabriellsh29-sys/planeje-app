@@ -359,8 +359,8 @@ describe('stripe-webhook.js', () => {
             eq: (_col, subId) => ({
               or: (filterStr) => {
                 const row = rows.get(subId) || { stripe_last_event_at: null };
-                const limiar = filterStr.match(/stripe_last_event_at\.lt\.([^,]+)/)?.[1] ?? null;
-                const passa = row.stripe_last_event_at == null || (limiar !== null && row.stripe_last_event_at < limiar);
+                const limiar = filterStr.match(/stripe_last_event_at\.lte\.([^,]+)/)?.[1] ?? null;
+                const passa = row.stripe_last_event_at == null || (limiar !== null && row.stripe_last_event_at <= limiar);
                 if (passa) rows.set(subId, { ...row, ...payload });
                 calls.push({ subId, payload, aplicado: passa });
                 return Promise.resolve({ error: null });
@@ -477,5 +477,35 @@ describe('stripe-webhook.js', () => {
     await handler(reqComBody('{}'), makeRes());
 
     expect(rows.get('sub_1').assinatura_status).toBe('inativa');
+  });
+
+  it('21. Dois eventos legítimos com o MESMO timestamp (empate) — o segundo NÃO é descartado', async () => {
+    // A resolução do "created" da Stripe é de 1 segundo. Dois eventos
+    // distintos podem legitimamente empatar nesse segundo. A guarda de
+    // ordenação não pode tratar isso como "evento antigo" e descartar um
+    // update válido — só deve bloquear quando o evento é ESTRITAMENTE mais
+    // antigo que o já aplicado.
+    const { client, rows } = supabaseComGuardaDeOrdenacao();
+    supabaseState.impl = () => client;
+    const { default: handler } = await import('../../api/stripe-webhook.js');
+
+    const primeiroEvento = {
+      type: 'customer.subscription.updated',
+      created: 5000,
+      data: { object: { id: 'sub_2', status: 'past_due' } }, // status "não ativo"
+    };
+    const segundoEventoMesmoSegundo = {
+      type: 'customer.subscription.updated',
+      created: 5000, // EMPATE proposital com o evento anterior
+      data: { object: { id: 'sub_2', status: 'active' } },
+    };
+
+    stripeState.impl = () => ({ webhooks: { constructEvent: vi.fn(() => primeiroEvento) } });
+    await handler(reqComBody('{}'), makeRes());
+    expect(rows.get('sub_2').assinatura_status).toBe('inativa');
+
+    stripeState.impl = () => ({ webhooks: { constructEvent: vi.fn(() => segundoEventoMesmoSegundo) } });
+    await handler(reqComBody('{}'), makeRes());
+    expect(rows.get('sub_2').assinatura_status).toBe('ativa');
   });
 });

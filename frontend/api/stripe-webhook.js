@@ -82,7 +82,7 @@ export default async function handler(req, res) {
     const { error } = await supabase.from('perfis')
       .update({ assinatura_status: status, stripe_last_event_at: eventTs })
       .eq('stripe_subscription_id', sub.id)
-      .or(`stripe_last_event_at.is.null,stripe_last_event_at.lt.${eventTs}`);
+      .or(`stripe_last_event_at.is.null,stripe_last_event_at.lte.${eventTs}`);
 
     if (error) {
       console.error('[webhook] erro ao atualizar assinatura:', error.message);
