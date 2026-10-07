@@ -45,6 +45,15 @@ function fmt(v) { return new Intl.NumberFormat('pt-BR', { style: 'currency', cur
 function fmtDate(d) { try { return new Date(d + 'T00:00:00').toLocaleDateString('pt-BR'); } catch { return d || ''; } }
 function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
+// Neutraliza CSV/Formula Injection: campos de texto livre (nome, categoria) vêm
+// do próprio usuário e podem começar com =, +, - ou @ — o Excel/Sheets interpreta
+// isso como fórmula ao abrir o arquivo exportado. Prefixar com ' força leitura
+// como texto, sem alterar o valor visível.
+function csvSafe(cell) {
+  const s = String(cell ?? '');
+  return /^[=+\-@]/.test(s) ? `'${s}` : s;
+}
+
 function mesKey(month, year) { return `${year}-${String(month).padStart(2, '0')}`; }
 
 // Para "fixa"/"parcelar", nome/valor/categoria podem variar por mês (overrides/
@@ -550,7 +559,7 @@ export function exportCSV(month, year) {
 
   const csvContent = '﻿' + rows.map(row =>
     (Array.isArray(row) ? row : [row]).map(cell =>
-      `"${String(cell ?? '').replace(/"/g, '""')}"`
+      `"${csvSafe(cell).replace(/"/g, '""')}"`
     ).join(';')
   ).join('\r\n');
 
