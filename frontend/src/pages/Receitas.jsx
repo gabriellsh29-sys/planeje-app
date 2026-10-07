@@ -190,7 +190,7 @@ function ConfigurarParcelas({ parcelaInicial, totalParcelas, periodicidade, onCh
   );
 }
 
-function DropdownSelect({ id, label, options, selected, onToggle, openDropdown, setOpenDropdown }) {
+function DropdownSelect({ id, label, options, selected, onToggle, openDropdown, setOpenDropdown, onSelectAll, selectAllLabel }) {
   const ref = useRef(null);
   const isOpen = openDropdown === id;
   useEffect(() => {
@@ -217,6 +217,12 @@ function DropdownSelect({ id, label, options, selected, onToggle, openDropdown, 
         <div className="absolute top-full left-0 mt-1 z-50 rounded-xl py-1 min-w-[200px] flex flex-col"
           style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 16px 40px rgba(0,0,0,0.6)', maxHeight: 260 }}>
           <p className="px-3 pt-2 pb-1 text-[9px] uppercase tracking-widest font-bold text-white/40 flex-shrink-0">{label}</p>
+          {onSelectAll && (
+            <button onClick={onSelectAll}
+              className="w-full text-left px-3 py-1.5 text-[11px] text-accent hover:bg-white/5 transition flex-shrink-0">
+              {selectAllLabel || 'Selecionar todos'}
+            </button>
+          )}
           {selected.length > 0 && (
             <button onClick={() => onToggle(null)}
               className="w-full text-left px-3 py-1.5 text-[11px] text-expense hover:bg-white/5 transition flex-shrink-0">
@@ -697,6 +703,8 @@ export default function Receitas({ month, year }) {
           options={MONTHS_LABEL.map((l, i) => ({ val: String(i + 1), label: l }))}
           selected={selectedMonths}
           onToggle={(val) => val === null ? setSelectedMonths([String(month || now.getMonth() + 1)]) : toggleFilter(selectedMonths, setSelectedMonths, val)}
+          onSelectAll={() => setSelectedMonths([])}
+          selectAllLabel="Todos os meses"
           openDropdown={openDropdown} setOpenDropdown={setOpenDropdown}
         />
         <DropdownSelect
