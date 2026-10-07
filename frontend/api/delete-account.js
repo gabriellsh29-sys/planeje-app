@@ -33,8 +33,15 @@ export default async function handler(req, res) {
     await supabase.from('webauthn_credentials').delete().eq('user_id', user.id);
     await supabase.from('perfis').delete().eq('id', user.id);
 
-    // Apaga avatar do storage (LGPD — exclusão completa dos dados)
-    await supabase.storage.from('avatars').remove([`${user.id}/avatar.jpg`]);
+    // Apaga avatar do storage (LGPD — exclusão completa dos dados). O bucket aceita
+    // jpeg/png/webp (ver storage.buckets.allowed_mime_types), então remove as 3
+    // extensões possíveis para não deixar arquivo órfão caso o avatar atual não
+    // tenha sido salvo como .jpg.
+    await supabase.storage.from('avatars').remove([
+      `${user.id}/avatar.jpg`,
+      `${user.id}/avatar.png`,
+      `${user.id}/avatar.webp`,
+    ]);
 
     // Apaga a conta de autenticação via admin
     const { error } = await supabase.auth.admin.deleteUser(user.id);
