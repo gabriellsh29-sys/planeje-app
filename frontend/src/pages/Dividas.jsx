@@ -276,12 +276,6 @@ function DropdownSelect({ id, label, options, selected, onToggle, openDropdown, 
         <div className="absolute top-full left-0 mt-1 z-50 rounded-xl py-1 min-w-[200px] flex flex-col"
           style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 16px 40px rgba(0,0,0,0.6)', maxHeight: 260 }}>
           <p className="px-3 pt-2 pb-1 text-[9px] uppercase tracking-widest font-bold text-text-3 flex-shrink-0">{label}</p>
-          {onSelectAll && (
-            <button onClick={onSelectAll}
-              className="w-full text-left px-3 py-1.5 text-[11px] text-accent hover:bg-white/5 transition flex-shrink-0">
-              {selectAllLabel || 'Selecionar todos'}
-            </button>
-          )}
           {selected.length > 0 && (
             <button onClick={() => onToggle(null)}
               className="w-full text-left px-3 py-1.5 text-[11px] text-expense hover:bg-white/5 transition flex-shrink-0">
@@ -289,6 +283,23 @@ function DropdownSelect({ id, label, options, selected, onToggle, openDropdown, 
             </button>
           )}
           <div className="overflow-y-auto">
+          {onSelectAll && (
+            <label onMouseDown={e => { e.preventDefault(); onSelectAll(); }}
+              className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-white/5 transition"
+              style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0"
+                style={selected.length === 0
+                  ? { background: '#22c55e', border: '1px solid #22c55e' }
+                  : { background: 'transparent', border: '1px solid rgba(255,255,255,0.2)' }}>
+                {selected.length === 0 && (
+                  <svg viewBox="0 0 12 12" fill="none" className="w-3 h-3">
+                    <path d="M2 6l3 3 5-5" stroke="#0f172a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                )}
+              </div>
+              <span className={`text-[12px] ${selected.length === 0 ? 'text-text-1 font-medium' : 'text-text-2'}`}>{selectAllLabel || 'Todos'}</span>
+            </label>
+          )}
           {options.map(opt => (
             <label key={opt.val} onMouseDown={e => { e.preventDefault(); onToggle(opt.val); }}
               className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-white/5 transition">
@@ -844,7 +855,7 @@ export default function Dividas({ month, year }) {
                 selected={selectedMonths}
                 onToggle={(val) => val === null ? setSelectedMonths([String(month || now.getMonth() + 1)]) : toggleFilter(selectedMonths, setSelectedMonths, val)}
                 onSelectAll={() => setSelectedMonths([])}
-                selectAllLabel="Todos os meses"
+                selectAllLabel="Todos"
                 openDropdown={openDropdown} setOpenDropdown={setOpenDropdown}
               />
               <DropdownSelect
