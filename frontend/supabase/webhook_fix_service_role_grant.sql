@@ -1,0 +1,45 @@
+-- =============================================================================
+-- Planeje — Correção: service_role sem permissão em stripe_processed_events
+-- =============================================================================
+-- JÁ APLICADO E VALIDADO EM PRODUÇÃO EM 07/10/2026. Não execute de novo —
+-- este arquivo existe só para registro histórico.
+--
+-- Incidente: a Stripe reportou por e-mail (03/10/2026) que o webhook
+-- https://www.planejeapp.com.br/api/stripe-webhook estava recebendo 503 em
+-- 10/10 tentativas de entrega, todas do mesmo evento (evt_1ULLyrHQNHPVuwPLJgvwkXwi,
+-- customer.subscription.updated, originado 30/09/2026 08:47 -03), reenviado
+-- repetidamente pela Stripe por ~7 dias sem sucesso.
+--
+-- Causa raiz: a tabela public.stripe_processed_events (criada em
+-- webhook_idempotency_events.sql, 22/09/2026) nunca recebeu GRANT explícito
+-- pro role service_role. Diferente das tabelas mais antigas (perfis,
+-- user_data), que já tinham privilégio padrão de service_role desde a
+-- criação original do projeto, esta tabela nova — criada via SQL direto no
+-- SQL Editor — ficou só com REFERENCES/TRIGGER/TRUNCATE pro service_role,
+-- sem SELECT/INSERT/UPDATE/DELETE. api/stripe-webhook.js usa o cliente
+-- service_role pra acessar essa tabela DIRETO (não via função SECURITY
+-- DEFINER, que teria rodado como o dono da função e não precisaria desse
+-- grant) — então claimEvent() falhava no INSERT inicial, sempre com
+-- reason:'infra', e o handler respondia 503 { error: "try_again_later" }
+-- pra TODO evento de assinatura, de forma 100% reprodutível.
+--
+-- Confirmado via (só leitura):
+--   select grantee, privilege_type from information_schema.table_privileges
+--   where table_schema='public' and table_name='stripe_processed_events'
+--   order by grantee, privilege_type;
+-- Antes da correção: service_role só tinha REFERENCES/TRIGGER/TRUNCATE.
+-- Depois: SELECT/INSERT/UPDATE/DELETE/REFERENCES/TRIGGER/TRUNCATE.
+--
+-- Lição pra próximas tabelas backend-only criadas via SQL Editor: sempre
+-- conferir/conceder GRANT explícito pro service_role quando a tabela for
+-- acessada direto pelo client (sem passar por função SECURITY DEFINER).
+-- =============================================================================
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.stripe_processed_events TO service_role;
+
+-- Verificação (já confirmada em produção, repetir se quiser reconferir):
+--   select grantee, privilege_type from information_schema.table_privileges
+--   where table_schema='public' and table_name='stripe_processed_events'
+--     and grantee = 'service_role'
+--   order by privilege_type;
+--   -- esperado: DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE
