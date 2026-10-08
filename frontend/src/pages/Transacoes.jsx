@@ -388,7 +388,7 @@ export default function Transacoes({ transactions, onDelete, loading, onAdd }) {
       {efetivandoId && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/70" style={{ backdropFilter: 'blur(8px)' }} />
-          <div className="relative card-premium p-6 w-full max-w-xs animate-scale-in" onClick={e => e.stopPropagation()}>
+          <div className="relative card-premium p-6 w-full max-w-xs animate-scale-in" style={{ maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-xl flex items-center justify-center"
                 style={{ background: efetivIsDivida ? 'rgba(34,197,94,0.1)' : 'rgba(201,168,76,0.1)' }}>

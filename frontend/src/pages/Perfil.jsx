@@ -269,7 +269,7 @@ function DadosTab() {
       {showExcluirModal && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/75" style={{ backdropFilter: 'blur(8px)' }} />
-          <div className="relative card-premium p-6 w-full max-w-sm animate-scale-in" onClick={e => e.stopPropagation()}>
+          <div className="relative card-premium p-6 w-full max-w-sm animate-scale-in" style={{ maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-text-1 font-bold text-base">Excluir conta</h3>
               <button onClick={() => setShowExcluirModal(false)}

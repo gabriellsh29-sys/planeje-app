@@ -76,8 +76,8 @@ export default function AvatarCropModal({ src, onCancel, onConfirm }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.8)' }}>
-      <div className="rounded-2xl p-5 w-[340px] flex flex-col items-center gap-4"
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ background: 'rgba(0,0,0,0.8)' }}>
+      <div className="rounded-2xl p-5 w-full max-w-[340px] flex flex-col items-center gap-4"
         style={{ background: '#0f172a', border: '1px solid rgba(34,197,94,0.25)', boxShadow: '0 32px 80px rgba(0,0,0,0.7)' }}>
         <h3 className="text-text-1 font-bold text-base self-start">Ajustar foto</h3>
 

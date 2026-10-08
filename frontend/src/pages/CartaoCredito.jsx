@@ -391,10 +391,10 @@ export default function CartaoCredito({ month, year }) {
 
       {/* ── Modal: Novo Lançamento ── */}
       {showFormLanc && createPortal(
-        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 16px' }}>
           <div className="absolute inset-0 bg-black/75" style={{ backdropFilter: 'blur(8px)' }} />
           <div className="relative w-full max-w-sm rounded-[1.5rem] overflow-hidden"
-            style={{ background: '#0d1117', border: '1px solid rgba(255,255,255,0.08)' }}
+            style={{ background: '#0d1117', border: '1px solid rgba(255,255,255,0.08)', maxHeight: '90vh', overflowY: 'auto' }}
             onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
               <button onClick={() => setShowFormLanc(false)} className="w-11 h-11 flex items-center justify-center rounded-lg text-white/40 hover:text-white text-xl">×</button>
@@ -445,7 +445,7 @@ export default function CartaoCredito({ month, year }) {
       {showPagar && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/75" style={{ backdropFilter: 'blur(10px)' }} />
-          <div className="relative card-premium p-6 w-full max-w-xs animate-scale-in" onClick={e => e.stopPropagation()}>
+          <div className="relative card-premium p-6 w-full max-w-xs animate-scale-in" style={{ maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
             <p className="text-white font-semibold text-center mb-1">
               {faturaPaga ? 'Desmarcar pagamento?' : 'Confirmar pagamento?'}
             </p>
@@ -468,7 +468,7 @@ export default function CartaoCredito({ month, year }) {
       {confirmRemoverCartao && cartaoSelecionado && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/75" style={{ backdropFilter: 'blur(10px)' }} />
-          <div className="relative card-premium p-6 w-full max-w-xs animate-scale-in" onClick={e => e.stopPropagation()}>
+          <div className="relative card-premium p-6 w-full max-w-xs animate-scale-in" style={{ maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
             <p className="text-white font-semibold text-center mb-1">Remover cartão?</p>
             <p className="text-white/50 text-xs text-center mb-5">
               "{cartaoSelecionado.nome}" e todos os lançamentos associados a ele serão excluídos permanentemente. Essa ação não pode ser desfeita.

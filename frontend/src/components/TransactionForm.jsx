@@ -103,11 +103,11 @@ export default function TransactionForm({ onSave, onClose, defaultType }) {
   const isExpense = type === 'expense';
 
   return createPortal(
-    <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 16px' }}>
       <div className="absolute inset-0 bg-black/75" style={{ backdropFilter: 'blur(8px)' }} />
       <div
         className="relative w-full max-w-md rounded-[1.5rem] shadow-2xl animate-scale-in overflow-hidden"
-        style={{ background: '#0d1117', border: '1px solid rgba(255,255,255,0.08)' }}
+        style={{ background: '#0d1117', border: '1px solid rgba(255,255,255,0.08)', maxHeight: '90vh', overflowY: 'auto' }}
         onClick={e => e.stopPropagation()}
       >
 

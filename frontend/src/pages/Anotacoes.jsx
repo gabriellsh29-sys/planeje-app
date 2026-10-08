@@ -1113,8 +1113,8 @@ function ListModal({ modo, grupoInicial, onSave, onClose }) {
   const submit = () => { if (!nome.trim()) return; onSave({ nome: nome.trim(), emoji, cor }, modo === 'edit' ? grupoInicial.id : null); };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.75)' }} onClick={onClose}>
-      <div className="rounded-2xl w-[360px] flex flex-col overflow-hidden"
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ background: 'rgba(0,0,0,0.75)' }} onClick={onClose}>
+      <div className="rounded-2xl w-full max-w-[360px] flex flex-col overflow-hidden"
         style={{ background: '#0f172a', border: '1px solid rgba(34,197,94,0.25)', boxShadow: '0 32px 80px rgba(0,0,0,0.7)' }}
         onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'rgba(34,197,94,0.12)' }}>
