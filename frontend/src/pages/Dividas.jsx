@@ -249,14 +249,29 @@ function ConfigurarParcelas({ parcelaInicial, totalParcelas, periodicidade, onCh
 
 const MONTHS_LABEL = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
-function DropdownSelect({ id, label, options, selected, onToggle, openDropdown, setOpenDropdown, onSelectAll, selectAllLabel }) {
+// Seleção múltipla com confirmação explícita: marcar itens só atualiza um
+// rascunho local (draft); o filtro de verdade (selected, do componente pai)
+// só muda quando o usuário aperta "OK". Clicar fora ou reabrir sem confirmar
+// descarta o rascunho — evita que cada clique individual já feche/aplique o
+// dropdown, que é o que impedia escolher vários meses de uma vez.
+function DropdownSelect({ id, label, options, selected, onApply, openDropdown, setOpenDropdown, selectAllLabel }) {
   const ref = useRef(null);
   const isOpen = openDropdown === id;
+  const [draft, setDraft] = useState(selected);
+
+  // Ao abrir, começa do que já está aplicado (não do que sobrou de uma
+  // tentativa anterior cancelada).
+  useEffect(() => { if (isOpen) setDraft(selected); }, [isOpen]);
+
   useEffect(() => {
     const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpenDropdown(null); };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [setOpenDropdown]);
+
+  const toggleDraft = (val) => setDraft(prev => prev.includes(val) ? prev.filter(x => x !== val) : [...prev, val]);
+  const confirmar = () => { onApply(draft); setOpenDropdown(null); };
+
   const labelOf = (val) => options.find(o => o.val === val)?.label ?? val;
   const displayLabel = selected.length === 0 ? label
     : selected.length === 1 ? labelOf(selected[0])
@@ -274,46 +289,53 @@ function DropdownSelect({ id, label, options, selected, onToggle, openDropdown, 
       </button>
       {isOpen && (
         <div className="absolute top-full left-0 mt-1 z-50 rounded-xl py-1 min-w-[200px] flex flex-col"
-          style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 16px 40px rgba(0,0,0,0.6)', maxHeight: 260 }}>
-          <p className="px-3 pt-2 pb-1 text-[9px] uppercase tracking-widest font-bold text-text-3 flex-shrink-0">{label}</p>
-          {selected.length > 0 && (
-            <button onClick={() => onToggle(null)}
+          style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 16px 40px rgba(0,0,0,0.6)', maxHeight: 300 }}>
+          <div className="flex items-center justify-between gap-2 px-3 pt-2 pb-1 flex-shrink-0">
+            <p className="text-[9px] uppercase tracking-widest font-bold text-text-3">{label}</p>
+            <button onClick={confirmar}
+              className="text-[11px] font-bold px-2.5 py-1 rounded-lg transition-all flex-shrink-0"
+              style={{ background: 'rgba(34,197,94,0.15)', color: '#22c55e' }}>
+              OK
+            </button>
+          </div>
+          {draft.length > 0 && (
+            <button onClick={() => setDraft([])}
               className="w-full text-left px-3 py-1.5 text-[11px] text-expense hover:bg-white/5 transition flex-shrink-0">
               Limpar seleção
             </button>
           )}
           <div className="overflow-y-auto">
-          {onSelectAll && (
-            <label onMouseDown={e => { e.preventDefault(); onSelectAll(); }}
+          {selectAllLabel && (
+            <label onMouseDown={e => { e.preventDefault(); setDraft([]); }}
               className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-white/5 transition"
               style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
               <div className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0"
-                style={selected.length === 0
+                style={draft.length === 0
                   ? { background: '#22c55e', border: '1px solid #22c55e' }
                   : { background: 'transparent', border: '1px solid rgba(255,255,255,0.2)' }}>
-                {selected.length === 0 && (
+                {draft.length === 0 && (
                   <svg viewBox="0 0 12 12" fill="none" className="w-3 h-3">
                     <path d="M2 6l3 3 5-5" stroke="#0f172a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 )}
               </div>
-              <span className={`text-[12px] ${selected.length === 0 ? 'text-text-1 font-medium' : 'text-text-2'}`}>{selectAllLabel || 'Todos'}</span>
+              <span className={`text-[12px] ${draft.length === 0 ? 'text-text-1 font-medium' : 'text-text-2'}`}>{selectAllLabel}</span>
             </label>
           )}
           {options.map(opt => (
-            <label key={opt.val} onMouseDown={e => { e.preventDefault(); onToggle(opt.val); }}
+            <label key={opt.val} onMouseDown={e => { e.preventDefault(); toggleDraft(opt.val); }}
               className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-white/5 transition">
               <div className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0"
-                style={selected.includes(opt.val)
+                style={draft.includes(opt.val)
                   ? { background: '#22c55e', border: '1px solid #22c55e' }
                   : { background: 'transparent', border: '1px solid rgba(255,255,255,0.2)' }}>
-                {selected.includes(opt.val) && (
+                {draft.includes(opt.val) && (
                   <svg viewBox="0 0 12 12" fill="none" className="w-3 h-3">
                     <path d="M2 6l3 3 5-5" stroke="#0f172a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 )}
               </div>
-              <span className={`text-[12px] ${selected.includes(opt.val) ? 'text-text-1 font-medium' : 'text-text-2'}`}>{opt.label}</span>
+              <span className={`text-[12px] ${draft.includes(opt.val) ? 'text-text-1 font-medium' : 'text-text-2'}`}>{opt.label}</span>
             </label>
           ))}
           </div>
@@ -716,10 +738,6 @@ export default function Dividas({ month, year }) {
     return `${d.parcelaInicial}/${d.totalParcelas}x ${d.periodicidade || 'Mensal'}`;
   };
 
-  const toggleFilter = (arr, setArr, val) => {
-    setArr(prev => prev.includes(val) ? prev.filter(x => x !== val) : [...prev, val]);
-  };
-
   // "Pagas" usa a lista por fluxo de caixa (dividasPagasNoMes); "Todas"/"Pendentes"
   // continuam por vencimento/accrual (dividasPeriodo) — ver decisão no loadPagasNoMes.
   const baseFiltro = filter === 'pagas' ? dividasPagasNoMes : dividasPeriodo;
@@ -853,8 +871,7 @@ export default function Dividas({ month, year }) {
                 id="mes" label="Todos os meses"
                 options={MONTHS_LABEL.map((lbl, i) => ({ val: String(i + 1), label: lbl }))}
                 selected={selectedMonths}
-                onToggle={(val) => val === null ? setSelectedMonths([String(month || now.getMonth() + 1)]) : toggleFilter(selectedMonths, setSelectedMonths, val)}
-                onSelectAll={() => setSelectedMonths([])}
+                onApply={setSelectedMonths}
                 selectAllLabel="Todos"
                 openDropdown={openDropdown} setOpenDropdown={setOpenDropdown}
               />
@@ -862,7 +879,8 @@ export default function Dividas({ month, year }) {
                 id="ano" label="Todos os anos"
                 options={anosDisponiveis.map(yr => ({ val: String(yr), label: String(yr) }))}
                 selected={selectedYears}
-                onToggle={(val) => val === null ? setSelectedYears([String(year || now.getFullYear())]) : toggleFilter(selectedYears, setSelectedYears, val)}
+                onApply={setSelectedYears}
+                selectAllLabel="Todos"
                 openDropdown={openDropdown} setOpenDropdown={setOpenDropdown}
               />
 
@@ -875,7 +893,7 @@ export default function Dividas({ month, year }) {
                   { val: 'proximos7', label: 'Próximos 7 dias' },
                 ]}
                 selected={filterVencs}
-                onToggle={(val) => val === null ? setFilterVencs([]) : toggleFilter(filterVencs, setFilterVencs, val)}
+                onApply={setFilterVencs}
                 openDropdown={openDropdown} setOpenDropdown={setOpenDropdown}
               />
 
@@ -884,7 +902,7 @@ export default function Dividas({ month, year }) {
                 id="cat" label="Categoria"
                 options={[...new Set([...categorias, ...dividas.map(d => d.categoria).filter(Boolean)])].sort((a, b) => a.localeCompare(b, 'pt-BR')).map(c => ({ val: c, label: c }))}
                 selected={filterCategorias}
-                onToggle={(val) => val === null ? setFilterCategorias([]) : toggleFilter(filterCategorias, setFilterCategorias, val)}
+                onApply={setFilterCategorias}
                 openDropdown={openDropdown} setOpenDropdown={setOpenDropdown}
               />
 
@@ -893,7 +911,7 @@ export default function Dividas({ month, year }) {
                 id="dia" label="Dia"
                 options={Array.from({ length: 31 }, (_, i) => { const n = String(i + 1); return { val: n, label: `Dia ${n}` }; })}
                 selected={filterDias}
-                onToggle={(val) => val === null ? setFilterDias([]) : toggleFilter(filterDias, setFilterDias, val)}
+                onApply={setFilterDias}
                 openDropdown={openDropdown} setOpenDropdown={setOpenDropdown}
               />
 
