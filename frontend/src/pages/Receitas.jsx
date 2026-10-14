@@ -970,7 +970,19 @@ export default function Receitas({ month, year }) {
                           style={{ background: 'rgba(34,197,94,0.04)', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
                           <div className="flex items-center gap-2">
                             <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-income"><path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd"/></svg>
-                            <span className="text-white text-sm">Parcela {form.parcelaInicial}/{form.totalParcelas} · {form.periodicidade}</span>
+                            <span className="text-white text-sm">
+                              Parcela {(() => {
+                                // Mostra a parcela DESTE mês sendo editado, não o número-base
+                                // da receita (sempre o da 1ª parcela) — senão parece que está
+                                // editando o lançamento inteiro desde o início, mesmo ao abrir
+                                // a edição a partir de uma parcela já recebida no meio/fim da série.
+                                if (!editId) return form.parcelaInicial;
+                                const original = receitas.find(x => x.id === editId);
+                                if (!original) return form.parcelaInicial;
+                                const info = parcelaInfo(original, editMes ?? lm, editAno ?? ly);
+                                return info ? info.parcelaAtual : form.parcelaInicial;
+                              })()}/{form.totalParcelas} · {form.periodicidade}
+                            </span>
                           </div>
                           <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-white/40"><path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd"/></svg>
                         </button>

@@ -38,6 +38,17 @@ function parcelaAbrangeMs(d, month, year) {
   return atual >= inicio && atual <= fim;
 }
 
+// Número da parcela NAQUELE mês específico — d.parcelaInicial é só a âncora base
+// (sempre o número da 1ª parcela cadastrada); cada mês seguinte soma 1 a partir
+// dela. Usar d.parcelaInicial direto (sem esse deslocamento) faz qualquer tela
+// mostrar sempre a mesma parcela (normalmente "1"), não importa o mês visto.
+function parcelaAtualMes(d, month, year) {
+  if (!d.vencimento) return d.parcelaInicial || 1;
+  const [vy, vm] = d.vencimento.split('-').map(Number);
+  const offset = (year * 12 + (month - 1)) - (vy * 12 + (vm - 1));
+  return (d.parcelaInicial || 1) + offset;
+}
+
 function filtrarPeriodo(dividas, month, year) {
   return dividas.filter(d => {
     if (d.recorrencia === 'fixa') {
@@ -952,12 +963,7 @@ export default function Dividas({ month, year }) {
             // por atraso), mostra o que REALMENTE saiu da conta, não o previsto.
             const valorPrevisto = parcelaValorMes(d, d._m, d._y);
             const valorExibido = st.pago && st.valorPago != null ? st.valorPago : valorPrevisto;
-            const parcelaAtual = (() => {
-              if (!isParcelada || !d.vencimento) return d.parcelaInicial || 1;
-              const [vy, vm] = d.vencimento.split('-').map(Number);
-              const offset = (d._y * 12 + (d._m - 1)) - (vy * 12 + (vm - 1));
-              return (d.parcelaInicial || 1) + offset;
-            })();
+            const parcelaAtual = isParcelada ? parcelaAtualMes(d, d._m, d._y) : (d.parcelaInicial || 1);
             const pct = isParcelada && d.totalParcelas > 0
               ? Math.round((parcelaAtual - 1 + (st.pago ? 1 : 0)) / d.totalParcelas * 100)
               : 0;
@@ -1150,8 +1156,10 @@ export default function Dividas({ month, year }) {
         // (ex: juros por atraso), mostra o que REALMENTE saiu da conta, não o previsto.
         const pvExibido = st.pago && st.valorPago != null ? st.valorPago : pv;
 
-        // Progresso parcelamento
-        const parcelasPagas = isParcelada ? (d.parcelaInicial - 1 + (st.pago ? 1 : 0)) : 0;
+        // Progresso parcelamento — usa a parcela DESTE mês (dm/dy), não o número-base
+        // da dívida (que é sempre o da 1ª parcela cadastrada, ex: "1").
+        const parcelaAtualDetalhe = isParcelada ? parcelaAtualMes(d, dm, dy) : (d.parcelaInicial || 1);
+        const parcelasPagas = isParcelada ? (parcelaAtualDetalhe - 1 + (st.pago ? 1 : 0)) : 0;
         const parcelasPendentes = isParcelada ? (d.totalParcelas - parcelasPagas) : 0;
         const valorEfetivado = isParcelada ? parcelasPagas * pv : (st.pago ? pv : 0);
         const valorPendente = isParcelada ? parcelasPendentes * pv : (st.pago ? 0 : pv);
@@ -1231,7 +1239,7 @@ export default function Dividas({ month, year }) {
                 {isParcelada && (
                   <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
                     <p className="text-text-3 text-[10px] font-semibold uppercase tracking-widest px-4 py-2.5" style={{ background: 'rgba(255,255,255,0.03)' }}>Parcelamento</p>
-                    <DetailRow label="Parcelas" value={<span className="font-semibold text-text-1">{d.parcelaInicial}/{d.totalParcelas}</span>} />
+                    <DetailRow label="Parcelas" value={<span className="font-semibold text-text-1">{parcelaAtualDetalhe}/{d.totalParcelas}</span>} />
                     <DetailRow label="Periodicidade" value={d.periodicidade || 'Mensal'} />
                     <DetailRow label="Valor total" value={<span className="font-semibold">{fmt(d.valor)}</span>} />
                     <div className="px-4 py-3" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
@@ -1400,7 +1408,18 @@ export default function Dividas({ month, year }) {
                           style={{ background: 'rgba(34,197,94,0.04)', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
                           <div className="flex items-center gap-2">
                             <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-accent"><path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd"/></svg>
-                            <span className="text-text-1 text-sm">Parcela {form.parcelaInicial}/{form.totalParcelas} · {form.periodicidade}</span>
+                            <span className="text-text-1 text-sm">
+                              Parcela {(() => {
+                                // Mostra a parcela DESTE mês sendo editado, não o número-base da
+                                // dívida (que é sempre o da 1ª parcela) — senão parece que está
+                                // editando o lançamento inteiro desde o início, mesmo ao abrir
+                                // a edição a partir de uma parcela já paga no meio/fim da série.
+                                if (!editId) return form.parcelaInicial;
+                                const original = dividas.find(x => x.id === editId);
+                                if (!original) return form.parcelaInicial;
+                                return parcelaAtualMes(original, editMes ?? m, editAno ?? y);
+                              })()}/{form.totalParcelas} · {form.periodicidade}
+                            </span>
                           </div>
                           <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-text-3"><path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd"/></svg>
                         </button>
