@@ -18,6 +18,8 @@ try {
 // Tombstones: registram IDs de itens deletados para propagar deleções entre dispositivos
 const TOMB = '__tomb';
 
+export const POLL_INTERVAL_MS = 60_000;
+
 let pushTimer         = null;
 let currentUserId     = null;
 let unpatch           = null;
@@ -460,15 +462,24 @@ export function applyCloudData(data) {
   }
 }
 
+// Primeiro pergunta só o carimbo (updated_at, poucos bytes) e só baixa o JSON inteiro
+// (`data`) quando há dado mais novo. Antes, TODO ciclo baixava o JSON completo e só
+// depois comparava o carimbo — a cada 5 s por aba aberta, o que estourou a cota de
+// egress do Supabase (7,9 GB de 5 GB em 10/2026 com 1 usuário ativo).
 async function autoSyncCycle(userId) {
   try {
-    const res = await runResilient(() => supabase.from('user_data')
-      .select('data, updated_at').eq('user_id', userId).maybeSingle());
-    const row = res?.data;
-    if (row?.data && Object.keys(row.data).length > 0 && isNewerCloud(lastAppliedCloudTs, row.updated_at)) {
-      lastAppliedCloudTs = row.updated_at || lastAppliedCloudTs;
-      applyCloudData(row.data);
-      console.log('[cloudSync] pull concluído');
+    const probe = await runResilient(() => supabase.from('user_data')
+      .select('updated_at').eq('user_id', userId).maybeSingle());
+    const probeRow = probe?.data;
+    if (probeRow && isNewerCloud(lastAppliedCloudTs, probeRow.updated_at)) {
+      const res = await runResilient(() => supabase.from('user_data')
+        .select('data, updated_at').eq('user_id', userId).maybeSingle());
+      const row = res?.data;
+      if (row?.data && Object.keys(row.data).length > 0 && isNewerCloud(lastAppliedCloudTs, row.updated_at)) {
+        lastAppliedCloudTs = row.updated_at || lastAppliedCloudTs;
+        applyCloudData(row.data);
+        console.log('[cloudSync] pull concluído');
+      }
     }
   } catch (err) {
     if (handleSyncError(err) === 'stop') { haltSyncCycle(); return; }
@@ -614,13 +625,16 @@ export function startCloudSync(userId) {
     }, 30 * 60 * 1000);
   }
 
+  // Rede de segurança caso o Realtime caia. Intervalo de 60 s e só com a aba visível
+  // (regra de consumo de GUARDRAILS-CONSUMO: mínimo 60 s e pausar com a aba oculta).
+  // Ao voltar a ficar visível, onVisibility acima já dispara um ciclo imediato.
   if (!pollInterval) {
     pollInterval = setInterval(() => {
-      if (currentUserId) {
-        console.debug('[cloudSync] polling tick');
-        autoSyncCycle(currentUserId);
-      }
-    }, 5000);
+      if (!currentUserId) return;
+      if (document.visibilityState === 'hidden') return;
+      console.debug('[cloudSync] polling tick');
+      autoSyncCycle(currentUserId);
+    }, POLL_INTERVAL_MS);
   }
 }
 
