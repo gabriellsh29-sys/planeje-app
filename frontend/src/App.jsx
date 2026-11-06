@@ -5,6 +5,8 @@ import { useLockBodyScroll } from './lib/useLockBodyScroll';
 import LoginPage from './components/LoginPage';
 import ResetPasswordPage from './components/ResetPasswordPage';
 import PaywallPage from './components/PaywallPage';
+import ServicoIndisponivel from './components/ServicoIndisponivel';
+import { useStatusDoServico } from './lib/servicoIndisponivel';
 import Sidebar from './components/Sidebar';
 import TransactionForm from './components/TransactionForm';
 import TrialBanner from './components/TrialBanner';
@@ -308,6 +310,23 @@ function AppContent() {
 }
 
 export default function App() {
+  // O AuthProvider (login, sync, limpeza de dados locais) só monta depois de saber que
+  // o Supabase não está restrito (402). Restrito: mostra o aviso e NÃO toca em nada.
+  const { status, verificar } = useStatusDoServico();
+
+  if (status === 'verificando') {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#0f172a' }}>
+        <div className="flex flex-col items-center gap-4">
+          <img src="/img/logo/logo-app-icon.png" alt="Planeje" className="w-32 h-32 object-contain rounded-3xl" />
+          <div className="w-6 h-6 border-2 rounded-full animate-spin"
+            style={{ borderColor: 'rgba(34,197,94,0.2)', borderTopColor: '#22c55e' }} />
+        </div>
+      </div>
+    );
+  }
+  if (status === 'restrito') return <ServicoIndisponivel onRetry={verificar} />;
+
   return (
     <AuthProvider>
       <AppContent />
