@@ -460,10 +460,16 @@ export function applyCloudData(data) {
   }
 }
 
+// Economia de cota (nov/2026): o ciclo pergunta primeiro só a DATA da versão na
+// nuvem ("mudou algo?") e só baixa o documento inteiro quando mudou. Antes, cada
+// sessão aberta baixava o documento inteiro a cada 5 s.
 async function autoSyncCycle(userId) {
   try {
-    const res = await runResilient(() => supabase.from('user_data')
-      .select('data, updated_at').eq('user_id', userId).maybeSingle());
+    const meta = await runResilient(() => supabase.from('user_data')
+      .select('updated_at').eq('user_id', userId).maybeSingle());
+    const mudou = meta?.data?.updated_at && isNewerCloud(lastAppliedCloudTs, meta.data.updated_at);
+    const res = mudou ? await runResilient(() => supabase.from('user_data')
+      .select('data, updated_at').eq('user_id', userId).maybeSingle()) : null;
     const row = res?.data;
     if (row?.data && Object.keys(row.data).length > 0 && isNewerCloud(lastAppliedCloudTs, row.updated_at)) {
       lastAppliedCloudTs = row.updated_at || lastAppliedCloudTs;
@@ -473,7 +479,9 @@ async function autoSyncCycle(userId) {
   } catch (err) {
     if (handleSyncError(err) === 'stop') { haltSyncCycle(); return; }
   }
-  await lightPushToCloud(userId);
+  // Só empurra se há alteração local pendente (cada edição já é enviada na hora
+  // por schedulePush; aqui é a nova tentativa de um envio que falhou).
+  if (dirtyKeys.size > 0) await lightPushToCloud(userId);
 }
 
 export async function pullFromCloud(userId) {
@@ -615,12 +623,14 @@ export function startCloudSync(userId) {
   }
 
   if (!pollInterval) {
+    // 60 s e só com a aba visível: o Realtime já entrega as mudanças na hora e,
+    // ao voltar para a aba, o onVisibility sincroniza imediatamente.
     pollInterval = setInterval(() => {
-      if (currentUserId) {
+      if (currentUserId && document.visibilityState === 'visible') {
         console.debug('[cloudSync] polling tick');
         autoSyncCycle(currentUserId);
       }
-    }, 5000);
+    }, 60000);
   }
 }
 
