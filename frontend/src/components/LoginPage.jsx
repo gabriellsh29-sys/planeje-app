@@ -7,7 +7,10 @@ const webauthnSuportado = typeof window !== 'undefined' && !!window.PublicKeyCre
 
 export default function LoginPage() {
   const { signInWithGoogle, signInWithPassword, signUp, resendConfirmation, resetPassword, loginWithToken } = useAuth();
-  const [mode, setMode] = useState('login'); // 'login' | 'cadastro' | 'recuperar'
+  // A landing page (/lp) manda quem quer testar para /?cadastro=1: abre direto em "Criar conta".
+  const [mode, setMode] = useState(() =>
+    typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('cadastro') === '1' ? 'cadastro' : 'login'
+  ); // 'login' | 'cadastro' | 'recuperar'
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
