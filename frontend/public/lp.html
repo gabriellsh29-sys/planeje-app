@@ -3,989 +3,669 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Planeje — Sua vida financeira, finalmente organizada</title>
-<meta name="description" content="Organize receitas, despesas, cartões e metas em um único lugar. Saiba exatamente para onde vai seu dinheiro. 7 dias grátis, sem cartão.">
+<title>Planeje | Organize contas, cartões e metas num só lugar</title>
+<meta name="description" content="Lance receitas, contas e cartões e veja o que já saiu, o que ainda vai sair e quanto sobra no mês. 7 dias grátis, sem cartão.">
 <link rel="canonical" href="https://www.planejeapp.com.br/lp">
 <link rel="icon" type="image/png" href="/img/logo/favicon-32x32.png">
+<meta name="theme-color" content="#0f172a">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://www.planejeapp.com.br/lp">
-<meta property="og:title" content="Planeje — Sua vida financeira, finalmente organizada">
-<meta property="og:description" content="Organize receitas, despesas, cartões e metas em um único lugar. 7 dias grátis, sem cartão.">
+<meta property="og:title" content="Planeje | Organize contas, cartões e metas num só lugar">
+<meta property="og:description" content="Veja o que já saiu, o que ainda vai sair e quanto sobra no mês. 7 dias grátis, sem cartão.">
 <meta property="og:image" content="https://www.planejeapp.com.br/img/logo/og-image.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:locale" content="pt_BR">
 <meta property="og:site_name" content="Planeje">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Planeje — Sua vida financeira, finalmente organizada">
-<meta name="twitter:description" content="Organize receitas, despesas, cartões e metas em um único lugar. 7 dias grátis, sem cartão.">
+<meta name="twitter:title" content="Planeje | Organize contas, cartões e metas num só lugar">
+<meta name="twitter:description" content="Veja o que já saiu, o que ainda vai sair e quanto sobra no mês. 7 dias grátis, sem cartão.">
 <meta name="twitter:image" content="https://www.planejeapp.com.br/img/logo/og-image.png">
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Planeje","description":"Organize sua vida financeira com receitas, despesas, cartões e metas em um único aplicativo.","applicationCategory":"FinanceApplication","operatingSystem":"Web","offers":{"@type":"Offer","price":"9.90","priceCurrency":"BRL"},"aggregateRating":{"@type":"AggregateRating","ratingValue":"4.9","ratingCount":"312"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Planeje","description":"Aplicativo web para organizar receitas, despesas, cartões, orçamentos e metas.","applicationCategory":"FinanceApplication","operatingSystem":"Web","offers":[{"@type":"Offer","name":"Mensal","price":"9.90","priceCurrency":"BRL"},{"@type":"Offer","name":"Anual","price":"89.90","priceCurrency":"BRL"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
+{"@type":"Question","name":"Preciso informar cartão para testar?","acceptedAnswer":{"@type":"Answer","text":"Não. Os 7 dias de teste não pedem nenhum dado de pagamento. Depois deles, você escolhe um plano para continuar."}},
+{"@type":"Question","name":"Preciso conectar minha conta do banco?","acceptedAnswer":{"@type":"Answer","text":"Não. Você lança receitas e despesas manualmente, então o Planeje não tem acesso ao seu banco nem pede senha bancária."}},
+{"@type":"Question","name":"Funciona no celular?","acceptedAnswer":{"@type":"Answer","text":"Funciona no navegador do celular e do computador, sem instalar nada, e os dados ficam sincronizados entre os aparelhos."}},
+{"@type":"Question","name":"Posso cancelar quando quiser?","acceptedAnswer":{"@type":"Answer","text":"Sim. Você gerencia ou cancela a assinatura dentro do app, em Perfil."}},
+{"@type":"Question","name":"Dá para usar junto com outra pessoa?","acceptedAnswer":{"@type":"Answer","text":"Hoje cada conta é individual e não há convite para outra pessoa."}},
+{"@type":"Question","name":"Meus dados ficam salvos?","acceptedAnswer":{"@type":"Answer","text":"Ficam salvos na nuvem, ligados à sua conta, e aparecem em qualquer aparelho em que você entrar. Você pode excluir a conta e os dados pelo próprio app."}}
+]}</script>
+<script>document.documentElement.classList.add('js')</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="/vendor/lucide-1.47.0.min.js" defer></script>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-/* ─── TOKENS ──────────────────────────────────────────── */
-:root {
-  --c-bg:      #0F172A;
-  --c-surface: rgba(16,26,48,.88);
-  --c-green:   #22C55E;
-  --c-green2:  #16A34A;
-  --grad:      linear-gradient(135deg,#22C55E 0%,#16A34A 100%);
-  --tl:        rgba(34,197,94,.14);
-  --tl2:       rgba(34,197,94,.28);
-  --tf:        rgba(34,197,94,.05);
-  --tf2:       rgba(34,197,94,.11);
-  --w80: rgba(255,255,255,.80);
-  --w60: rgba(255,255,255,.60);
-  --w40: rgba(255,255,255,.40);
-  --w12: rgba(255,255,255,.12);
-  --w06: rgba(255,255,255,.06);
-  --w03: rgba(255,255,255,.03);
-  --pos: #22C55E;
-  --neg: #EF4444;
-  --indigo: #6366F1;
-  --purple:  #A855F7;
-  --amber:   #F59E0B;
-  --red:     #EF4444;
-  --cyan:    #06B6D4;
-  --fd: 'Sora',system-ui,sans-serif;
-  --fs: 'Plus Jakarta Sans',system-ui,sans-serif;
-  --sh: 0 24px 64px rgba(0,0,0,.55),0 8px 24px rgba(0,0,0,.30);
-  --shg: 0 8px 32px rgba(34,197,94,.32);
-  --shg2: 0 16px 56px rgba(34,197,94,.46);
-  --rc: 22px;
-  --rs: 14px;
-  --rx: 10px;
+:root{
+  --navy:#0f172a; --navy-2:#162036; --navy-3:#1e293b; --navy-4:#243044;
+  --verde:#22c55e; --verde-2:#16a34a; --verde-3:#15803d; --verde-claro:#4ade80;
+  --rosa:#f43f5e; --azul:#3b82f6; --ouro:#c9a84c;
+  --papel:#f5f5f7; --tinta:#0f172a; --tinta-2:#3f4b5f;
+  --b100:#fff; --b72:rgba(255,255,255,.74); --b55:rgba(255,255,255,.58); --b10:rgba(255,255,255,.10); --b06:rgba(255,255,255,.06);
+  --ease:cubic-bezier(.23,1,.32,1);
+  --pad:clamp(20px,5vw,48px);
+  --max:1120px;
 }
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{font-family:'Poppins',system-ui,-apple-system,Segoe UI,sans-serif;background:var(--navy);color:var(--b100);line-height:1.6;font-size:1rem;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+img,svg{display:block;max-width:100%}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+:focus-visible{outline:3px solid var(--verde-claro);outline-offset:3px;border-radius:6px}
+.wrap{width:100%;max-width:calc(var(--max) + var(--pad)*2);margin:0 auto;padding:0 var(--pad)}
+.pular{position:absolute;left:12px;top:-60px;background:var(--verde);color:#07090f;padding:10px 16px;border-radius:10px;font-weight:600;z-index:100}
+.pular:focus{top:12px}
 
-/* ─── RESET ──────────────────────────────────────────── */
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth}
-body{background:var(--c-bg);color:var(--w60);font-family:var(--fs);-webkit-font-smoothing:antialiased;overflow-x:hidden}
-h1,h2,h3,h4{color:#fff;font-family:var(--fd);letter-spacing:-.028em;line-height:1.09}
-p{line-height:1.72}
-a{text-decoration:none;color:inherit}
-img{max-width:100%;display:block}
-button{border:none;cursor:pointer;background:none;font-family:inherit}
+/* sem JavaScript o "mês" interativo ficaria vazio: melhor não mostrar */
+html:not(.js) .mes{display:none}
+/* entrada ao rolar: só esconde quando o JS está ligado */
+.js .rv{opacity:0;transform:translateY(20px);transition:opacity .7s var(--ease),transform .7s var(--ease)}
+.js .rv.in{opacity:1;transform:none}
+.js .rv[data-d="1"]{transition-delay:.08s}.js .rv[data-d="2"]{transition-delay:.16s}.js .rv[data-d="3"]{transition-delay:.24s}
 
-/* ─── LAYOUT ─────────────────────────────────────────── */
-.wrap{max-width:1240px;margin:0 auto;padding:0 44px}
-.eyebrow{font-size:12px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--c-green)}
-.sec-head{text-align:center;margin-bottom:40px}
-.sec-head h2{margin-top:8px;font-size:50px;font-weight:800}
-.sec-head p{margin-top:10px;font-size:17px;color:var(--w60);max-width:44ch;margin-left:auto;margin-right:auto}
-.sec-pad{padding-top:76px;padding-bottom:76px}
-.num{font-variant-numeric:tabular-nums}
+/* ───────── NAV ───────── */
+.nav{position:sticky;top:0;z-index:50;background:var(--navy);transition:box-shadow .2s}
+.nav.sombra{box-shadow:0 1px 0 var(--b10)}
+.nav .wrap{display:flex;align-items:center;justify-content:space-between;height:68px;gap:16px}
+.marca{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.25rem;letter-spacing:-.02em}
+.marca svg{width:30px;height:30px;color:var(--verde)}
+.nav ul{display:flex;gap:30px;list-style:none;font-size:.9375rem;font-weight:500}
+.nav ul a{color:var(--b72);transition:color .15s;padding:8px 0}
+.nav ul a:hover{color:#fff}
+.nav-acoes{display:flex;align-items:center;gap:8px}
+.nav-entrar{font-size:.9375rem;font-weight:500;color:var(--b72);padding:10px 14px;border-radius:10px;transition:color .15s,background .15s}
+.nav-entrar:hover{color:#fff;background:var(--b06)}
 
-/* ─── BUTTONS ────────────────────────────────────────── */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:.5em;font-family:var(--fs);font-weight:700;border-radius:var(--rs);cursor:pointer;border:1.5px solid transparent;white-space:nowrap;transition:all .20s cubic-bezier(.4,0,.2,1);letter-spacing:-.01em}
-.btn-sm{height:38px;padding:0 1rem;font-size:14px}
-.btn-md{height:48px;padding:0 1.5rem;font-size:16px}
-.btn-lg{height:56px;padding:0 2rem;font-size:17px}
-.btn-xl{height:64px;padding:0 2.4rem;font-size:18px}
-.btn-primary{background:var(--grad);color:#03110A;box-shadow:var(--shg)}
-.btn-primary:hover{filter:brightness(1.09);box-shadow:var(--shg2);transform:translateY(-2px) scale(1.016)}
-.btn-primary:active{transform:translateY(0) scale(.999);transition-duration:.08s}
-.hcta .btn-primary{box-shadow:0 10px 44px rgba(34,197,94,.44),0 0 0 1px rgba(34,197,94,.10)}
-.pl-pop .btn-primary{box-shadow:0 6px 28px rgba(34,197,94,.50),0 0 0 1px rgba(34,197,94,.18);letter-spacing:.01em}
-.btn-secondary{background:var(--w03);color:#fff;border-color:var(--w12)}
-.btn-secondary:hover{background:var(--w06);border-color:rgba(34,197,94,.38);transform:translateY(-1px)}
-.btn-full{width:100%}
-
-/* ─── SCROLL REVEAL ──────────────────────────────────── */
-.reveal{opacity:0;transform:translateY(26px);transition:opacity .65s cubic-bezier(.4,0,.2,1),transform .65s cubic-bezier(.4,0,.2,1)}
-.reveal.visible{opacity:1;transform:none}
-.d1{transition-delay:.08s}.d2{transition-delay:.16s}.d3{transition-delay:.24s}
-.d4{transition-delay:.32s}.d5{transition-delay:.40s}.d6{transition-delay:.48s}
-
-/* ─── KEYFRAMES ──────────────────────────────────────── */
-@keyframes float {0%,100%{transform:translateY(0)}50%{transform:translateY(-13px)}}
-@keyframes float2{0%,100%{transform:translateY(0) rotate(-1.5deg)}50%{transform:translateY(-11px) rotate(1.5deg)}}
-@keyframes pdot  {0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,.5)}60%{box-shadow:0 0 0 6px rgba(34,197,94,0)}}
-@keyframes bar-in{from{transform:scaleY(0)}to{transform:scaleY(1)}}
-@keyframes gpulse{0%,100%{opacity:.48}50%{opacity:.92}}
-
-/* ─── ICON BOX ───────────────────────────────────────── */
-.ib{
-  width:60px;height:60px;border-radius:18px;
-  display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;
-  border:1px solid rgba(255,255,255,.16);
-  backdrop-filter:blur(8px);
+/* ───────── BOTÃO (brilho que passa + seta que desliza, como no login do RA) ───────── */
+.btn{position:relative;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;gap:10px;height:52px;padding:0 26px;border-radius:14px;
+  font-weight:700;font-size:1rem;letter-spacing:.005em;color:#07090f;background:var(--verde);
+  transition:transform .16s var(--ease),box-shadow .2s,background .2s}
+.btn:hover{background:var(--verde-claro);transform:translateY(-2px)}
+.btn:active{transform:scale(.97)}
+.btn::before{content:'';position:absolute;top:0;bottom:0;width:55%;left:-80%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);transform:skewX(-20deg)}
+.btn:hover::before{animation:brilho .85s ease}
+@keyframes brilho{to{left:130%}}
+.btn svg{width:18px;height:18px;transition:transform .2s var(--ease)}
+.btn:hover svg{transform:translateX(5px)}
+.btn.peq{height:42px;padding:0 18px;font-size:.9375rem;border-radius:12px;white-space:nowrap}
+@media (max-width:380px){
+  .marca{font-size:1.1rem;gap:8px}.marca svg{width:26px;height:26px}
+  .nav .wrap{gap:8px}.nav-acoes{gap:2px}.nav-entrar{padding:10px 8px}.btn.peq{padding:0 12px;font-size:.875rem}
 }
-.ib svg{width:28px;height:28px;flex-shrink:0}
+.link-sec{font-weight:600;color:var(--b72);padding:12px 4px;border-radius:8px;transition:color .15s}
+.link-sec:hover{color:#fff}
 
-/* ─── NAV ────────────────────────────────────────────── */
-header.nav{
-  position:sticky;top:0;z-index:100;
-  display:flex;align-items:center;justify-content:space-between;gap:20px;
-  padding:14px 44px;
-  background:rgba(15,23,42,.93);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
-  border-bottom:1px solid var(--tl)
+/* ───────── HERO ───────── */
+.escuro{position:relative;isolation:isolate;overflow:hidden;background:radial-gradient(1200px 720px at 12% -12%,#1a2a4c 0%,#0f172a 58%,#0b1224 100%)}
+.blob{position:absolute;border-radius:50%;filter:blur(100px);pointer-events:none;will-change:transform;z-index:-1}
+.bl1{width:520px;height:520px;left:-160px;top:-120px;background:var(--verde-2);opacity:.30;animation:f1 19s ease-in-out infinite}
+.bl2{width:460px;height:460px;right:-120px;top:8%;background:var(--azul);opacity:.22;animation:f2 23s ease-in-out infinite}
+.bl3{width:360px;height:360px;left:34%;bottom:-200px;background:var(--rosa);opacity:.12;animation:f3 26s ease-in-out infinite}
+@keyframes f1{50%{transform:translate(110px,80px) scale(1.15)}}
+@keyframes f2{50%{transform:translate(-90px,70px) scale(1.2)}}
+@keyframes f3{50%{transform:translate(-80px,-60px) scale(1.1)}}
+.grade{position:absolute;inset:0;z-index:-1;pointer-events:none;opacity:.55;
+  background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);
+  background-size:56px 56px;-webkit-mask-image:radial-gradient(ellipse at 40% 45%,#000 18%,transparent 72%);mask-image:radial-gradient(ellipse at 40% 45%,#000 18%,transparent 72%)}
+.hero{padding:clamp(44px,7vw,92px) 0 clamp(56px,8vw,104px)}
+.hero .wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.02fr);gap:clamp(32px,5vw,76px);align-items:center}
+h1{font-size:clamp(2.35rem,5.2vw,3.9rem);line-height:1.06;letter-spacing:-.035em;font-weight:700;max-width:13ch}
+.hero p.lead{margin-top:22px;font-size:clamp(1.0625rem,1.5vw,1.25rem);color:var(--b72);max-width:34em;line-height:1.55}
+.hero-cta{margin-top:34px;display:flex;flex-wrap:wrap;align-items:center;gap:14px 22px}
+.micro{margin-top:16px;font-size:.875rem;color:var(--b55)}
+
+/* ───────── CARTÃO DO MÊS (borda de luz + spotlight) ───────── */
+.mes{--mx:50%;--my:50%;position:relative;padding:2px;border-radius:26px}
+.mes::before{content:'';position:absolute;inset:0;border-radius:26px;padding:2px;
+  background:conic-gradient(from var(--ang,0deg),transparent 0 58%,var(--verde-2) 76%,var(--verde-claro) 92%,transparent 100%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;
+  opacity:.9;animation:gira 7s linear infinite}
+@property --ang{syntax:'<angle>';initial-value:0deg;inherits:false}
+@keyframes gira{to{--ang:360deg}}
+.mes-in{position:relative;border-radius:24px;padding:clamp(18px,2.6vw,28px);overflow:hidden;background:linear-gradient(160deg,#1a2540,#131c33);
+  box-shadow:0 34px 80px -24px rgba(3,8,24,.8),0 0 0 1px rgba(255,255,255,.06) inset}
+.mes-in::after{content:'';position:absolute;inset:0;pointer-events:none;opacity:.22;background:radial-gradient(380px circle at var(--mx) var(--my),var(--verde-2),transparent 62%);mix-blend-mode:screen}
+.mes-in>*{position:relative;z-index:1}
+.mes-topo{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.mes-titulo{font-weight:600;font-size:1rem}
+.mes-titulo small{display:block;font-weight:400;font-size:.8125rem;color:var(--b55)}
+.seg{display:inline-flex;background:rgba(255,255,255,.06);border-radius:12px;padding:3px}
+.seg button{height:34px;padding:0 14px;border-radius:9px;font-size:.8125rem;font-weight:600;color:var(--b72);transition:background .18s,color .18s}
+.seg button[aria-pressed=true]{background:var(--verde);color:#07090f}
+.nums{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:20px}
+.num{background:rgba(255,255,255,.05);border-radius:14px;padding:12px 14px;min-width:0}
+.num span{display:block;font-size:.75rem;color:var(--b55)}
+.num b{display:block;margin-top:2px;font-size:clamp(.9375rem,1.7vw,1.1875rem);font-weight:600;letter-spacing:-.01em;font-variant-numeric:tabular-nums;white-space:nowrap}
+.num.sobra b{color:var(--verde-claro)}
+.regua{display:grid;grid-template-columns:repeat(15,1fr);gap:5px;margin-top:18px}
+.dia{aspect-ratio:1;min-width:0;border-radius:7px;background:rgba(255,255,255,.05);display:grid;place-items:center;font-size:.6875rem;font-weight:700;color:transparent;
+  transition:background .3s var(--ease),transform .3s var(--ease),color .2s,box-shadow .2s}
+.dia.m{box-shadow:inset 0 0 0 1.5px var(--verde-2);color:var(--verde-claro)}
+.dia.m.pago{background:var(--verde);box-shadow:none;color:#07090f;transform:scale(1.06)}
+.dia.foco{box-shadow:inset 0 0 0 2px #fff}
+.regua-leg{margin-top:8px;font-size:.75rem;color:var(--b55);display:flex;justify-content:space-between;gap:8px}
+.contas{list-style:none;margin-top:14px;display:grid;gap:6px}
+.conta{width:100%;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;min-height:56px;padding:8px 12px;border-radius:14px;text-align:left;
+  background:rgba(255,255,255,.04);transition:background .18s,transform .16s var(--ease)}
+.conta:hover,.conta.foco{background:rgba(255,255,255,.09)}
+.conta:active{transform:scale(.985)}
+.chk{width:24px;height:24px;border-radius:50%;border:2px solid rgba(255,255,255,.35);display:grid;place-items:center;transition:background .2s,border-color .2s}
+.chk svg{width:14px;height:14px;color:#07090f;opacity:0;transform:scale(.4);transition:opacity .18s,transform .22s var(--ease)}
+.conta[aria-checked=true] .chk{background:var(--verde);border-color:var(--verde)}
+.conta[aria-checked=true] .chk svg{opacity:1;transform:none}
+.conta .nome{font-weight:500;font-size:.9375rem;line-height:1.25}
+.conta .meta{display:block;font-size:.75rem;color:var(--b55);font-weight:400}
+.conta[aria-checked=true] .nome{color:var(--b72)}
+.conta[aria-checked=true] .nome .t{text-decoration:line-through;text-decoration-color:rgba(255,255,255,.4)}
+.conta .val{font-weight:600;font-size:.9375rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+.vazio{padding:18px 12px;font-size:.875rem;color:var(--b55);text-align:center}
+.nota{margin-top:14px;font-size:.75rem;color:var(--b55)}
+
+/* ───────── FAIXA CLARA (leitura) ───────── */
+.clara{background:var(--papel);color:var(--tinta)}
+.sec{padding:clamp(64px,9vw,120px) 0}
+h2{font-size:clamp(1.75rem,3.6vw,2.75rem);line-height:1.12;letter-spacing:-.03em;font-weight:700;max-width:22ch;text-wrap:balance}
+.sub{margin-top:16px;font-size:1.0625rem;color:var(--tinta-2);max-width:36em}
+.escuro .sub,.escuro-sec .sub{color:var(--b72)}
+.linha{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:clamp(28px,6vw,88px);align-items:center;padding:clamp(28px,4vw,52px) 0}
+.linha.inv{grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr)}
+.linha.inv .txt{order:2}
+.linha h3{font-size:clamp(1.5rem,2.8vw,2.125rem);line-height:1.15;letter-spacing:-.025em;font-weight:700;max-width:16ch}
+.linha p{margin-top:14px;color:var(--tinta-2);font-size:1.0625rem;max-width:30em}
+
+/* objetos de produto (a interface de verdade, escura, sobre a faixa clara) */
+.app{background:linear-gradient(135deg,#1e293b 0%,#1a2540 100%);border:1px solid rgba(34,197,94,.14);border-radius:20px;padding:clamp(16px,2.4vw,24px);color:#fff;
+  box-shadow:0 30px 60px -28px rgba(15,23,42,.55)}
+.app h4{font-size:.9375rem;font-weight:600}
+.app .nt{font-size:.75rem;color:var(--b55);margin-top:2px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+.chip{font-size:.75rem;font-weight:600;padding:7px 12px;border-radius:999px;background:rgba(255,255,255,.07);color:var(--b72)}
+.chip.on{background:rgba(34,197,94,.16);color:var(--verde-claro)}
+.lin{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.04);margin-top:6px}
+.lin b{font-weight:500;font-size:.9375rem;display:block}
+.lin small{font-size:.75rem;color:var(--b55)}
+.lin .v{font-weight:600;font-size:.9375rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+.lin.q b{text-decoration:line-through;color:var(--b72)}
+.lin.q small{color:var(--verde-claro)}
+.form{margin-top:14px;padding:14px;border-radius:14px;background:rgba(255,255,255,.05)}
+.form label{display:block;font-size:.75rem;color:var(--b55)}
+.form .campo{margin-top:4px;margin-bottom:10px;height:42px;border-radius:10px;background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.18);display:flex;align-items:center;padding:0 12px;font-size:.9375rem;font-variant-numeric:tabular-nums}
+.form .ok{display:inline-flex;height:40px;align-items:center;padding:0 18px;border-radius:12px;background:var(--verde);color:#07090f;font-weight:700;font-size:.875rem}
+.cartao{height:116px;border-radius:16px;background:var(--navy-4);padding:14px 16px;display:flex;flex-direction:column;justify-content:space-between;position:relative;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.cartao .chipcartao{width:34px;height:24px;border-radius:6px;background:var(--ouro)}
+.cartao .fim{display:flex;justify-content:space-between;align-items:end;font-size:.8125rem;color:var(--b72)}
+.cartao .fim b{font-size:1rem;color:#fff;font-weight:600;font-variant-numeric:tabular-nums}
+.barra{height:8px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:8px}
+.barra i{display:block;height:100%;border-radius:99px;background:var(--verde);width:0;transition:width .9s var(--ease)}
+.barra i.estoura{background:var(--rosa)}
+.bloco{margin-top:14px}
+.bloco .topo{display:flex;justify-content:space-between;gap:10px;font-size:.875rem}
+.bloco .topo span:last-child{font-variant-numeric:tabular-nums;color:var(--b72)}
+.bloco .topo .alerta{color:#fb7185;font-weight:600}
+.rank{margin-top:14px;display:grid;gap:12px}
+.rank .r{display:grid;grid-template-columns:7.5em 1fr auto;gap:10px;align-items:center;font-size:.875rem}
+.rank .r .barra{margin:0;height:10px}
+.rank .r span:last-child{font-variant-numeric:tabular-nums;color:var(--b72);min-width:6.5em;text-align:right}
+.rank .r span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ───────── SEGURANÇA ───────── */
+.escuro-sec{position:relative;isolation:isolate;overflow:hidden;background:linear-gradient(180deg,#0f172a,#0b1224)}
+.seg-grid{margin-top:48px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(28px,4vw,56px) clamp(32px,6vw,88px)}
+.seg-grid h3{font-size:1.1875rem;font-weight:600;letter-spacing:-.015em}
+.seg-grid p{margin-top:8px;color:var(--b72);font-size:1rem;max-width:28em}
+
+/* ───────── PLANOS ───────── */
+.planos{margin-top:44px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,.95fr);gap:20px;align-items:stretch}
+.plano{position:relative;border-radius:22px;padding:clamp(22px,3vw,32px);background:#fff;color:var(--tinta);box-shadow:0 1px 0 rgba(15,23,42,.05),0 24px 48px -30px rgba(15,23,42,.25);transition:transform .25s var(--ease),box-shadow .25s}
+.plano:hover{transform:translateY(-4px);box-shadow:0 1px 0 rgba(15,23,42,.05),0 34px 56px -30px rgba(15,23,42,.35)}
+.plano.dest{background:var(--navy);color:#fff;padding:2px}
+.plano.dest::before{content:'';position:absolute;inset:0;border-radius:22px;padding:2px;background:conic-gradient(from var(--ang,0deg),transparent 0 58%,var(--verde-2) 76%,var(--verde-claro) 92%,transparent 100%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:gira 7s linear infinite}
+.plano.dest .dentro{position:relative;border-radius:20px;background:linear-gradient(160deg,#1a2540,#131c33);padding:calc(clamp(22px,3vw,32px) - 2px);height:100%}
+.plano h3{font-size:1.0625rem;font-weight:600}
+.plano .preco{margin-top:14px;font-size:clamp(2.25rem,4vw,3rem);font-weight:700;letter-spacing:-.035em;line-height:1;font-variant-numeric:tabular-nums}
+.plano .preco small{font-size:1rem;font-weight:500;letter-spacing:0;opacity:.65;margin-left:4px}
+.plano .desc{margin-top:12px;font-size:.9375rem;color:var(--tinta-2);min-height:3.2em}
+.plano.dest .desc{color:var(--b72)}
+.plano .btn{margin-top:20px;width:100%}
+.inclui{padding:clamp(22px,3vw,32px) 0 0 clamp(4px,1.5vw,20px)}
+.inclui h3{font-size:1.0625rem;font-weight:600}
+.inclui ul{margin-top:14px;display:grid;grid-template-columns:minmax(0,1fr);gap:12px;list-style:none}
+.inclui li{position:relative;padding-left:26px;color:var(--tinta-2);font-size:1rem}
+.inclui li::before{content:'';position:absolute;left:3px;top:.5em;width:6px;height:11px;border:solid var(--verde-3);border-width:0 2.5px 2.5px 0;transform:rotate(45deg)}
+
+/* ───────── FAQ ───────── */
+.faq-cols{display:grid;grid-template-columns:minmax(0,.7fr) minmax(0,1.3fr);gap:clamp(24px,6vw,88px);align-items:start}
+.faq{max-width:none}
+.faq details{border-radius:16px;background:#fff;margin-bottom:10px;box-shadow:0 1px 0 rgba(15,23,42,.05)}
+.faq summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:20px 22px;font-weight:600;font-size:1.0625rem;border-radius:16px;min-height:60px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:'';flex:none;width:10px;height:10px;border:solid var(--tinta);border-width:0 2.5px 2.5px 0;transform:rotate(45deg) translateY(-2px);transition:transform .25s var(--ease)}
+.faq details[open] summary::after{transform:rotate(-135deg) translateY(-2px)}
+.faq details p{padding:0 22px 22px;color:var(--tinta-2);font-size:1rem;max-width:40em;animation:abre .35s var(--ease)}
+@keyframes abre{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+
+/* ───────── FECHAMENTO ───────── */
+.fecha{padding:clamp(72px,10vw,128px) 0;text-align:center}
+.fecha h2{margin:0 auto;max-width:15ch}
+.fecha .sub{margin:16px auto 0}
+.fecha .btn{margin-top:32px}
+footer{background:#0a1020;padding:36px 0;font-size:.875rem;color:var(--b55)}
+footer .wrap{display:flex;flex-wrap:wrap;gap:14px 28px;align-items:center;justify-content:space-between}
+footer nav{display:flex;flex-wrap:wrap;gap:8px 22px}
+footer a{padding:6px 0;transition:color .15s}
+footer a:hover{color:#fff}
+footer .marca{font-size:1.0625rem;color:#fff}
+footer .marca svg{width:24px;height:24px}
+
+/* ───────── RESPONSIVO ───────── */
+@media (max-width:960px){
+  .hero .wrap{grid-template-columns:minmax(0,1fr)}
+  h1{max-width:14ch}
+  .linha,.linha.inv{grid-template-columns:minmax(0,1fr);gap:28px}
+  .linha.inv .txt{order:0}
+  .linha h3,h2{max-width:20ch}
+  .planos{max-width:520px;grid-template-columns:minmax(0,1fr)}
+  .inclui{padding:8px 0 0}
+  .faq-cols{grid-template-columns:minmax(0,1fr)}
 }
-.brand{display:flex;align-items:center;gap:11px}
-.bsq{width:37px;height:37px;border-radius:11px;background:var(--grad);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
-.bnm{font-family:var(--fd);font-weight:800;font-size:19px;color:#fff}
-.nl{display:flex;align-items:center;gap:28px;font-size:14px;font-weight:600;color:var(--w60)}
-.nl a{transition:color .15s}
-.nl a:hover{color:#fff}
-.nr{display:flex;align-items:center;gap:10px}
-
-/* ─── HERO ───────────────────────────────────────────── */
-.hero{
-  position:relative;overflow:hidden;
-  min-height:840px;
-  display:flex;align-items:center;
-  padding:84px 0 92px
+@media (max-width:720px){
+  .nav ul{display:none}
+  .nav .wrap{height:62px}
+  .nav-entrar{padding:10px 8px}
+  .seg-grid{grid-template-columns:minmax(0,1fr)}
+  .regua{grid-template-columns:repeat(10,1fr)}
+  .rank .r{grid-template-columns:6.2em 1fr;}
+  .rank .r span:last-child{grid-column:1/-1;text-align:left;margin-top:-6px}
 }
-.hbg{position:absolute;inset:0;pointer-events:none}
-.hbg::before{content:'';position:absolute;top:-300px;right:-200px;width:860px;height:860px;border-radius:50%;background:radial-gradient(circle,rgba(34,197,94,.13) 0%,transparent 65%);animation:gpulse 6s ease-in-out infinite}
-.hbg::after{content:'';position:absolute;bottom:-220px;left:-140px;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(99,102,241,.08) 0%,transparent 65%)}
-.hgrid{position:relative;width:100%;display:grid;grid-template-columns:1fr 1fr;gap:76px;align-items:center}
-.pill{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;background:var(--tf);border:1px solid var(--tl2);color:var(--c-green);font-size:13px;font-weight:700}
-.pdot{width:7px;height:7px;border-radius:50%;background:var(--c-green);animation:pdot 2.4s ease-in-out infinite}
-h1.hh{margin-top:24px;font-size:82px;font-weight:800;line-height:1.02;letter-spacing:-.038em;text-wrap:balance}
-.gt{background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
-.hlead{margin-top:14px;font-size:18px;line-height:1.72;color:var(--w60);max-width:40ch}
-.hcta{display:flex;flex-wrap:wrap;gap:14px;margin-top:36px}
-.fp{margin-top:16px;font-size:13px;color:var(--w40);display:flex;align-items:center;gap:6px}
-.fp svg{width:13px;height:13px;color:var(--c-green);flex-shrink:0}
-
-/* ─── MOCKUP ─────────────────────────────────────────── */
-.mock-outer{position:relative;padding:26px 10px 38px 26px}
-.mock-card{
-  position:relative;overflow:hidden;
-  background:linear-gradient(160deg,rgba(12,22,50,.97) 0%,rgba(7,14,36,.99) 100%);
-  backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);
-  border:1px solid rgba(34,197,94,.30);
-  border-radius:26px;padding:30px;
-  box-shadow:var(--sh),0 0 0 1px rgba(34,197,94,.10),0 0 100px rgba(34,197,94,.20),0 0 220px rgba(34,197,94,.07);
-  animation:float 8s ease-in-out infinite
+@media (max-width:420px){
+  .nums{grid-template-columns:1fr 1fr}
+  .num.sobra{grid-column:1/-1}
+  .btn:not(.peq){width:100%}
+  .hero-cta{flex-direction:column;align-items:stretch}
+  .link-sec{text-align:center}
 }
-.mock-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(34,197,94,.10) 0%,transparent 52%);pointer-events:none;border-radius:26px}
-.mock-card::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(34,197,94,.45),transparent);pointer-events:none;border-radius:26px 26px 0 0}
-.ml{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--w40)}
-.mb{font-family:var(--fd);font-weight:800;font-size:40px;color:#fff;letter-spacing:-.03em;margin-top:4px}
-.mb small{font-size:23px;opacity:.85}
-.ms{font-size:11px;color:var(--w40);margin-top:3px}
-.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:22px}
-.mtile{background:rgba(255,255,255,.062);border:1px solid rgba(255,255,255,.12);border-radius:13px;padding:14px;box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}
-.mtile .ml{margin-bottom:5px}
-.mtile .mv{font-family:var(--fd);font-weight:700;font-size:18px}
-.mchart{margin-top:22px}
-.mchart-l{font-size:10.5px;font-weight:600;color:var(--w40);margin-bottom:10px}
-.bars{display:flex;align-items:flex-end;gap:6px;height:56px}
-.bar{flex:1;border-radius:5px 5px 0 0;transform-origin:bottom center;transform:scaleY(0)}
-.bar.bi{animation:bar-in .55s cubic-bezier(.34,1.56,.64,1) forwards}
-.bm{background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.12)}
-.ba{background:var(--grad);border:none;box-shadow:0 -10px 28px rgba(34,197,94,.54)}
-.mtxs{margin-top:22px;display:flex;flex-direction:column;gap:10px}
-.mtxs-l{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--w40);margin-bottom:4px}
-.tx{display:flex;align-items:center;gap:11px}
-.txic{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
-.txin{flex:1;min-width:0}
-.txn{font-size:13px;font-weight:600;color:var(--w80)}
-.txd{font-size:10.5px;color:var(--w40)}
-.txv{font-size:13px;font-weight:700;flex-shrink:0}
-
-/* Floating cards */
-.fc{
-  position:absolute;
-  background:linear-gradient(145deg,rgba(10,18,44,.97) 0%,rgba(7,13,36,.99) 100%);
-  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
-  border:1px solid rgba(255,255,255,.15);border-radius:16px;
-  padding:13px 18px;display:flex;align-items:center;gap:12px;
-  box-shadow:0 20px 60px rgba(0,0,0,.60),0 4px 16px rgba(0,0,0,.36),inset 0 1px 0 rgba(255,255,255,.09);
-  white-space:nowrap;z-index:10
-}
-.fcic{width:36px;height:36px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
-.fcl{font-size:10px;color:var(--w40);font-weight:600;letter-spacing:.04em;text-transform:uppercase}
-.fcv{font-size:14px;color:#fff;font-weight:700;margin-top:2px}
-.fc1{top:-18px;right:-16px;animation:float 7s ease-in-out infinite}
-.fc2{bottom:10px;left:-22px;animation:float2 8.5s ease-in-out 1.3s infinite}
-
-/* ─── TRUST ──────────────────────────────────────────── */
-.trust{border-top:1px solid var(--tl);border-bottom:1px solid var(--tl);padding:22px 44px;background:rgba(34,197,94,.03)}
-.trust-in{display:flex;align-items:center;justify-content:center;gap:40px;flex-wrap:wrap}
-.ti{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:600;color:var(--w60)}
-.stars{display:flex;gap:1px;color:#F59E0B;font-size:14px}
-.tdiv{width:1px;height:20px;background:rgba(255,255,255,.10)}
-
-/* ─── GLASS CARD ─────────────────────────────────────── */
-.gc{
-  background:linear-gradient(145deg,rgba(255,255,255,.062) 0%,rgba(255,255,255,.026) 100%);
-  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
-  border:1px solid rgba(255,255,255,.14);
-  border-radius:var(--rc);
-  box-shadow:0 4px 24px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.09);
-  transition:border-color .26s cubic-bezier(.4,0,.2,1),background .26s cubic-bezier(.4,0,.2,1),transform .26s cubic-bezier(.4,0,.2,1),box-shadow .26s cubic-bezier(.4,0,.2,1)
-}
-.gc:hover{
-  border-color:rgba(34,197,94,.34);
-  background:linear-gradient(145deg,rgba(34,197,94,.09) 0%,rgba(34,197,94,.034) 100%);
-  transform:translateY(-4px);
-  box-shadow:0 16px 44px rgba(0,0,0,.30),0 0 0 1px rgba(34,197,94,.16),0 0 28px rgba(34,197,94,.08),inset 0 1px 0 rgba(255,255,255,.12)
-}
-
-/* ─── PROBLEM ────────────────────────────────────────── */
-.pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:36px}
-.pc{padding:30px}
-.pc h3{font-size:21px;font-weight:700;margin:18px 0 9px;color:#fff}
-.pc p{font-size:14.5px;color:var(--w50,rgba(255,255,255,.50));line-height:1.68}
-
-/* ─── FEATURES ───────────────────────────────────────── */
-.fgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
-.fc-card{padding:28px}
-.fc-card h3{font-size:19px;font-weight:700;margin:16px 0 7px;color:#fff}
-.fc-card p{font-size:14px;color:var(--w50,rgba(255,255,255,.50));line-height:1.68}
-
-/* ─── HOW ────────────────────────────────────────────── */
-.hgrid2{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:36px;position:relative}
-.hgrid2::before{content:'';position:absolute;top:33px;left:calc(16.67% + 20px);right:calc(16.67% + 20px);height:1px;background:linear-gradient(90deg,transparent,rgba(34,197,94,.16),transparent);pointer-events:none}
-.hs{text-align:center;padding:0 14px}
-.sn{width:64px;height:64px;border-radius:50%;background:var(--grad);color:#03110A;font-family:var(--fd);font-weight:800;font-size:23px;display:inline-flex;align-items:center;justify-content:center;box-shadow:var(--shg);margin-bottom:14px}
-.hs h3{font-size:19px;font-weight:700;margin-bottom:8px}
-.hs p{font-size:14.5px;color:var(--w40);line-height:1.68;max-width:22ch;margin:0 auto}
-
-/* ─── SHOWCASE ───────────────────────────────────────── */
-.srow{display:grid;grid-template-columns:1fr 1fr;gap:68px;align-items:center}
-.srow+.srow{margin-top:64px}
-.srow.rev{direction:rtl}
-.srow.rev>*{direction:ltr}
-.stxt h2{font-size:42px;font-weight:800;text-wrap:balance}
-.stxt .pill{margin-bottom:18px}
-.stxt p{margin-top:18px;font-size:16px;color:var(--w60);line-height:1.75;max-width:40ch}
-.slist{margin-top:24px;display:flex;flex-direction:column;gap:13px}
-.si{display:flex;align-items:center;gap:12px;font-size:14.5px;font-weight:600;color:var(--w80)}
-.sck{width:20px;height:20px;border-radius:6px;flex-shrink:0;background:var(--tf2);border:1px solid var(--tl2);background-image:url("data:image/svg+xml,%3Csvg width='11' height='9' viewBox='0 0 11 9' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 4.5L4 7.5L10 1' stroke='%2322C55E' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:center}
-.sviz{
-  background:linear-gradient(155deg,rgba(10,20,48,.96) 0%,rgba(7,14,38,.98) 100%);
-  backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);
-  border:1px solid rgba(34,197,94,.28);
-  border-radius:var(--rc);padding:28px;
-  box-shadow:var(--sh),0 0 0 1px rgba(34,197,94,.08),0 0 80px rgba(34,197,94,.14),0 0 160px rgba(34,197,94,.05);
-  position:relative;overflow:hidden;
-  transition:box-shadow .28s ease,border-color .28s ease,transform .28s ease
-}
-.sviz:hover{border-color:rgba(34,197,94,.40);box-shadow:var(--sh),0 0 0 1px rgba(34,197,94,.14),0 0 100px rgba(34,197,94,.20);transform:translateY(-2px)}
-.sviz::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(34,197,94,.08) 0%,transparent 48%);pointer-events:none}
-.sviz::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(34,197,94,.32),transparent);pointer-events:none}
-
-/* spend rows */
-.sr{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px}
-.sc{display:flex;align-items:center;gap:10px;min-width:115px}
-.sd{width:10px;height:10px;border-radius:50%;flex-shrink:0}
-.sn2{font-size:13px;font-weight:600;color:var(--w80)}
-.sbw{flex:1;height:6px;background:rgba(255,255,255,.09);border-radius:99px;margin:0 14px;overflow:hidden}
-.sb{height:100%;border-radius:99px}
-.sp{font-size:12px;font-weight:700;color:var(--w60);width:32px;text-align:right}
-
-/* credit card */
-.ccv{border-radius:18px;padding:22px;height:148px;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden}
-.cch{width:32px;height:25px;border-radius:5px;background:linear-gradient(135deg,#F59E0B,#D97706)}
-.ccn{font-size:13px;letter-spacing:.18em;color:rgba(255,255,255,.65);font-weight:500}
-.ccf{display:flex;justify-content:space-between;align-items:flex-end}
-.cco{font-size:10.5px;font-weight:700;color:rgba(255,255,255,.75);text-transform:uppercase;letter-spacing:.06em}
-.ccu{font-size:15px;font-weight:800;color:#fff}
-.cct{font-size:10px;color:rgba(255,255,255,.45)}
-
-/* ─── TESTIMONIALS ───────────────────────────────────── */
-.tgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
-.tc{padding:30px}
-.tc .stars{display:flex;gap:2px;color:#F59E0B;font-size:14px;margin-bottom:18px}
-.tc blockquote{font-size:15px;color:var(--w80);line-height:1.72;font-style:normal}
-.ta{display:flex;align-items:center;gap:12px;margin-top:22px;padding-top:22px;border-top:1px solid rgba(255,255,255,.08)}
-.tav{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;flex-shrink:0;color:#fff}
-.tn{font-size:13.5px;font-weight:700;color:#fff}
-.tc2{font-size:12px;color:var(--w40)}
-
-/* ─── PLANS ──────────────────────────────────────────── */
-.pl-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px;max-width:920px;margin:0 auto}
-.pl{border-radius:var(--rc);padding:38px}
-.pl-base{
-  background:linear-gradient(145deg,rgba(255,255,255,.038) 0%,rgba(255,255,255,.018) 100%);
-  border:1px solid rgba(255,255,255,.10);
-  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
-  box-shadow:0 2px 16px rgba(0,0,0,.16),inset 0 1px 0 rgba(255,255,255,.06)
-}
-.pl-pop{
-  background:linear-gradient(155deg,rgba(10,24,52,.97) 0%,rgba(6,18,42,.99) 100%);
-  border:1.5px solid rgba(34,197,94,.58);
-  backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);
-  box-shadow:0 0 0 1px rgba(34,197,94,.12),0 8px 56px rgba(0,0,0,.44),0 0 100px rgba(34,197,94,.20),0 0 200px rgba(34,197,94,.08);
-  position:relative;overflow:hidden
-}
-.pl-pop::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(34,197,94,.14) 0%,transparent 48%);pointer-events:none}
-.pl-pop::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(34,197,94,.60),transparent);pointer-events:none}
-.pl-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
-.pl-nm{font-family:var(--fd);font-weight:700;font-size:19px;color:#fff}
-.pl-sub{font-size:13.5px;color:var(--w40);margin-bottom:26px}
-.pl-price{display:flex;align-items:baseline;gap:6px;margin-bottom:7px}
-.pl-big{font-family:var(--fd);font-weight:800;font-size:56px;color:#fff;letter-spacing:-.035em;line-height:1}
-.pl-per{font-size:15px;color:var(--w40)}
-.pl-save{font-size:13.5px;color:var(--c-green);font-weight:700;margin-bottom:30px}
-.pl-feats{display:flex;flex-direction:column;gap:12px;margin-bottom:30px}
-.pl-feat{display:flex;align-items:center;gap:11px;font-size:14px;color:var(--w60)}
-.pl-ck{width:19px;height:19px;border-radius:6px;flex-shrink:0;background:var(--tf2);border:1px solid var(--tl2);background-image:url("data:image/svg+xml,%3Csvg width='10' height='8' viewBox='0 0 10 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 4L3.5 6.5L9 1' stroke='%2322C55E' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:center}
-.tag-best{
-  padding:5px 14px;border-radius:999px;
-  background:linear-gradient(135deg,#22C55E 0%,#16A34A 100%);
-  color:#03110A;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
-  flex-shrink:0;
-  box-shadow:0 2px 12px rgba(34,197,94,.40),0 0 0 1px rgba(34,197,94,.20)
-}
-.gr-row{display:flex;align-items:center;justify-content:center;gap:30px;flex-wrap:wrap;margin-top:30px;padding-top:30px;border-top:1px solid var(--tl)}
-.gr-item{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--w60);font-weight:600}
-.gr-item svg{color:var(--c-green);width:15px;height:15px}
-
-/* ─── FAQ ────────────────────────────────────────────── */
-.faq-wrap{max-width:750px;margin:0 auto}
-.faq-item{border-bottom:1px solid rgba(255,255,255,.07);border-radius:12px;transition:background .22s}
-.faq-item:last-child{border-bottom:none}
-.faq-q{
-  display:flex;align-items:center;justify-content:space-between;gap:16px;
-  padding:20px 14px;width:100%;cursor:pointer;
-  font-size:16px;font-weight:700;color:rgba(255,255,255,.88);
-  font-family:var(--fs);text-align:left;
-  transition:color .18s,background .18s;
-  border-radius:10px;
-}
-.faq-q:hover{color:#fff;background:rgba(255,255,255,.04)}
-.faq-ic{
-  flex-shrink:0;display:inline-flex;width:34px;height:34px;
-  align-items:center;justify-content:center;
-  border-radius:10px;background:rgba(255,255,255,.07);
-  border:1px solid rgba(255,255,255,.14);color:var(--w60);
-  transition:background .22s,color .22s,border-color .22s,transform .22s
-}
-.faq-ic svg{width:17px;height:17px}
-.faq-ic .fi-minus{display:none}
-.faq-item.open{background:rgba(34,197,94,.04)}
-.faq-item.open .faq-q{color:#fff}
-.faq-item.open .faq-ic{background:var(--tf2);color:var(--c-green);border-color:var(--tl2);transform:scale(1.08)}
-.faq-item.open .faq-ic .fi-plus{display:none}
-.faq-item.open .faq-ic .fi-minus{display:inline}
-.faq-a{max-height:0;overflow:hidden;transition:max-height .38s cubic-bezier(.4,0,.2,1)}
-.faq-ai{padding:0 14px 20px;font-size:15px;color:var(--w60);line-height:1.78}
-.faq-item.open .faq-a{max-height:240px}
-
-/* ─── FINAL CTA ──────────────────────────────────────── */
-.final{position:relative;overflow:hidden;padding:88px 44px 102px;text-align:center}
-.gl1{position:absolute;bottom:-260px;left:50%;transform:translateX(-50%);width:880px;height:640px;border-radius:50%;background:radial-gradient(circle,rgba(34,197,94,.14) 0%,transparent 65%);pointer-events:none}
-.gl2{position:absolute;top:-180px;right:-120px;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(99,102,241,.09) 0%,transparent 65%);pointer-events:none}
-.final h2{font-size:62px;font-weight:800;text-wrap:balance;max-width:18ch;margin:0 auto}
-.final p{margin:20px auto 0;font-size:17px;color:var(--w60);max-width:38ch}
-.final-cta{display:flex;flex-wrap:wrap;justify-content:center;gap:14px;margin-top:34px}
-.final-trust{display:flex;align-items:center;justify-content:center;gap:26px;flex-wrap:wrap;margin-top:28px}
-.fti{font-size:13.5px;color:var(--w40);display:flex;align-items:center;gap:7px}
-.fti svg{color:var(--c-green);width:14px;height:14px}
-
-/* ─── FOOTER ─────────────────────────────────────────── */
-footer{border-top:1px solid var(--tl);padding:30px 44px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
-.fp2{font-size:13px;color:var(--w40)}
-.fp2 a{color:var(--w60);transition:color .15s}
-.fp2 a:hover{color:#fff}
-
-/* ─── RESPONSIVE ─────────────────────────────────────── */
-@media(min-width:1081px){
-  .mock-outer{transform:scale(1.12);transform-origin:center center}
-}
-@media(max-width:1080px){
-  .hgrid{grid-template-columns:1fr;gap:0}
-  .hgrid>div:first-child{text-align:center}
-  .hlead{margin-left:auto;margin-right:auto}
-  .hcta{justify-content:center}
-  .pill,.fp{justify-content:center;display:flex}
-  .mock-outer{max-width:540px;margin:52px auto 0}
-  .fc1,.fc2{display:none}
-  .pgrid,.fgrid,.tgrid,.hgrid2{grid-template-columns:1fr}
-  .hgrid2::before{display:none}
-  .srow,.srow.rev{grid-template-columns:1fr;direction:ltr}
-  .srow.rev>*{direction:ltr}
-  .srow+.srow{margin-top:62px}
-  .pl-grid{grid-template-columns:1fr;max-width:500px}
-  h1.hh{font-size:46px}
-  .sec-head h2{font-size:36px}
-  .final h2{font-size:40px}
-  .hide-sm{display:none!important}
-  .hero{min-height:unset;padding:58px 0 68px}
-  .sec-pad{padding-top:60px;padding-bottom:60px}
-  .wrap{padding-left:24px;padding-right:24px}
-  .trust,.footer{padding-left:24px;padding-right:24px}
-  header.nav,.final{padding-left:24px;padding-right:24px}
-  footer{padding-left:24px;padding-right:24px}
-}
-@media(max-width:640px){
-  h1.hh{font-size:36px}
-  .sec-head h2{font-size:28px}
-  .stxt h2{font-size:28px}
-  .final h2{font-size:32px}
-  .btn-xl{height:54px;padding:0 1.7rem;font-size:16.5px}
-  .sec-pad{padding-top:44px;padding-bottom:44px}
-  .pl-big{font-size:44px}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .js .rv{opacity:1;transform:none}
 }
 </style>
 </head>
 <body>
+<a class="pular" href="#conteudo">Pular para o conteúdo</a>
 
-<!-- NAV -->
-<header class="nav">
-  <a class="brand" href="/lp">
-    <span class="bsq">
-      <svg width="20" height="20" viewBox="0 0 512 512" fill="none" aria-hidden="true">
-        <g stroke="#fff" stroke-width="30" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M118 407C75 407 58 377 58 336L58 139C58 92 92 58 139 58L344 58C391 58 424 92 424 139L424 158"/>
-          <path d="M126 298C207 280 286 225 366 128"/>
-          <path d="M326 128L366 128L366 168"/>
-        </g>
-        <g fill="#fff">
-          <rect x="119" y="321" width="54" height="105" rx="23"/>
-          <rect x="222" y="276" width="54" height="150" rx="23"/>
-          <rect x="325" y="211" width="54" height="215" rx="23"/>
-        </g>
-      </svg>
-    </span>
-    <span class="bnm">planeje</span>
-  </a>
-  <nav class="nl hide-sm">
-    <a href="#recursos">Recursos</a>
-    <a href="#como-funciona">Como funciona</a>
-    <a href="#planos">Planos</a>
-    <a href="#duvidas">Dúvidas</a>
-  </nav>
-  <div class="nr">
-    <a href="/" style="font-size:14px;font-weight:700;color:var(--w80);">Entrar</a>
-    <a class="btn btn-primary btn-sm" href="/?cadastro=1">Começar grátis</a>
+<header class="nav" id="nav">
+  <div class="wrap">
+    <a class="marca" href="/lp" aria-label="Planeje, página inicial">
+      <svg viewBox="0 0 512 512" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"><path d="M118 407 C75 407 58 377 58 336 L58 139 C58 92 92 58 139 58 L344 58 C391 58 424 92 424 139 L424 158"/><path d="M126 298 C207 280 286 225 366 128"/><path d="M326 128 L366 128 L366 168"/></g><g fill="currentColor"><rect x="119" y="321" width="54" height="105" rx="23"/><rect x="222" y="276" width="54" height="150" rx="23"/><rect x="325" y="211" width="54" height="215" rx="23"/></g></svg>
+      planeje
+    </a>
+    <nav aria-label="Principal"><ul>
+      <li><a href="#recursos">Como funciona</a></li>
+      <li><a href="#seguranca">Segurança</a></li>
+      <li><a href="#planos">Preços</a></li>
+      <li><a href="#duvidas">Dúvidas</a></li>
+    </ul></nav>
+    <div class="nav-acoes">
+      <a class="nav-entrar" href="/">Entrar</a>
+      <a class="btn peq" href="/?cadastro=1">Testar grátis</a>
+    </div>
   </div>
 </header>
 
-<!-- HERO -->
-<section class="hero">
-  <div class="hbg"></div>
+<main id="conteudo">
+<!-- ═════════ HERO ═════════ -->
+<section class="escuro hero">
+  <span class="blob bl1"></span><span class="blob bl2"></span><span class="blob bl3"></span><span class="grade"></span>
   <div class="wrap">
-    <div class="hgrid">
-
-      <!-- texto -->
-      <div>
-        <span class="pill reveal"><span class="pdot"></span>7 dias grátis · sem cartão</span>
-        <h1 class="hh reveal d1">Chega de não saber<br>pra onde foi <span class="gt">o dinheiro.</span></h1>
-        <p class="hlead reveal d2">Receitas, despesas, cartões e metas.<br>Tudo num único lugar.</p>
-        <div class="hcta reveal d3">
-          <a class="btn btn-primary btn-xl" href="/?cadastro=1">Começar grátis agora</a>
-          <a class="btn btn-secondary btn-xl" href="#planos">Ver planos</a>
-        </div>
-        <p class="fp reveal d4">
-          <i data-lucide="shield-check"></i>
-          Sem cartão agora. Sem cobrança. Cancele quando quiser.
-        </p>
+    <div>
+      <h1 class="rv">Pra onde foi o seu dinheiro?</h1>
+      <p class="lead rv" data-d="1">Lance suas receitas, contas e cartões. O Planeje mostra o que já saiu, o que ainda vai sair e quanto sobra no mês.</p>
+      <div class="hero-cta rv" data-d="2">
+        <a class="btn" href="/?cadastro=1">Testar 7 dias grátis
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10h12M11 5l5 5-5 5"/></svg></a>
+        <a class="link-sec" href="#planos">Ver preços</a>
       </div>
+      <p class="micro rv" data-d="3">Sem cartão de crédito. Cancele quando quiser.</p>
+    </div>
 
-      <!-- mockup -->
-      <div class="mock-outer reveal d2">
-        <div class="fc fc1">
-          <div class="fcic" style="background:rgba(34,197,94,.16);">✅</div>
-          <div><div class="fcl">Meta atingida</div><div class="fcv">Reserva de emergência</div></div>
-        </div>
-        <div class="fc fc2">
-          <div class="fcic" style="background:rgba(99,102,241,.16);">📉</div>
-          <div><div class="fcl">Você economizou</div><div class="fcv">R$ 890 este mês</div></div>
-        </div>
-        <div class="mock-card">
-          <div class="ml">Saldo total</div>
-          <div class="mb num" id="m-balance">R$ 0<small>,00</small></div>
-          <div class="ms">Atualizado agora</div>
-          <div class="mgrid">
-            <div class="mtile"><div class="ml">Receitas</div><div class="mv num" style="color:var(--pos);">↑ R$ 7.200</div></div>
-            <div class="mtile"><div class="ml">Despesas</div><div class="mv num" style="color:var(--neg);">↓ R$ 2.380</div></div>
-          </div>
-          <div class="mchart">
-            <div class="mchart-l">Gastos mensais</div>
-            <div class="bars">
-              <div class="bar bm" style="height:38%;"></div>
-              <div class="bar bm" style="height:55%;"></div>
-              <div class="bar bm" style="height:47%;"></div>
-              <div class="bar bm" style="height:70%;"></div>
-              <div class="bar bm" style="height:62%;"></div>
-              <div class="bar ba" style="height:82%;"></div>
-            </div>
-          </div>
-          <div class="mtxs">
-            <div class="mtxs-l">Transações recentes</div>
-            <div class="tx"><div class="txic" style="background:rgba(34,197,94,.15);">💼</div><div class="txin"><div class="txn">Salário</div><div class="txd">01 jul</div></div><div class="txv" style="color:var(--pos);">+R$ 4.500</div></div>
-            <div class="tx"><div class="txic" style="background:rgba(239,68,68,.13);">🛒</div><div class="txin"><div class="txn">Mercado</div><div class="txd">30 jun</div></div><div class="txv" style="color:var(--neg);">-R$ 380</div></div>
-            <div class="tx"><div class="txic" style="background:rgba(245,158,11,.13);">⚡</div><div class="txin"><div class="txn">Energia</div><div class="txd">29 jun</div></div><div class="txv" style="color:var(--neg);">-R$ 220</div></div>
+    <div class="mes rv" id="mes" data-d="2">
+      <div class="mes-in">
+        <div class="mes-topo">
+          <div class="mes-titulo">Novembro de 2026<small>Exemplo com dados fictícios</small></div>
+          <div class="seg" role="group" aria-label="O que somar">
+            <button type="button" id="b-previsto" aria-pressed="true">Previsto</button>
+            <button type="button" id="b-pagos" aria-pressed="false">Pagos</button>
           </div>
         </div>
+        <div class="nums" aria-live="polite">
+          <div class="num"><span>Entrou</span><b id="n-entrou">R$ 0</b></div>
+          <div class="num"><span id="l-desp">Despesas</span><b id="n-desp">R$ 0</b></div>
+          <div class="num sobra" id="box-sobra"><span>Sobra no mês</span><b id="n-sobra">R$ 0</b></div>
+        </div>
+        <div class="regua" id="regua" aria-hidden="true"></div>
+        <div class="regua-leg" aria-hidden="true"><span>Dia 1</span><span id="leg-pago">0 de 6 contas pagas</span><span>Dia 30</span></div>
+        <ul class="contas" id="contas"></ul>
+        <p class="nota">Toque numa conta para marcar como paga e veja o mês mudar.</p>
       </div>
-
     </div>
   </div>
 </section>
 
-<!-- TRUST -->
-<div class="trust reveal">
-  <div class="trust-in">
-    <div class="ti"><div class="stars">★★★★★</div><span>4.9 de 5</span></div>
-    <div class="tdiv hide-sm"></div>
-    <div class="ti"><i data-lucide="users" style="width:16px;height:16px;color:var(--c-green);"></i><span>+500 usuários ativos</span></div>
-    <div class="tdiv hide-sm"></div>
-    <div class="ti"><i data-lucide="shield-check" style="width:16px;height:16px;color:var(--c-green);"></i><span>Dados criptografados</span></div>
-    <div class="tdiv hide-sm"></div>
-    <div class="ti"><i data-lucide="zap" style="width:16px;height:16px;color:var(--c-green);"></i><span>Pronto em 1 minuto</span></div>
-  </div>
-</div>
-
-<!-- PROBLEM -->
-<section class="sec-pad" id="recursos" style="scroll-margin-top:70px">
+<!-- ═════════ RECURSOS ═════════ -->
+<section class="clara sec" id="recursos">
   <div class="wrap">
-    <div class="sec-head">
-      <div class="eyebrow reveal">O problema</div>
-      <h2 class="reveal d1">Você já passou por isso.</h2>
-      <p class="reveal d2">Não é falta de disciplina. É falta de visão.</p>
+    <h2 class="rv">Cada tela responde uma pergunta.</h2>
+    <p class="sub rv" data-d="1">Sem planilha para montar. Você lança o que acontece e o Planeje organiza o resto.</p>
+
+    <div class="linha">
+      <div class="txt rv">
+        <h3>O que vence e o que já foi pago?</h3>
+        <p>Contas fixas, parceladas ou avulsas, cada uma com a data certa. Veja o que venceu, o que vence hoje e as parcelas que faltam. Ao pagar, informe a data e o valor que realmente saiu, com juros ou desconto.</p>
+      </div>
+      <div class="app rv" data-d="1">
+        <h4>Despesas</h4><p class="nt">Novembro de 2026</p>
+        <div class="chips"><span class="chip on">Próximos 7 dias</span><span class="chip">Vencidas</span><span class="chip">Hoje</span><span class="chip">Categoria</span></div>
+        <div class="lin"><div><b>Seguro do carro</b><small>Parcela 4 de 10 · vence dia 21</small></div><span class="v">R$ 312,00</span></div>
+        <div class="lin"><div><b>Condomínio</b><small>Fixa mensal · vence dia 10</small></div><span class="v">R$ 640,00</span></div>
+        <div class="lin q"><div><b>Empréstimo pessoal</b><small>Parcela 3 de 3 · quitada</small></div><span class="v">R$ 380,65</span></div>
+        <div class="form">
+          <label>Data do pagamento</label><div class="campo">10/11/2026</div>
+          <label>Valor pago (pode alterar se houve juros ou desconto)</label><div class="campo">R$ 655,20</div>
+          <span class="ok">Confirmar</span>
+        </div>
+      </div>
     </div>
-    <div class="pgrid">
 
-      <div class="gc pc reveal d1">
-        <div class="ib" style="background:rgba(239,68,68,.13);box-shadow:0 0 28px rgba(239,68,68,.11);">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#EF4444;"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
-        </div>
-        <h3>Dinheiro some sem explicação</h3>
-        <p>Você trabalha o mês todo. No dia 20, o dinheiro sumiu e você não sabe dizer para onde foi.</p>
+    <div class="linha inv">
+      <div class="app rv">
+        <h4>Cartão de crédito</h4><p class="nt">Fatura de novembro</p>
+        <div class="cartao" style="margin-top:14px"><span class="chipcartao"></span><div class="fim"><span>Cartão principal · final 4892</span><b>R$ 1.240,00</b></div></div>
+        <div class="lin"><div><b>Supermercado</b><small>Parcela 3 de 6</small></div><span class="v">R$ 89,90</span></div>
+        <div class="lin"><div><b>Posto de combustível</b><small>À vista</small></div><span class="v">R$ 180,00</span></div>
+        <div class="lin"><div><b>Streaming</b><small>À vista</small></div><span class="v">R$ 55,90</span></div>
+        <div class="form" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><span style="font-size:.875rem;color:var(--b72)">Vence dia 15</span><span class="ok">Marcar fatura como paga</span></div>
       </div>
-
-      <div class="gc pc reveal d2">
-        <div class="ib" style="background:rgba(245,158,11,.13);box-shadow:0 0 28px rgba(245,158,11,.11);">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#F59E0B;"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M8 13h2"/><path d="M14 13h2"/><path d="M8 17h2"/><path d="M14 17h2"/></svg>
-        </div>
-        <h3>Planilhas que ninguém aguenta</h3>
-        <p>Começa com energia e para em três semanas. A planilha acumula erro e logo virou promessa não cumprida.</p>
+      <div class="txt rv" data-d="1">
+        <h3>Quanto vem de fatura este mês?</h3>
+        <p>Cadastre seus cartões e lance as compras, inclusive as parceladas. A fatura de cada mês fica separada e, depois de paga, entra nos seus gastos como qualquer outra conta.</p>
       </div>
+    </div>
 
-      <div class="gc pc reveal d3">
-        <div class="ib" style="background:rgba(168,85,247,.13);box-shadow:0 0 28px rgba(168,85,247,.11);">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#A855F7;"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
-        </div>
-        <h3>Tudo espalhado em apps diferentes</h3>
-        <p>Banco, cartão, poupança, dívida. Três apps diferentes e zero controle real sobre o quadro completo.</p>
+    <div class="linha">
+      <div class="txt rv">
+        <h3>Quanto posso gastar em cada coisa?</h3>
+        <p>Defina um teto por categoria e veja quanto do mês já foi usado. Para o que você quer conquistar, crie uma meta e acompanhe o progresso.</p>
       </div>
+      <div class="app rv" data-d="1" id="orc">
+        <h4>Orçamento do mês</h4><p class="nt">Teto por categoria</p>
+        <div class="bloco"><div class="topo"><span>Moradia</span><span>R$ 2.134 de R$ 2.200</span></div><div class="barra"><i data-w="97"></i></div></div>
+        <div class="bloco"><div class="topo"><span>Alimentação</span><span>R$ 586 de R$ 800</span></div><div class="barra"><i data-w="73"></i></div></div>
+        <div class="bloco"><div class="topo"><span>Lazer</span><span class="alerta">R$ 462 de R$ 400</span></div><div class="barra"><i class="estoura" data-w="100"></i></div></div>
+        <div class="bloco" style="margin-top:22px"><div class="topo"><span><b style="font-weight:600">Meta:</b> Reserva de emergência</span><span>R$ 4.800 de R$ 12.000</span></div><div class="barra"><i data-w="40"></i></div></div>
+      </div>
+    </div>
 
+    <div class="linha inv">
+      <div class="app rv" id="graf">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+          <div><h4>Despesas por categoria</h4><p class="nt">Novembro de 2026</p></div>
+          <div class="seg" role="group" aria-label="Ver no gráfico"><button type="button" id="g-prev" aria-pressed="true">Previsto</button><button type="button" id="g-pagos" aria-pressed="false">Pagos</button></div>
+        </div>
+        <div class="rank" id="rank"></div>
+        <div class="form" style="display:inline-flex;margin-top:18px;padding:0;background:none"><span class="ok" style="background:rgba(255,255,255,.08);color:#fff">Baixar relatório em PDF</span></div>
+      </div>
+      <div class="txt rv" data-d="1">
+        <h3>Pra onde foi o dinheiro este mês?</h3>
+        <p>O ranking de despesas e de receitas por categoria, mês a mês. Alterne entre o que já foi pago e o que está previsto, e baixe o relatório em PDF.</p>
+      </div>
     </div>
   </div>
 </section>
 
-<!-- FEATURES -->
-<section class="sec-pad" style="padding-top:0;">
+<!-- ═════════ SEGURANÇA ═════════ -->
+<section class="escuro-sec sec" id="seguranca">
+  <span class="blob bl2" style="top:-120px;right:-160px;opacity:.16"></span><span class="blob bl1" style="left:-200px;top:auto;bottom:-260px;opacity:.18"></span>
   <div class="wrap">
-    <div class="sec-head">
-      <div class="eyebrow reveal">O que você ganha</div>
-      <h2 class="reveal d1">Tudo em um único lugar.</h2>
-      <p class="reveal d2">Simples de usar. Poderoso o suficiente pra mudar sua relação com o dinheiro.</p>
-    </div>
-    <div class="fgrid">
-
-      <div class="gc fc-card reveal d1">
-        <div class="ib" style="background:rgba(99,102,241,.13);box-shadow:0 0 28px rgba(99,102,241,.11);">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#6366F1;"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><rect x="7" y="10" width="4" height="9" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
-        </div>
-        <h3>Visão completa do seu dinheiro</h3>
-        <p>Saldo, gastos e o que vem por aí — numa tela só. Sem abrir três apps.</p>
-      </div>
-
-      <div class="gc fc-card reveal d2">
-        <div class="ib" style="background:rgba(239,68,68,.13);box-shadow:0 0 28px rgba(239,68,68,.10);">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#EF4444;"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
-        </div>
-        <h3>Cartões e dívidas sob controle</h3>
-        <p>Limite disponível e fatura por vencimento. Nunca mais leve susto com a cobrança.</p>
-      </div>
-
-      <div class="gc fc-card reveal d3">
-        <div class="ib" style="background:rgba(245,158,11,.13);box-shadow:0 0 28px rgba(245,158,11,.10);">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#F59E0B;"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
-        </div>
-        <h3>Orçamento por categoria</h3>
-        <p>Defina limites por área da vida. O Planeje avisa quando o dinheiro apertar.</p>
-      </div>
-
-      <div class="gc fc-card reveal d4">
-        <div class="ib" style="background:rgba(34,197,94,.13);box-shadow:0 0 28px rgba(34,197,94,.11);">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#22C55E;"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
-        </div>
-        <h3>Metas que realmente acontecem</h3>
-        <p>Do sonho à reserva real. Acompanhe o progresso visualmente, mês a mês.</p>
-      </div>
-
-      <div class="gc fc-card reveal d5">
-        <div class="ib" style="background:rgba(6,182,212,.13);box-shadow:0 0 28px rgba(6,182,212,.10);">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#06B6D4;"><path d="M3 3v18h18"/><path d="M8 17V9"/><path d="M13 17V5"/><path d="M18 17v-3"/></svg>
-        </div>
-        <h3>Relatórios e gráficos claros</h3>
-        <p>Cada centavo explicado sem complicação. Entenda seus padrões em segundos.</p>
-      </div>
-
-      <div class="gc fc-card reveal d6">
-        <div class="ib" style="background:rgba(168,85,247,.13);box-shadow:0 0 28px rgba(168,85,247,.10);">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#A855F7;"><rect x="2" y="4" width="13" height="9" rx="1"/><path d="M2 13h13"/><path d="M8 17v-4"/><path d="M6 17h4"/><rect x="17" y="4" width="5" height="13" rx="1"/><path d="M19 16h1"/></svg>
-        </div>
-        <h3>Funciona em qualquer tela</h3>
-        <p>Celular, computador ou tablet. Mobile-first, sem instalar nada.</p>
-      </div>
-
+    <h2 class="rv">Você digita. O Planeje não pede senha de banco.</h2>
+    <div class="seg-grid">
+      <div class="rv"><h3>Sem conexão com o banco</h3><p>Você lança os valores. Nenhuma senha nem acesso à sua conta bancária passa pelo Planeje.</p></div>
+      <div class="rv" data-d="1"><h3>Entrada por biometria</h3><p>Entre com e-mail e senha, com o Google ou com o Face ID do seu aparelho.</p></div>
+      <div class="rv"><h3>Apagar é apagar</h3><p>Pediu para excluir a conta? Os seus dados são removidos de verdade, pelo próprio app.</p></div>
+      <div class="rv" data-d="1"><h3>Conexão protegida</h3><p>O Planeje só abre por HTTPS, com a conexão criptografada entre o seu aparelho e o servidor.</p></div>
     </div>
   </div>
 </section>
 
-<!-- HOW IT WORKS -->
-<section class="sec-pad" style="padding-top:0;scroll-margin-top:70px" id="como-funciona">
+<!-- ═════════ PLANOS ═════════ -->
+<section class="clara sec" id="planos">
   <div class="wrap">
-    <div class="sec-head">
-      <div class="eyebrow reveal">Como funciona</div>
-      <h2 class="reveal d1">Organize em 3 passos.</h2>
-    </div>
-    <div class="hgrid2">
-      <div class="hs reveal d1">
-        <div class="sn">1</div>
-        <h3>Crie sua conta grátis</h3>
-        <p>30 segundos. Sem cartão de crédito.</p>
+    <h2 class="rv">R$&nbsp;9,90 por mês ou R$&nbsp;89,90 por ano.</h2>
+    <p class="sub rv" data-d="1">Os 7 primeiros dias não custam nada e não pedem cartão.</p>
+    <div class="planos">
+      <div class="plano rv">
+        <h3>Mensal</h3>
+        <div class="preco">R$ 9,90<small>/mês</small></div>
+        <p class="desc">Cobrado todo mês. Você cancela quando quiser.</p>
+        <a class="btn" href="/?cadastro=1&amp;plano=mensal">Começar teste grátis</a>
       </div>
-      <div class="hs reveal d2">
-        <div class="sn">2</div>
-        <h3>Adicione suas finanças</h3>
-        <p>Receitas, gastos, cartões. Você escolhe por onde começa.</p>
+      <div class="plano dest rv" data-d="1">
+        <div class="dentro">
+          <h3>Anual</h3>
+          <div class="preco">R$ 89,90<small>/ano</small></div>
+          <p class="desc">Equivale a R$ 7,49 por mês: são R$ 28,90 a menos do que pagar 12 mensalidades.</p>
+          <a class="btn" href="/?cadastro=1&amp;plano=anual">Começar teste grátis
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10h12M11 5l5 5-5 5"/></svg></a>
+        </div>
       </div>
-      <div class="hs reveal d3">
-        <div class="sn">3</div>
-        <h3>Veja tudo se organizar</h3>
-        <p>Clareza imediata. Controle real sobre cada centavo.</p>
+      <div class="inclui rv" data-d="2">
+        <h3>Nos dois planos</h3>
+        <ul>
+          <li>Despesas e receitas fixas, parceladas e avulsas</li>
+          <li>Cartões, compras parceladas e faturas</li>
+          <li>Orçamento por categoria e metas</li>
+          <li>Gráficos e relatório em PDF</li>
+          <li>Celular e computador, com os dados sincronizados</li>
+        </ul>
       </div>
     </div>
   </div>
 </section>
 
-<!-- SHOWCASE -->
-<section class="sec-pad" style="padding-top:0;">
+<!-- ═════════ FAQ ═════════ -->
+<section class="clara sec" id="duvidas" style="padding-top:0">
+  <div class="wrap faq-cols">
+    <h2 class="rv">Dúvidas comuns.</h2>
+    <div class="faq rv" data-d="1">
+      <details><summary>Preciso informar cartão para testar?</summary><p>Não. Os 7 dias de teste não pedem nenhum dado de pagamento. Depois deles, você escolhe um plano para continuar.</p></details>
+      <details><summary>Preciso conectar minha conta do banco?</summary><p>Não. Você lança receitas e despesas manualmente, então o Planeje não tem acesso ao seu banco nem pede senha bancária.</p></details>
+      <details><summary>Funciona no celular?</summary><p>Funciona no navegador do celular e do computador, sem instalar nada, e os dados ficam sincronizados entre os aparelhos.</p></details>
+      <details><summary>Posso cancelar quando quiser?</summary><p>Sim. Você gerencia ou cancela a assinatura dentro do app, em Perfil.</p></details>
+      <details><summary>Dá para usar junto com outra pessoa?</summary><p>Hoje cada conta é individual e não há convite para outra pessoa.</p></details>
+      <details><summary>Meus dados ficam salvos?</summary><p>Ficam salvos na nuvem, ligados à sua conta, e aparecem em qualquer aparelho em que você entrar. Você pode excluir a conta e os dados pelo próprio app.</p></details>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ FECHAMENTO ═════════ -->
+<section class="escuro fecha">
+  <span class="blob bl1"></span><span class="blob bl2"></span><span class="grade"></span>
   <div class="wrap">
-
-    <!-- ROW 1 -->
-    <div class="srow">
-      <div class="stxt">
-        <span class="pill reveal">Dashboard</span>
-        <h2 class="reveal d1">Veja sua vida financeira de uma vez.</h2>
-        <p class="reveal d2">Saldo, receitas e despesas em tempo real. Sem abrir três apps.</p>
-        <div class="slist reveal d3">
-          <div class="si"><span class="sck"></span>Saldo real a qualquer momento</div>
-          <div class="si"><span class="sck"></span>Gastos por período e categoria</div>
-          <div class="si"><span class="sck"></span>Gráficos que fazem sentido</div>
-          <div class="si"><span class="sck"></span>Alertas automáticos de orçamento</div>
-        </div>
-        <div style="margin-top:34px;" class="reveal d4">
-          <a class="btn btn-primary btn-md" href="/?cadastro=1">Experimentar grátis</a>
-        </div>
-      </div>
-      <div class="reveal d2">
-        <div class="sviz">
-          <div class="ml" style="font-size:12px;margin-bottom:20px;">Gastos por categoria · Junho</div>
-          <div style="display:flex;flex-direction:column;gap:13px;">
-            <div class="sr"><div class="sc"><div class="sd" style="background:var(--red);"></div><span class="sn2">Moradia</span></div><div class="sbw"><div class="sb" style="width:68%;background:var(--red);opacity:.65;"></div></div><div class="sp">68%</div></div>
-            <div class="sr"><div class="sc"><div class="sd" style="background:var(--amber);"></div><span class="sn2">Alimentação</span></div><div class="sbw"><div class="sb" style="width:42%;background:var(--amber);opacity:.65;"></div></div><div class="sp">42%</div></div>
-            <div class="sr"><div class="sc"><div class="sd" style="background:var(--indigo);"></div><span class="sn2">Transporte</span></div><div class="sbw"><div class="sb" style="width:24%;background:var(--indigo);opacity:.65;"></div></div><div class="sp">24%</div></div>
-            <div class="sr"><div class="sc"><div class="sd" style="background:var(--cyan);"></div><span class="sn2">Lazer</span></div><div class="sbw"><div class="sb" style="width:15%;background:var(--cyan);opacity:.65;"></div></div><div class="sp">15%</div></div>
-            <div class="sr"><div class="sc"><div class="sd" style="background:var(--pos);"></div><span class="sn2">Poupança</span></div><div class="sbw"><div class="sb" style="width:30%;background:var(--pos);opacity:.65;"></div></div><div class="sp">30%</div></div>
-          </div>
-          <div style="position:relative;margin-top:26px;padding-top:22px;border-top:1px solid var(--tl);display:flex;justify-content:space-between;align-items:center;">
-            <div><div class="ml">Total gasto</div><div class="num" style="font-size:24px;font-weight:800;color:#fff;margin-top:5px;">R$ 2.380,00</div></div>
-            <div style="text-align:right;"><div class="ml">Restante</div><div class="num" style="font-size:24px;font-weight:800;color:var(--pos);margin-top:5px;">R$ 1.120,00</div></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ROW 2 -->
-    <div class="srow rev">
-      <div class="stxt">
-        <span class="pill reveal">Cartões e dívidas</span>
-        <h2 class="reveal d1">Nunca mais leve susto com a fatura.</h2>
-        <p class="reveal d2">Limite disponível, fatura por vencimento e dívidas parceladas. Tudo visível.</p>
-        <div class="slist reveal d3">
-          <div class="si"><span class="sck"></span>Limite disponível em tempo real</div>
-          <div class="si"><span class="sck"></span>Faturas organizadas por vencimento</div>
-          <div class="si"><span class="sck"></span>Dívidas e parcelamentos</div>
-          <div class="si"><span class="sck"></span>Alertas antes de vencer</div>
-        </div>
-        <div style="margin-top:34px;" class="reveal d4">
-          <a class="btn btn-primary btn-md" href="/?cadastro=1">Criar minha conta</a>
-        </div>
-      </div>
-      <div class="reveal d2">
-        <div class="sviz">
-          <div class="ccv" style="background:linear-gradient(135deg,#1a1f35 0%,#2d1b6e 100%);margin-bottom:24px;">
-            <div style="position:absolute;inset:0;background:radial-gradient(ellipse at top right,rgba(168,85,247,.30),transparent 60%);border-radius:18px;"></div>
-            <div class="cch"></div>
-            <div class="ccn">•••• •••• •••• 4892</div>
-            <div class="ccf">
-              <div class="cco">Rafael M.</div>
-              <div><div class="ccu">R$ 1.240</div><div class="cct">de R$ 5.000</div></div>
-            </div>
-          </div>
-          <div style="margin-bottom:24px;">
-            <div style="display:flex;justify-content:space-between;margin-bottom:9px;">
-              <span style="font-size:13px;font-weight:600;color:var(--w60);">Limite usado</span>
-              <span style="font-size:13px;font-weight:700;color:var(--w80);">24,8%</span>
-            </div>
-            <div style="height:7px;background:rgba(255,255,255,.06);border-radius:99px;overflow:hidden;">
-              <div style="width:24.8%;height:100%;background:var(--grad);border-radius:99px;"></div>
-            </div>
-          </div>
-          <div class="ml" style="font-size:12px;margin-bottom:13px;">Próximas faturas</div>
-          <div style="display:flex;flex-direction:column;gap:11px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:rgba(255,255,255,.04);border-radius:12px;border:1px solid rgba(255,255,255,.07);">
-              <div><div style="font-size:14px;font-weight:600;color:#fff;">Nubank Platinum</div><div style="font-size:11.5px;color:var(--w40);margin-top:3px;">Vence em 5 dias</div></div>
-              <div style="font-size:15px;font-weight:700;color:var(--neg);">R$ 1.240</div>
-            </div>
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:rgba(255,255,255,.04);border-radius:12px;border:1px solid rgba(255,255,255,.07);">
-              <div><div style="font-size:14px;font-weight:600;color:#fff;">Itaú Visa</div><div style="font-size:11.5px;color:var(--w40);margin-top:3px;">Vence em 18 dias</div></div>
-              <div style="font-size:15px;font-weight:700;color:var(--w60);">R$ 380</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
+    <h2 class="rv">Comece pelo mês que está rolando.</h2>
+    <p class="sub rv" data-d="1">7 dias grátis, sem cartão de crédito.</p>
+    <a class="btn rv" data-d="2" href="/?cadastro=1">Testar 7 dias grátis
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10h12M11 5l5 5-5 5"/></svg></a>
   </div>
 </section>
+</main>
 
-<!-- TESTIMONIALS -->
-<section class="sec-pad" style="padding-top:0;">
-  <div class="wrap">
-    <div class="sec-head">
-      <div class="eyebrow reveal">Depoimentos</div>
-      <h2 class="reveal d1">Quem já usa, não para.</h2>
-    </div>
-    <div class="tgrid">
-      <div class="gc tc reveal d1">
-        <div class="stars">★★★★★</div>
-        <blockquote>"Dois meses depois de assinar, quitei minha primeira dívida. Sem milagre. Só clareza."</blockquote>
-        <div class="ta">
-          <div class="tav" style="background:linear-gradient(135deg,#6366F1,#8B5CF6);">A</div>
-          <div><div class="tn">Ana Beatriz C.</div><div class="tc2">São Paulo, SP</div></div>
-        </div>
-      </div>
-      <div class="gc tc reveal d2">
-        <div class="stars">★★★★★</div>
-        <blockquote>"R$ 3.200 de dívida sumidos em 4 meses. O Planeje me deu a visão que eu precisava pra agir."</blockquote>
-        <div class="ta">
-          <div class="tav" style="background:linear-gradient(135deg,#22C55E,#16A34A);">R</div>
-          <div><div class="tn">Rafael M.</div><div class="tc2">Belo Horizonte, MG</div></div>
-        </div>
-      </div>
-      <div class="gc tc reveal d3">
-        <div class="stars">★★★★★</div>
-        <blockquote>"Testei 4 apps antes do Planeje. Nunca mais voltei pra planilha. Simples assim."</blockquote>
-        <div class="ta">
-          <div class="tav" style="background:linear-gradient(135deg,#F59E0B,#D97706);">J</div>
-          <div><div class="tn">Juliana R.</div><div class="tc2">Curitiba, PR</div></div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- PLANS -->
-<section class="sec-pad" style="padding-top:0;scroll-margin-top:70px" id="planos">
-  <div class="wrap">
-    <div class="sec-head">
-      <div class="eyebrow reveal">Planos</div>
-      <h2 class="reveal d1">Comece grátis. Continue por menos de um café.</h2>
-      <p class="reveal d2">7 dias pra testar tudo. Sem cartão. Sem compromisso.</p>
-    </div>
-    <div class="pl-grid">
-
-      <div class="pl pl-base reveal d1">
-        <div class="pl-head"><div class="pl-nm">Mensal</div></div>
-        <div class="pl-sub">Flexibilidade total</div>
-        <div class="pl-price"><span class="pl-big num">R$ 9,90</span><span class="pl-per">/mês</span></div>
-        <div style="height:28px;"></div>
-        <div class="pl-feats">
-          <div class="pl-feat"><span class="pl-ck"></span>Visão total do seu dinheiro</div>
-          <div class="pl-feat"><span class="pl-ck"></span>Gastos e receitas ilimitados</div>
-          <div class="pl-feat"><span class="pl-ck"></span>Controle de cartões e faturas</div>
-          <div class="pl-feat"><span class="pl-ck"></span>Metas com progresso visual</div>
-          <div class="pl-feat"><span class="pl-ck"></span>Relatórios e gráficos</div>
-          <div class="pl-feat"><span class="pl-ck"></span>Celular e computador</div>
-        </div>
-        <a class="btn btn-secondary btn-lg btn-full" href="/?cadastro=1&plano=mensal">Assinar mensal</a>
-      </div>
-
-      <div class="pl pl-pop reveal d2">
-        <div style="position:relative;">
-          <div class="pl-head">
-            <div class="pl-nm">Anual</div>
-            <span class="tag-best">MELHOR ESCOLHA</span>
-          </div>
-          <div class="pl-sub">Economize 25% — o ano todo</div>
-          <div class="pl-price"><span class="pl-big num">R$ 89,90</span><span class="pl-per">/ano</span></div>
-          <div class="pl-save">≈ R$ 7,49/mês · Você economiza R$ 28,90</div>
-          <div class="pl-feats">
-            <div class="pl-feat"><span class="pl-ck"></span>Tudo do plano Mensal</div>
-            <div class="pl-feat"><span class="pl-ck"></span>25% de desconto automático</div>
-            <div class="pl-feat"><span class="pl-ck"></span>7 dias grátis incluídos</div>
-            <div class="pl-feat"><span class="pl-ck"></span>Cancele sem burocracia</div>
-            <div class="pl-feat"><span class="pl-ck"></span>Suporte prioritário</div>
-            <div class="pl-feat"><span class="pl-ck"></span>Acesso antecipado a novos recursos</div>
-          </div>
-          <a class="btn btn-primary btn-lg btn-full" href="/?cadastro=1&plano=anual">Começar teste grátis</a>
-        </div>
-      </div>
-
-    </div>
-    <div class="gr-row reveal">
-      <div class="gr-item"><i data-lucide="shield-check"></i>Sem cartão agora</div>
-      <div class="gr-item"><i data-lucide="clock"></i>7 dias de teste</div>
-      <div class="gr-item"><i data-lucide="x-circle"></i>Cancele quando quiser</div>
-      <div class="gr-item"><i data-lucide="lock"></i>Dados criptografados</div>
-    </div>
-  </div>
-</section>
-
-<!-- FAQ -->
-<section class="sec-pad" style="padding-top:0;scroll-margin-top:70px" id="duvidas">
-  <div class="wrap">
-    <div class="sec-head">
-      <div class="eyebrow reveal">Dúvidas</div>
-      <h2 class="reveal d1">Respondemos as mais comuns.</h2>
-    </div>
-    <div class="faq-wrap">
-
-      <div class="faq-item reveal">
-        <button class="faq-q">
-          Preciso informar cartão para testar?
-          <span class="faq-ic"><svg class="fi-plus" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><svg class="fi-minus" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
-        </button>
-        <div class="faq-a"><div class="faq-ai">Não. O período de teste é 100% grátis por 7 dias, sem nenhuma informação de pagamento. Você só informa dados do cartão se decidir continuar depois do teste.</div></div>
-      </div>
-
-      <div class="faq-item reveal d1">
-        <button class="faq-q">
-          Meus dados financeiros são seguros?
-          <span class="faq-ic"><svg class="fi-plus" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><svg class="fi-minus" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
-        </button>
-        <div class="faq-a"><div class="faq-ai">Sim. Todos os dados são criptografados em trânsito e em repouso. Você registra as informações manualmente — suas senhas e dados bancários nunca passam pelo sistema.</div></div>
-      </div>
-
-      <div class="faq-item reveal d2">
-        <button class="faq-q">
-          Posso cancelar quando quiser?
-          <span class="faq-ic"><svg class="fi-plus" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><svg class="fi-minus" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
-        </button>
-        <div class="faq-a"><div class="faq-ai">Sim. Um clique nas configurações da conta. Sem ligação, sem multa, sem burocracia. O acesso continua garantido até o fim do período pago.</div></div>
-      </div>
-
-      <div class="faq-item reveal d3">
-        <button class="faq-q">
-          Funciona no celular?
-          <span class="faq-ic"><svg class="fi-plus" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><svg class="fi-minus" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
-        </button>
-        <div class="faq-a"><div class="faq-ai">Sim. O Planeje foi feito com foco em mobile. Funciona direto no navegador do celular, sem precisar instalar nenhum aplicativo.</div></div>
-      </div>
-
-      <div class="faq-item reveal d4">
-        <button class="faq-q">
-          Posso usar para organizar as finanças do casal?
-          <span class="faq-ic"><svg class="fi-plus" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><svg class="fi-minus" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
-        </button>
-        <div class="faq-a"><div class="faq-ai">Sim. Muitos usuários usam uma conta compartilhada para organizar as finanças da família ou do casal. Funciona muito bem para esse caso.</div></div>
-      </div>
-
-    </div>
-  </div>
-</section>
-
-<!-- FINAL CTA -->
-<section class="final">
-  <div class="gl1"></div>
-  <div class="gl2"></div>
-  <div style="position:relative;">
-    <h2 class="reveal">Seu dinheiro merece um plano.</h2>
-    <p class="reveal d1">7 dias grátis. Sem cartão. Sem promessa — só resultado.</p>
-    <div class="final-cta reveal d2">
-      <a class="btn btn-primary btn-xl" href="/?cadastro=1">Quero organizar minha vida financeira</a>
-      <a class="btn btn-secondary btn-xl" href="#planos">Ver planos</a>
-    </div>
-    <div class="final-trust reveal d3">
-      <span class="fti"><i data-lucide="shield-check"></i>Seguro e criptografado</span>
-      <span class="fti"><i data-lucide="zap"></i>Pronto em 1 minuto</span>
-      <span class="fti"><i data-lucide="x-circle"></i>Cancele quando quiser</span>
-    </div>
-  </div>
-</section>
-
-<!-- FOOTER -->
 <footer>
-  <div class="brand">
-    <span class="bsq" style="width:30px;height:30px;border-radius:9px;">
-      <svg width="16" height="16" viewBox="0 0 512 512" fill="none" aria-hidden="true">
-        <g stroke="#fff" stroke-width="30" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M118 407C75 407 58 377 58 336L58 139C58 92 92 58 139 58L344 58C391 58 424 92 424 139L424 158"/>
-          <path d="M126 298C207 280 286 225 366 128"/>
-          <path d="M326 128L366 128L366 168"/>
-        </g>
-        <g fill="#fff">
-          <rect x="119" y="321" width="54" height="105" rx="23"/>
-          <rect x="222" y="276" width="54" height="150" rx="23"/>
-          <rect x="325" y="211" width="54" height="215" rx="23"/>
-        </g>
-      </svg>
-    </span>
-    <span class="bnm" style="font-size:16px;">planeje</span>
+  <div class="wrap">
+    <a class="marca" href="/lp">
+      <svg viewBox="0 0 512 512" aria-hidden="true" style="color:var(--verde)"><g fill="none" stroke="currentColor" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"><path d="M118 407 C75 407 58 377 58 336 L58 139 C58 92 92 58 139 58 L344 58 C391 58 424 92 424 139 L424 158"/><path d="M126 298 C207 280 286 225 366 128"/><path d="M326 128 L366 128 L366 168"/></g><g fill="currentColor"><rect x="119" y="321" width="54" height="105" rx="23"/><rect x="222" y="276" width="54" height="150" rx="23"/><rect x="325" y="211" width="54" height="215" rx="23"/></g></svg>
+      planeje
+    </a>
+    <span>© 2026 Planeje · Suas finanças, seu futuro.</span>
+    <nav aria-label="Rodapé">
+      <a href="/privacidade">Privacidade</a>
+      <a href="/termos">Termos</a>
+      <a href="https://wa.me/5562999855052?text=Quero%20saber%20mais%20sobre%20o%20Planeje" target="_blank" rel="noopener">Falar no WhatsApp</a>
+    </nav>
   </div>
-  <p class="fp2">© 2026 Planeje · Suas finanças, seu futuro. · <a href="/privacidade">Privacidade</a> · <a href="/termos">Termos</a></p>
 </footer>
 
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-  if (window.lucide) window.lucide.createIcons();
+(function(){
+  var reduzir = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var BRL = new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
+  var $ = function(s,r){return (r||document).querySelector(s)};
 
-  // Scroll reveal
-  const io = new IntersectionObserver((entries) => {
-    entries.forEach(e => {
-      if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); }
-    });
-  }, { threshold: 0.10, rootMargin: '0px 0px -32px 0px' });
-  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+  /* nav: sombra depois que rola */
+  var nav = $('#nav');
+  function sombra(){ nav.classList.toggle('sombra', window.scrollY > 8); }
+  sombra(); window.addEventListener('scroll', sombra, {passive:true});
 
-  // Balance counter
-  function countUp(el, target, duration) {
-    const start = performance.now();
-    const run = (t) => {
-      const p = Math.min((t - start) / duration, 1);
-      const ease = 1 - Math.pow(1 - p, 4);
-      const v = ease * target;
-      const int = Math.floor(v).toLocaleString('pt-BR');
-      const dec = String(Math.floor((v % 1) * 100)).padStart(2, '0');
-      el.innerHTML = `R$ ${int}<small>,${dec}</small>`;
-      if (p < 1) requestAnimationFrame(run);
-    };
-    requestAnimationFrame(run);
+  /* entrada ao rolar (com rede de segurança: se algo falhar, tudo aparece) */
+  var rv = [].slice.call(document.querySelectorAll('.rv'));
+  function mostrar(el){ el.classList.add('in'); }
+  if ('IntersectionObserver' in window && !reduzir) {
+    var io = new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting){ mostrar(e.target); io.unobserve(e.target); } }); }, {threshold:.12, rootMargin:'0px 0px -6% 0px'});
+    rv.forEach(function(el){ io.observe(el); });
+    setTimeout(function(){ rv.forEach(mostrar); }, 4000);
+  } else { rv.forEach(mostrar); }
+
+  /* barras de orçamento enchem quando aparecem */
+  var orc = $('#orc');
+  function encher(){ [].forEach.call(orc.querySelectorAll('.barra i'), function(i){ i.style.width = i.getAttribute('data-w') + '%'; }); }
+  if ('IntersectionObserver' in window && !reduzir) {
+    var io2 = new IntersectionObserver(function(es){ if(es[0].isIntersecting){ encher(); io2.disconnect(); } }, {threshold:.3});
+    io2.observe(orc);
+    setTimeout(encher, 5000);
+  } else encher();
+
+  /* cartão do mês: spotlight que segue o mouse */
+  var cartao = $('#mes'), raf = 0;
+  if (!reduzir && window.matchMedia('(hover: hover)').matches) {
+    window.addEventListener('mousemove', function(e){
+      if (raf) return;
+      raf = requestAnimationFrame(function(){
+        raf = 0;
+        var r = cartao.getBoundingClientRect();
+        cartao.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+        cartao.style.setProperty('--my', (e.clientY - r.top) + 'px');
+      });
+    }, {passive:true});
   }
-  const balEl = document.getElementById('m-balance');
-  if (balEl) setTimeout(() => countUp(balEl, 4820.90, 1800), 420);
 
-  // Chart bars staggered
-  document.querySelectorAll('.bars .bar').forEach((b, i) => {
-    setTimeout(() => b.classList.add('bi'), 520 + i * 85);
-  });
+  /* o mês: contas, régua de 30 dias e totais */
+  var ENTROU = 7200;
+  var CONTAS = [
+    {id:'aluguel', nome:'Aluguel',          dia:5,  valor:1800.00, pago:true},
+    {id:'energia', nome:'Energia',          dia:10, valor:214.30,  pago:true},
+    {id:'internet',nome:'Internet',         dia:12, valor:119.90,  pago:false},
+    {id:'cartao',  nome:'Fatura do cartão', dia:15, valor:1240.00, pago:false},
+    {id:'mercado', nome:'Mercado',          dia:18, valor:586.40,  pago:false},
+    {id:'academia',nome:'Academia',         dia:20, valor:99.90,   pago:false}
+  ];
+  var modo = 'previsto';
+  var elContas = $('#contas'), elRegua = $('#regua');
+  var mostrado = {entrou:0, desp:0, sobra:0};
+  var CHECK = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg>';
 
-  // FAQ accordion
-  document.querySelectorAll('.faq-q').forEach(q => {
-    q.addEventListener('click', () => {
-      const item = q.parentElement;
-      const isOpen = item.classList.contains('open');
-      document.querySelectorAll('.faq-item.open').forEach(i => i.classList.remove('open'));
-      if (!isOpen) item.classList.add('open');
+  function soma(l){ return l.reduce(function(s,c){return s+c.valor},0); }
+  function animarNumero(el, chave, alvo){
+    if (reduzir) { el.textContent = BRL.format(alvo); mostrado[chave]=alvo; return; }
+    var de = mostrado[chave], t0 = performance.now(), dur = 420;
+    function passo(t){
+      var p = Math.min(1,(t-t0)/dur), e = 1-Math.pow(1-p,3);
+      el.textContent = BRL.format(de + (alvo-de)*e);
+      if (p<1) requestAnimationFrame(passo); else mostrado[chave]=alvo;
+    }
+    requestAnimationFrame(passo);
+  }
+  function desenharRegua(){
+    var h = '';
+    for (var d=1; d<=30; d++){
+      var c = CONTAS.filter(function(x){return x.dia===d})[0];
+      h += c ? '<span class="dia m'+(c.pago?' pago':'')+'" data-id="'+c.id+'">'+d+'</span>' : '<span class="dia"></span>';
+    }
+    elRegua.innerHTML = h;
+  }
+  function atualizarRegua(){
+    [].forEach.call(elRegua.querySelectorAll('.dia.m'), function(el){
+      var c = CONTAS.filter(function(x){return x.id===el.getAttribute('data-id')})[0];
+      el.classList.toggle('pago', c.pago);
     });
+  }
+  function desenharLista(){
+    var lista = modo==='previsto' ? CONTAS : CONTAS.filter(function(c){return c.pago});
+    if (!lista.length) { elContas.innerHTML = '<li class="vazio">Nenhuma conta paga ainda. Volte para Previsto e toque numa conta.</li>'; return; }
+    elContas.innerHTML = lista.map(function(c){
+      var meta = c.pago ? 'Paga · venceu dia '+c.dia : 'Vence dia '+c.dia;
+      return '<li><button type="button" class="conta" role="switch" aria-checked="'+c.pago+'" data-id="'+c.id+'" aria-label="'+c.nome+', '+(c.pago?'paga':'vence dia '+c.dia)+', '+BRL.format(c.valor)+'">'
+        + '<span class="chk">'+CHECK+'</span><span class="nome"><span class="t">'+c.nome+'</span><span class="meta">'+meta+'</span></span><span class="val">'+BRL.format(c.valor)+'</span></button></li>';
+    }).join('');
+  }
+  function totais(){
+    var base = modo==='previsto' ? CONTAS : CONTAS.filter(function(c){return c.pago});
+    var desp = soma(base), sobra = ENTROU - desp, pagas = CONTAS.filter(function(c){return c.pago}).length;
+    $('#l-desp').textContent = modo==='previsto' ? 'Despesas previstas' : 'Despesas pagas';
+    $('#box-sobra span').textContent = modo==='previsto' ? 'Sobra prevista' : 'Sobra até agora';
+    $('#leg-pago').textContent = pagas + ' de ' + CONTAS.length + ' contas pagas';
+    animarNumero($('#n-entrou'),'entrou',ENTROU);
+    animarNumero($('#n-desp'),'desp',desp);
+    animarNumero($('#n-sobra'),'sobra',sobra);
+  }
+  function tudo(){ desenharLista(); atualizarRegua(); totais(); }
+  function marcarFoco(id, on){
+    var cel = elRegua.querySelector('.dia[data-id="'+id+'"]'), lin = elContas.querySelector('.conta[data-id="'+id+'"]');
+    if (cel) cel.classList.toggle('foco', on); if (lin) lin.classList.toggle('foco', on);
+  }
+  elContas.addEventListener('click', function(e){
+    var b = e.target.closest('.conta'); if(!b) return;
+    var c = CONTAS.filter(function(x){return x.id===b.getAttribute('data-id')})[0];
+    c.pago = !c.pago; tudo();
+    var novo = elContas.querySelector('.conta[data-id="'+c.id+'"]'); if (novo) novo.focus({preventScroll:true});
   });
-});
+  elContas.addEventListener('mouseover', function(e){ var b=e.target.closest('.conta'); if(b) marcarFoco(b.getAttribute('data-id'), true); });
+  elContas.addEventListener('mouseout',  function(e){ var b=e.target.closest('.conta'); if(b) marcarFoco(b.getAttribute('data-id'), false); });
+  elRegua.addEventListener('mouseover', function(e){ var d=e.target.closest('.dia.m'); if(d) marcarFoco(d.getAttribute('data-id'), true); });
+  elRegua.addEventListener('mouseout',  function(e){ var d=e.target.closest('.dia.m'); if(d) marcarFoco(d.getAttribute('data-id'), false); });
+  function trocarModo(m){
+    modo = m;
+    $('#b-previsto').setAttribute('aria-pressed', m==='previsto');
+    $('#b-pagos').setAttribute('aria-pressed', m==='pagos');
+    tudo();
+  }
+  $('#b-previsto').addEventListener('click', function(){ trocarModo('previsto'); });
+  $('#b-pagos').addEventListener('click', function(){ trocarModo('pagos'); });
+  desenharRegua(); tudo();
+
+  /* gráfico: Previsto x Pagos */
+  var CAT = [
+    {n:'Moradia',     prev:2134.20, pago:2014.30},
+    {n:'Cartão',      prev:1240.00, pago:0},
+    {n:'Alimentação', prev:586.40,  pago:0},
+    {n:'Saúde',       prev:99.90,   pago:0}
+  ];
+  var maxCat = CAT[0].prev, rank = $('#rank');
+  rank.innerHTML = CAT.map(function(c,i){ return '<div class="r"><span>'+c.n+'</span><div class="barra"><i data-i="'+i+'"></i></div><span data-v="'+i+'"></span></div>'; }).join('');
+  function graf(chave){
+    CAT.forEach(function(c,i){
+      var v = c[chave];
+      rank.querySelector('[data-i="'+i+'"]').style.width = (v/maxCat*100)+'%';
+      rank.querySelector('[data-v="'+i+'"]').textContent = BRL.format(v);
+    });
+    $('#g-prev').setAttribute('aria-pressed', chave==='prev'); $('#g-pagos').setAttribute('aria-pressed', chave==='pago');
+  }
+  $('#g-prev').addEventListener('click', function(){ graf('prev'); });
+  $('#g-pagos').addEventListener('click', function(){ graf('pago'); });
+  if ('IntersectionObserver' in window && !reduzir) {
+    var io3 = new IntersectionObserver(function(es){ if(es[0].isIntersecting){ graf('prev'); io3.disconnect(); } }, {threshold:.3});
+    io3.observe($('#graf')); setTimeout(function(){ graf('prev'); }, 5000);
+  } else graf('prev');
+})();
 </script>
 </body>
 </html>
