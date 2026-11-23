@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import SelectDown from '../components/SelectDown';
 import { AppIcon, GOAL_ICONS } from '../lib/icons';
 import { newId } from '../lib/ids';
 
@@ -227,15 +228,19 @@ function Orcamento({ month, year }) {
             </div>
             <div className="px-5 py-4 space-y-4">
               <div>
-                <label className="text-white/50 text-xs block mb-1.5">Categoria</label>
-                <select value={formCateg} onChange={e => setFormCateg(e.target.value)}
-                  className="input-premium [color-scheme:dark]">
-                  <option value="">Selecione...</option>
-                  {[...new Set([...categoriasDividas, ...categoriasExtra, 'Cartão de Crédito','Empréstimo','Financiamento','Alimentação','Transporte','Saúde','Lazer','Outros'])].map(c => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                  <option value="__nova__">+ Nova categoria...</option>
-                </select>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-white/50 text-xs">Categoria</label>
+                  <button type="button" onClick={() => setFormCateg('__nova__')}
+                    className="text-gold text-xs hover:opacity-80 transition">+ Nova</button>
+                </div>
+                <SelectDown
+                  value={formCateg === '__nova__' ? '' : formCateg}
+                  placeholder={formCateg === '__nova__' ? 'Nova categoria...' : 'Selecione...'}
+                  onChange={setFormCateg}
+                  options={[...new Set([...categoriasDividas, ...categoriasExtra, 'Cartão de Crédito','Empréstimo','Financiamento','Alimentação','Transporte','Saúde','Lazer','Outros'])]}
+                  onCreate={(n) => { setNovaCategoria(n); setFormCateg('__nova__'); }}
+                  className="input-premium w-full"
+                />
               </div>
               {formCateg === '__nova__' && (
                 <div>

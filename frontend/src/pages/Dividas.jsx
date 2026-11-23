@@ -4,6 +4,7 @@ import CalculatorModal from '../components/CalculatorModal';
 import SelectDown from '../components/SelectDown';
 import { newId } from '../lib/ids';
 import { useLockBodyScroll } from '../lib/useLockBodyScroll';
+import { ordenarAZ } from '../lib/categorias';
 
 const fmt = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
 const fmtDate = (d) => {
@@ -446,12 +447,17 @@ export default function Dividas({ month, year }) {
 
   const updateForm = (patch) => setForm(f => ({ ...f, ...patch }));
 
-  const adicionarCategoria = () => {
-    const nova = novaCategoria.trim();
-    if (!nova || categorias.includes(nova)) { setShowNovaCategoria(false); setNovaCategoria(''); return; }
+  // Cria a categoria (ou só seleciona, se já existir). Usada pelo "+ Nova" e pelo "Criar" da busca.
+  const criarCategoria = (nome) => {
+    const nova = nome.trim();
+    if (!nova) return;
+    if (categorias.includes(nova)) { updateForm({ categoria: nova }); return; }
     const updated = [...categorias, nova];
     setCategorias(updated); saveCategorias(updated);
     updateForm({ categoria: nova });
+  };
+  const adicionarCategoria = () => {
+    criarCategoria(novaCategoria);
     setNovaCategoria(''); setShowNovaCategoria(false);
   };
 
@@ -1357,11 +1363,12 @@ export default function Dividas({ month, year }) {
                   value={form.categoria}
                   onChange={v => updateForm({ categoria: v })}
                   options={categorias}
+                  onCreate={criarCategoria}
                   className="input-premium w-full"
                 />
                 {categorias.filter(c => !CATEGORIAS_PADRAO.includes(c)).length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mt-2">
-                    {categorias.filter(c => !CATEGORIAS_PADRAO.includes(c)).map(c => (
+                    {ordenarAZ(categorias.filter(c => !CATEGORIAS_PADRAO.includes(c))).map(c => (
                       <div key={c} className="flex items-center gap-1 badge text-gold"
                         style={{ background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.2)' }}>
                         <span className="text-[10px]">{c}</span>

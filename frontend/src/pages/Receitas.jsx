@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import CalculatorModal from '../components/CalculatorModal';
+import SelectDown from '../components/SelectDown';
 import { newId } from '../lib/ids';
 import { useLockBodyScroll } from '../lib/useLockBodyScroll';
 
@@ -597,10 +598,15 @@ export default function Receitas({ month, year }) {
     setEditId(r.id); setEditMes(mes); setEditAno(ano); setShowForm(true);
   };
 
-  const addCateg = () => {
-    const n = novaCateg.trim();
-    if (!n || categorias.includes(n)) { setShowCateg(false); setNovaCateg(''); return; }
+  // Cria a categoria (ou só seleciona, se já existir). Usada pelo "+ Nova" e pelo "Criar" da busca.
+  const criarCategoria = (nome) => {
+    const n = nome.trim();
+    if (!n) return;
+    if (categorias.includes(n)) { upd({ categoria: n }); return; }
     const u = [...categorias, n]; setCategorias(u); saveCats(u); upd({ categoria: n });
+  };
+  const addCateg = () => {
+    criarCategoria(novaCateg);
     setNovaCateg(''); setShowCateg(false);
   };
 
@@ -938,10 +944,13 @@ export default function Receitas({ month, year }) {
                     <button type="button" onClick={addCateg} className="btn-gold py-2 px-3 text-sm">OK</button>
                   </div>
                 )}
-                <select value={form.categoria} onChange={e => upd({ categoria: e.target.value })}
-                  className="input-premium [color-scheme:dark]">
-                  {categorias.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
+                <SelectDown
+                  value={form.categoria}
+                  onChange={v => upd({ categoria: v })}
+                  options={categorias}
+                  onCreate={criarCategoria}
+                  className="input-premium w-full"
+                />
               </div>
               <div className="rounded-xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
                 <div className="px-4 py-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>

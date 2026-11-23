@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import CalculatorModal from '../components/CalculatorModal';
+import SelectDown from '../components/SelectDown';
 import { newId } from '../lib/ids';
 import { useLockBodyScroll } from '../lib/useLockBodyScroll';
 
@@ -428,9 +429,12 @@ export default function CartaoCredito({ month, year }) {
               </div>
               <div>
                 <label className="text-white/50 text-xs block mb-1.5">Categoria</label>
-                <select value={formL.categoria} onChange={e => updL({ categoria: e.target.value })} className="input-premium [color-scheme:dark]">
-                  {CATEGORIAS_FATURA.map(c=><option key={c} value={c}>{c}</option>)}
-                </select>
+                <SelectDown
+                  value={formL.categoria}
+                  onChange={v => updL({ categoria: v })}
+                  options={CATEGORIAS_FATURA}
+                  className="input-premium w-full"
+                />
               </div>
               <div>
                 <label className="text-white/50 text-xs block mb-1.5">Data da compra</label>

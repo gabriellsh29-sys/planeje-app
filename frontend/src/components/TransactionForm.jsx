@@ -58,19 +58,20 @@ export default function TransactionForm({ onSave, onClose, defaultType }) {
     setNovaCateg('');
   }, [type]);
 
-  const addCateg = () => {
-    const n = novaCateg.trim();
-    if (!n) { setShowCateg(false); setNovaCateg(''); return; }
-    if (categories.includes(n)) {
-      setCategory(n);
-      setShowCateg(false); setNovaCateg('');
-      return;
-    }
+  // Cria a categoria (ou só seleciona, se já existir). Usada pelo "+ Nova" e pelo "Criar" da busca.
+  const criarCategoria = (nome) => {
+    const n = nome.trim();
+    if (!n) return;
+    if (categories.includes(n)) { setCategory(n); return; }
     const defaults = type === 'expense' ? CATEGORIES_EXPENSE : CATEGORIES_INCOME;
     const key = type === 'expense' ? CAT_KEY_EXPENSE : CAT_KEY_INCOME;
     saveExtraCat(key, defaults, n);
     setCategories([...categories, n]);
     setCategory(n);
+  };
+
+  const addCateg = () => {
+    criarCategoria(novaCateg);
     setShowCateg(false); setNovaCateg('');
   };
 
@@ -209,6 +210,7 @@ export default function TransactionForm({ onSave, onClose, defaultType }) {
                 value={category}
                 onChange={setCategory}
                 options={categories}
+                onCreate={criarCategoria}
                 className="input-premium w-full"
               />
             </div>
