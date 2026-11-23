@@ -61,7 +61,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .js .rv[data-d="1"]{transition-delay:.1s}.js .rv[data-d="2"]{transition-delay:.2s}
 
 /* NAV */
-.nav{position:sticky;top:0;z-index:50;background:rgba(15,23,42,.94);border-bottom:1px solid transparent;transition:border-color .2s}
+.nav{position:sticky;top:0;z-index:50;background:var(--bg);border-bottom:1px solid transparent;transition:border-color .2s}
 .nav.sombra{border-bottom-color:var(--linha)}
 .nav .wrap{display:flex;align-items:center;justify-content:space-between;height:72px;gap:16px}
 .marca{display:flex;align-items:center;gap:10px;font-family:var(--fd);font-weight:700;font-size:1.3rem;letter-spacing:-.03em}
@@ -95,15 +95,15 @@ h1 em{font-style:normal;color:var(--g)}
 .garantias span{display:inline-flex;align-items:center;gap:8px}
 .garantias svg{width:16px;height:16px;color:var(--g);flex:none}
 
-.vis{position:relative;--px:0;--py:0;max-width:1060px;margin:clamp(44px,6vw,76px) auto 0;text-align:left}
+.vis{position:relative;--px:0;--py:0;--hs:0;max-width:1060px;margin:clamp(44px,6vw,76px) auto 0;text-align:left}
 .vis::before{content:'';position:absolute;inset:-8% -6% -14%;background:radial-gradient(closest-side,rgba(34,197,94,.26),transparent 72%);filter:blur(36px);z-index:0}
 .fr-d{position:relative;z-index:1;border-radius:16px;overflow:hidden;background:#0d1426;box-shadow:0 50px 100px -30px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.1);
-  transform:translate(calc(var(--px)*-6px),calc(var(--py)*-4px));transition:transform .4s var(--ease)}
+  transform:translate(calc(var(--px)*-6px),calc(var(--py)*-4px + var(--hs)*28px));transition:transform .4s var(--ease)}
 .fr-d img{width:100%}
 .fr-p{position:relative;z-index:2;border-radius:40px;padding:9px;background:linear-gradient(145deg,#33405f,#0b1020 60%);box-shadow:0 40px 80px -20px rgba(0,0,0,.85),0 0 0 1px rgba(255,255,255,.1) inset}
 .fr-p img{border-radius:32px;width:100%}
 .vis .fr-p{position:absolute;right:-3%;bottom:-12%;width:23%;animation:flutua 7s ease-in-out infinite;
-  transform:translate(calc(var(--px)*10px),calc(var(--py)*8px))}
+  transform:translate(calc(var(--px)*10px),calc(var(--py)*8px + var(--hs)*-90px))}
 @keyframes flutua{50%{translate:0 -10px}}
 
 /* FAIXA DE CONFIANÇA */
@@ -120,21 +120,36 @@ h1 em{font-style:normal;color:var(--g)}
 .cab.centro{margin:0 auto;text-align:center}
 .cab.centro .sub{margin-left:auto;margin-right:auto}
 
-.recursos{padding-top:clamp(56px,8vw,104px)}
-.linha{display:grid;grid-template-columns:minmax(0,.76fr) minmax(0,1.24fr);gap:clamp(32px,6vw,92px);align-items:center;margin-top:clamp(56px,8vw,104px)}
-.linha.inv{grid-template-columns:minmax(0,1.24fr) minmax(0,.76fr)}
-.linha.inv .txt{order:2}
-.linha h3{font-family:var(--fd);font-weight:700;font-size:clamp(1.6rem,3vw,2.35rem);line-height:1.1;letter-spacing:-.04em}
-.linha p{margin-top:16px;color:var(--mut);font-size:1.125rem}
-.linha ul{margin-top:20px;list-style:none;display:grid;gap:10px}
-.linha li{position:relative;padding-left:30px;color:var(--mut);font-size:1.0625rem}
-.linha li::before{content:'';position:absolute;left:3px;top:.45em;width:7px;height:12px;border:solid var(--g);border-width:0 2.5px 2.5px 0;transform:rotate(45deg)}
-.vis2{position:relative}
-.vis2::before{content:'';position:absolute;inset:10% 0 -4%;background:radial-gradient(closest-side,rgba(34,197,94,.16),transparent 72%);filter:blur(28px);z-index:0}
-.vis2 .fr-p.solo{width:min(330px,72%);margin:0 auto}
-.so-m{display:none}
-.vis2 .fr-d{transition:transform .5s var(--ease)}
-.vis2:hover .fr-d{transform:translateY(-6px)}
+/* HISTÓRIA: o aparelho fica fixo e vira computador ou celular conforme a rolagem */
+.historia{padding-top:clamp(56px,8vw,104px);padding-bottom:clamp(40px,6vw,80px)}
+.hgrid{display:grid;grid-template-columns:minmax(0,.78fr) minmax(0,1.22fr);gap:clamp(32px,6vw,88px);margin-top:clamp(16px,3vw,40px)}
+.passos{padding-bottom:16vh}
+.passo{min-height:88vh;display:flex;align-items:center}
+.passo .tx{max-width:30em;opacity:.28;transform:translateX(-12px);transition:opacity .55s var(--ease),transform .55s var(--ease)}
+.passo.ativo .tx{opacity:1;transform:none}
+.passo h3{font-family:var(--fd);font-weight:700;font-size:clamp(1.65rem,3vw,2.4rem);line-height:1.1;letter-spacing:-.04em;text-wrap:balance}
+.passo p{margin-top:16px;color:var(--mut);font-size:1.125rem}
+.passo ul{margin-top:20px;list-style:none;display:grid;gap:10px}
+.passo li{position:relative;padding-left:30px;color:var(--mut);font-size:1.0625rem}
+.passo li::before{content:'';position:absolute;left:3px;top:.45em;width:7px;height:12px;border:solid var(--g);border-width:0 2.5px 2.5px 0;transform:rotate(45deg)}
+.passo .troca{margin-top:20px;display:flex;align-items:center;gap:10px;font-size:.9375rem;font-weight:600;color:var(--gl)}
+.passo .troca svg{width:18px;height:18px;flex:none}
+.palco-col{position:relative}
+.palco{position:sticky;top:72px;height:calc(100vh - 72px);min-height:560px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px}
+.palco::before{content:'';position:absolute;left:50%;top:48%;width:min(720px,110%);aspect-ratio:1;transform:translate(-50%,-50%);background:radial-gradient(closest-side,rgba(34,197,94,.17),transparent 72%);filter:blur(30px);pointer-events:none}
+.aparelho{--sw:600px;--ph:min(calc(100vh - 220px),640px);position:relative;z-index:1;width:var(--sw);height:calc(var(--sw)*.6364);border-radius:16px;padding:0;background:#0d1426;
+  box-shadow:0 50px 100px -30px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.1);
+  transition:width .85s var(--ease),height .85s var(--ease),border-radius .85s var(--ease),padding .85s var(--ease),background .6s;
+  transform:perspective(1600px) rotateY(calc((var(--p,.5) - .5)*-7deg)) rotateX(calc((var(--p,.5) - .5)*2.5deg));will-change:transform}
+.aparelho[data-forma=fone]{width:calc(var(--ph)*.4621 + 18px);height:var(--ph);border-radius:max(20px,calc(var(--ph)*.072));padding:9px;background:linear-gradient(145deg,#33405f,#0b1020 60%);box-shadow:0 40px 80px -20px rgba(0,0,0,.85),0 0 0 1px rgba(255,255,255,.1) inset}
+.tela{position:relative;width:100%;height:100%;border-radius:16px;overflow:hidden;transition:border-radius .85s var(--ease)}
+.aparelho[data-forma=fone] .tela{border-radius:max(11px,calc(var(--ph)*.072 - 9px))}
+.t{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center;opacity:0;transform:scale(1.04);transition:opacity .6s var(--ease),transform .9s var(--ease)}
+.t.on{opacity:1;transform:none}
+.trilho{position:relative;z-index:1;list-style:none;display:flex;align-items:center;gap:12px}
+.trilho button{position:relative;display:block;width:11px;height:11px;border-radius:999px;background:rgba(255,255,255,.24);padding:0;transition:background .3s,width .35s var(--ease)}
+.trilho button::after{content:'';position:absolute;inset:-16px -6px}
+.trilho button[aria-current=true]{background:var(--g);width:32px}
 
 /* PLANOS */
 .planos{background:var(--bg2)}
@@ -184,10 +199,16 @@ footer .marca svg{width:26px;height:26px}
   .hero{padding-bottom:84px}
   .vis{max-width:700px}
   .prova .wrap{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .linha,.linha.inv{grid-template-columns:minmax(0,1fr);gap:36px}
-  .linha.inv .txt{order:0}
-  .vis2{max-width:640px;margin:0 auto;width:100%}
   .cards{grid-template-columns:minmax(0,1fr);max-width:520px}
+  /* celular e tablet: o aparelho fica fixo no topo e o texto de cada passo sobe por baixo dele */
+  .hgrid{grid-template-columns:minmax(0,1fr);gap:0}
+  .palco-col{order:-1;position:sticky;top:64px;z-index:8;background:var(--bg);margin:0 calc(var(--pad)*-1);padding:0 var(--pad)}
+  .palco{position:static;height:auto;min-height:0;padding:10px 0 14px;gap:12px}
+  .palco::before{display:none}
+  .aparelho{--ph:clamp(240px,38svh,380px)}
+  .passos{padding-bottom:6svh}
+  .passo{min-height:56svh;align-items:flex-end;padding-bottom:calc(88px + 2svh)}
+  .passo .tx{max-width:none;transform:translateY(10px)}
 }
 @media (max-width:720px){
   body{font-size:1rem}
@@ -195,11 +216,7 @@ footer .marca svg{width:26px;height:26px}
   .nav .wrap{height:64px}
   .vis{max-width:320px;margin-top:40px}
   .vis .fr-d{display:none}
-  .so-d{display:none}
-  .so-m{display:block}
   .vis .fr-p{position:relative;right:auto;bottom:auto;width:100%;animation:none;transform:none}
-  .vis2 .fr-p.solo{width:min(310px,82%)}
-  .vis2{max-width:340px}
   .cta .btn{width:100%}
   .cta{flex-direction:column;align-items:stretch}
   .link{text-align:center}
@@ -278,72 +295,75 @@ footer .marca svg{width:26px;height:26px}
   </div>
 </section>
 
-<!-- RECURSOS -->
-<section class="sec recursos" id="recursos">
+<!-- HISTÓRIA -->
+<section class="sec historia" id="recursos">
   <div class="wrap">
     <div class="cab centro rv">
       <h2 class="titulo">Cada tela responde uma dúvida do seu mês.</h2>
-      <p class="sub">Sem planilha para montar. Você lança o que acontece e o Planeje organiza o resto.</p>
+      <p class="sub">No computador ou no celular, é o mesmo Planeje. Role e veja.</p>
     </div>
 
-    <div class="linha">
-      <div class="txt rv">
-        <h3>Abriu, entendeu quanto sobra.</h3>
-        <p>Saldo, receitas, despesas e o que ainda falta pagar, numa tela só. Os gastos viram gráfico e você vê para onde cada real foi.</p>
+    <div class="hgrid" id="hgrid">
+      <div class="passos" id="passos">
+        <article class="passo" data-forma="desk" data-d="d-resumo" data-m="m-resumo" data-nome="o resumo do mês">
+          <div class="tx">
+            <h3>Abriu, entendeu quanto sobra.</h3>
+            <p>Saldo, receitas, despesas e o que ainda falta pagar, numa tela só. Os gastos viram gráfico e você vê para onde cada real foi.</p>
+          </div>
+        </article>
+        <article class="passo" data-forma="desk" data-d="d-despesas" data-m="m-despesas" data-nome="as despesas">
+          <div class="tx">
+            <h3>Nenhuma conta esquecida.</h3>
+            <p>Fixas, parceladas ou avulsas, cada uma com a data certa.</p>
+            <ul>
+              <li>Veja o que venceu, o que vence hoje e quantas parcelas faltam</li>
+              <li>Ao pagar, informe a data e o valor que realmente saiu, com juros ou desconto</li>
+              <li>Filtre por mês, categoria e situação</li>
+            </ul>
+          </div>
+        </article>
+        <article class="passo" data-forma="fone" data-d="m-cartao" data-m="m-cartao" data-nome="o cartão de crédito">
+          <div class="tx">
+            <h3>O cartão sem susto.</h3>
+            <p>Cadastre seus cartões e lance as compras, inclusive as parceladas. A fatura de cada mês fica separada e, depois de paga, entra nos seus gastos como qualquer outra conta.</p>
+            <div class="troca"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2.5" width="8" height="15" rx="2"/><path d="M9 14.5h2"/></svg>Agora no celular: mesma conta, mesmos dados.</div>
+          </div>
+        </article>
+        <article class="passo" data-forma="fone" data-d="m-planejamento" data-m="m-planejamento" data-nome="o planejamento">
+          <div class="tx">
+            <h3>Gaste dentro do que você definiu.</h3>
+            <p>Defina um limite para cada categoria e acompanhe quanto já usou. Passou do limite? O Planeje mostra quanto excedeu.</p>
+            <ul>
+              <li>Barra de progresso por categoria</li>
+              <li>Metas para os planos maiores, com o valor já guardado</li>
+            </ul>
+          </div>
+        </article>
+        <article class="passo" data-forma="desk" data-d="d-graficos" data-m="m-graficos" data-nome="os gráficos">
+          <div class="tx">
+            <h3>Pra onde foi o dinheiro? Aqui você vê.</h3>
+            <p>O ranking de despesas e de receitas por categoria, mês a mês. Alterne entre o que já foi pago e o que está previsto, e exporte o relatório em PDF quando precisar.</p>
+            <div class="troca"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="4" width="15" height="10" rx="2"/><path d="M7 17h6M10 14v3"/></svg>De volta ao computador.</div>
+          </div>
+        </article>
       </div>
-      <div class="vis2 rv" data-d="1">
-        <div class="fr-p solo"><img src="/img/lp/mob-resumo.webp" width="780" height="1688" loading="lazy" alt="Resumo do mês no celular, com saldo em conta, receitas, despesas e valor a pagar"></div>
-      </div>
-    </div>
 
-    <div class="linha inv">
-      <div class="vis2 rv">
-        <div class="fr-d so-d"><img src="/img/lp/dsk-despesas.webp" width="1100" height="700" loading="lazy" alt="Lista de despesas do mês com vencimentos, parcelas e botão Efetivar pagamento"></div>
-        <div class="fr-p solo so-m"><img src="/img/lp/mob-despesas.webp" width="780" height="1688" loading="lazy" alt="Lista de despesas no celular"></div>
-      </div>
-      <div class="txt rv" data-d="1">
-        <h3>Nenhuma conta esquecida.</h3>
-        <p>Fixas, parceladas ou avulsas, cada uma com a data certa.</p>
-        <ul>
-          <li>Veja o que venceu, o que vence hoje e quantas parcelas faltam</li>
-          <li>Ao pagar, informe a data e o valor que realmente saiu, com juros ou desconto</li>
-          <li>Filtre por mês, categoria e situação</li>
-        </ul>
-      </div>
-    </div>
-
-    <div class="linha">
-      <div class="txt rv">
-        <h3>O cartão sem susto.</h3>
-        <p>Cadastre seus cartões e lance as compras, inclusive as parceladas. A fatura de cada mês fica separada e, depois de paga, entra nos seus gastos como qualquer outra conta.</p>
-      </div>
-      <div class="vis2 rv" data-d="1">
-        <div class="fr-p solo"><img src="/img/lp/mob-cartao.webp" width="780" height="1688" loading="lazy" alt="Tela de cartão de crédito com a fatura do mês e as compras lançadas"></div>
-      </div>
-    </div>
-
-    <div class="linha inv">
-      <div class="vis2 rv">
-        <div class="fr-d so-d"><img src="/img/lp/dsk-planejamento.webp" width="1100" height="700" loading="lazy" alt="Orçamento por categoria com barras de limite e aviso de valor excedido"></div>
-        <div class="fr-p solo so-m"><img src="/img/lp/mob-planejamento.webp" width="780" height="1688" loading="lazy" alt="Orçamento por categoria no celular"></div>
-      </div>
-      <div class="txt rv" data-d="1">
-        <h3>Gaste dentro do que você definiu.</h3>
-        <p>Defina um limite para cada categoria e acompanhe quanto já usou. Passou do limite? O Planeje mostra quanto excedeu.</p>
-        <ul>
-          <li>Barra de progresso por categoria</li>
-          <li>Metas para os planos maiores, com o valor já guardado</li>
-        </ul>
-      </div>
-    </div>
-
-    <div class="linha">
-      <div class="txt rv">
-        <h3>Pra onde foi o dinheiro? Aqui você vê.</h3>
-        <p>O ranking de despesas e de receitas por categoria, mês a mês. Alterne entre o que já foi pago e o que está previsto, e exporte o relatório em PDF quando precisar.</p>
-      </div>
-      <div class="vis2 rv" data-d="1">
-        <div class="fr-p solo"><img src="/img/lp/mob-graficos.webp" width="780" height="1688" loading="lazy" alt="Ranking de despesas por categoria no celular, com opção Pagos ou Previsto"></div>
+      <div class="palco-col">
+        <div class="palco" id="palco">
+          <div class="aparelho" id="aparelho" data-forma="desk">
+            <div class="tela">
+              <img class="t on" data-k="d-resumo" src="/img/lp/dsk-resumo.webp" width="1100" height="700" alt="Resumo do mês no computador, com saldo, receitas, despesas e valor a pagar">
+              <img class="t" data-k="d-despesas" src="/img/lp/dsk-despesas.webp" width="1100" height="700" loading="lazy" alt="Lista de despesas no computador, com vencimentos, parcelas e botão Efetivar pagamento">
+              <img class="t" data-k="d-graficos" src="/img/lp/dsk-graficos.webp" width="1100" height="700" loading="lazy" alt="Ranking de despesas e receitas por categoria no computador, com opção Pagos ou Previsto">
+              <img class="t" data-k="m-resumo" src="/img/lp/mob-resumo.webp" width="780" height="1688" loading="lazy" alt="Resumo do mês no celular">
+              <img class="t" data-k="m-despesas" src="/img/lp/mob-despesas.webp" width="780" height="1688" loading="lazy" alt="Lista de despesas no celular">
+              <img class="t" data-k="m-cartao" src="/img/lp/mob-cartao.webp" width="780" height="1688" loading="lazy" alt="Tela de cartão de crédito no celular, com a fatura do mês e as compras lançadas">
+              <img class="t" data-k="m-planejamento" src="/img/lp/mob-planejamento.webp" width="780" height="1688" loading="lazy" alt="Orçamento por categoria no celular, com barras de limite e aviso de valor excedido">
+              <img class="t" data-k="m-graficos" src="/img/lp/mob-graficos.webp" width="780" height="1688" loading="lazy" alt="Ranking de despesas por categoria no celular, com opção Pagos ou Previsto">
+            </div>
+          </div>
+          <ol class="trilho" id="trilho" aria-label="Passos"></ol>
+        </div>
       </div>
     </div>
   </div>
@@ -464,6 +484,61 @@ footer .marca svg{width:26px;height:26px}
         vis.style.setProperty('--py', ((e.clientY / window.innerHeight) - .5).toFixed(3));
       });
     }, {passive:true});
+  }
+
+  /* parallax do hero: o celular sobe um pouco mais rápido que o computador ao rolar */
+  var heroVis = document.getElementById('vis');
+  function parallaxHero(){
+    if (!heroVis || reduzir || !hero) return;
+    var hs = Math.max(0, Math.min(1, window.scrollY / (hero.offsetHeight || 1)));
+    heroVis.style.setProperty('--hs', hs.toFixed(3));
+  }
+
+  /* história: o aparelho fica fixo e muda de forma e de tela conforme o passo na tela */
+  var passos = [].slice.call(document.querySelectorAll('.passo'));
+  var ap = document.getElementById('aparelho'), palco = document.getElementById('palco'), col = document.querySelector('.palco-col'), trilho = document.getElementById('trilho');
+  var mq = window.matchMedia('(max-width: 960px)'), ativo = -1;
+  if (passos.length && ap && palco && col && trilho) {
+    var telas = {};
+    [].forEach.call(ap.querySelectorAll('.t'), function(t){ telas[t.getAttribute('data-k')] = t; });
+    var pontos = passos.map(function(pa, i){
+      var b = document.createElement('button'); b.type = 'button';
+      b.setAttribute('aria-label', 'Ver ' + pa.getAttribute('data-nome'));
+      b.addEventListener('click', function(){ pa.scrollIntoView({behavior: reduzir ? 'auto' : 'smooth', block: 'center'}); });
+      var li = document.createElement('li'); li.appendChild(b); trilho.appendChild(li); return b;
+    });
+    var medir = function(){ ap.style.setProperty('--sw', Math.max(300, Math.min(col.clientWidth, 720)) + 'px'); };
+    var definir = function(i){
+      if (i === ativo) return; ativo = i;
+      var pa = passos[i], mob = mq.matches;
+      ap.setAttribute('data-forma', mob ? 'fone' : pa.getAttribute('data-forma'));
+      var chave = mob ? pa.getAttribute('data-m') : pa.getAttribute('data-d');
+      Object.keys(telas).forEach(function(k){ telas[k].classList.toggle('on', k === chave); });
+      passos.forEach(function(x, k){ x.classList.toggle('ativo', k === i); });
+      pontos.forEach(function(b, k){ if (k === i) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current'); });
+    };
+    var focoY = function(){
+      if (!mq.matches) return window.innerHeight * 0.5;
+      var r = palco.getBoundingClientRect(); return r.bottom + (window.innerHeight - r.bottom) / 2;
+    };
+    var aoRolarHistoria = function(){
+      var mid = focoY(), melhor = 0, dist = Infinity;
+      passos.forEach(function(pa, k){ var r = pa.getBoundingClientRect(), d = Math.abs(r.top + r.height / 2 - mid); if (d < dist) { dist = d; melhor = k; } });
+      definir(melhor);
+      if (!reduzir) {
+        var r2 = passos[melhor].getBoundingClientRect();
+        ap.style.setProperty('--p', Math.max(0, Math.min(1, (mid - r2.top) / r2.height)).toFixed(3));
+      }
+    };
+    var redefinir = function(){ ativo = -1; medir(); aoRolarHistoria(); };
+    window.addEventListener('resize', redefinir);
+    if (mq.addEventListener) mq.addEventListener('change', redefinir);
+    medir(); aoRolarHistoria();
+    var quadro = 0;
+    window.addEventListener('scroll', function(){
+      if (quadro) return;
+      quadro = requestAnimationFrame(function(){ quadro = 0; aoRolarHistoria(); parallaxHero(); });
+    }, {passive: true});
   }
 })();
 </script>
